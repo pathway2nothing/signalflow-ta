@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signalflow-ta"
+version = "1.1.0"
+description = "Technical analysis extension for signalflow-trading."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "signalflow-trading>=1.1.0",
+  "torch>=2.2",
+  "lightning>=2.5",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["signalflow.ta*"]
