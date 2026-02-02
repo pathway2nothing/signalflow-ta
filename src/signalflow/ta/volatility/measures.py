@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -41,7 +42,6 @@ class MassIndexVol(Feature):
         
         hl_range = high - low
         
-        # Double EMA of range
         alpha = 2 / (self.fast + 1)
         
         ema1 = np.full(n, np.nan)
@@ -54,10 +54,8 @@ class MassIndexVol(Feature):
             ema1[i] = alpha * hl_range[i] + (1 - alpha) * ema1[i - 1]
             ema2[i] = alpha * ema1[i] + (1 - alpha) * ema2[i - 1]
         
-        # Ratio
         ratio = ema1 / (ema2 + 1e-10)
         
-        # Rolling sum
         massi = np.full(n, np.nan)
         for i in range(self.slow - 1, n):
             massi[i] = np.sum(ratio[i - self.slow + 1:i + 1])
@@ -65,6 +63,12 @@ class MassIndexVol(Feature):
         return df.with_columns(
             pl.Series(name=f"massi_{self.fast}_{self.slow}", values=massi)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 9, "slow": 25},
+        {"fast": 9, "slow": 50},
+        {"fast": 15, "slow": 40},
+    ]
 
 
 @dataclass
@@ -95,7 +99,6 @@ class UlcerIndexVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Percentage drawdown from rolling max
         ui = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
@@ -107,6 +110,12 @@ class UlcerIndexVol(Feature):
         return df.with_columns(
             pl.Series(name=f"ulcer_{self.period}", values=ui)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 30},
+        {"period": 60},
+    ]
 
 
 @dataclass
@@ -138,24 +147,20 @@ class RviVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Rolling standard deviation
         std = np.full(n, np.nan)
         for i in range(self.std_period - 1, n):
             std[i] = np.std(close[i - self.std_period + 1:i + 1], ddof=1)
         
-        # Direction
         diff = np.diff(close, prepend=close[0])
         
         up_std = np.where(diff > 0, std, 0)
         dn_std = np.where(diff <= 0, std, 0)
         
-        # EMA of up/down std
         alpha = 2 / (self.period + 1)
         
         up_ema = np.full(n, np.nan)
         dn_ema = np.full(n, np.nan)
         
-        # Initialize
         start = self.std_period - 1
         up_ema[start] = np.nanmean(up_std[:start + 1])
         dn_ema[start] = np.nanmean(dn_std[:start + 1])
@@ -164,13 +169,17 @@ class RviVol(Feature):
             up_ema[i] = alpha * up_std[i] + (1 - alpha) * up_ema[i - 1]
             dn_ema[i] = alpha * dn_std[i] + (1 - alpha) * dn_ema[i - 1]
         
-        # RVI
         rvi = 100 * up_ema / (up_ema + dn_ema + 1e-10)
         
         return df.with_columns(
             pl.Series(name=f"rvi_{self.period}", values=rvi)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14, "std_period": 10},
+        {"period": 20, "std_period": 14},
+        {"period": 30, "std_period": 20},
+    ]
 
 @dataclass
 @sf_component(name="volatility/historical_vol")
@@ -200,11 +209,9 @@ class HistoricalVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Log returns
         log_ret = np.log(close / np.roll(close, 1))
         log_ret[0] = 0
         
-        # Rolling std of log returns
         hv = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
@@ -213,7 +220,12 @@ class HistoricalVol(Feature):
         return df.with_columns(
             pl.Series(name=f"hv_{self.period}", values=hv)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20, "annualize": 252},
+        {"period": 30, "annualize": 252},
+        {"period": 60, "annualize": 365}, 
+    ]
 
 @dataclass
 @sf_component(name="volatility/atr_percent")
@@ -241,7 +253,6 @@ class AtrPercentVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # True Range
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
         
@@ -254,16 +265,20 @@ class AtrPercentVol(Feature):
         )
         tr[0] = high[0] - low[0]
         
-        # ATR (RMA)
         alpha = 1 / self.period
         atr = np.full(n, np.nan)
         atr[self.period - 1] = np.mean(tr[:self.period])
         for i in range(self.period, n):
             atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
         
-        # Percentage
         atr_pct = 100 * atr / close
         
         return df.with_columns(
             pl.Series(name=f"atr_pct_{self.period}", values=atr_pct)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 30},
+        {"period": 60},
+    ]

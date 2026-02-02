@@ -6,7 +6,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-
+from typing import ClassVar
 
 @dataclass
 @sf_component(name="momentum/rsi")
@@ -38,36 +38,36 @@ class RsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Price changes
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
         
-        # Separate gains and losses
         gains = np.where(diff > 0, diff, 0)
         losses = np.where(diff < 0, -diff, 0)
         
-        # Wilder's smoothing (RMA)
         alpha = 1 / self.period
         
         avg_gain = np.full(n, np.nan)
         avg_loss = np.full(n, np.nan)
         
-        # Initialize with SMA
         avg_gain[self.period] = np.mean(gains[1:self.period + 1])
         avg_loss[self.period] = np.mean(losses[1:self.period + 1])
         
-        # RMA
         for i in range(self.period + 1, n):
             avg_gain[i] = alpha * gains[i] + (1 - alpha) * avg_gain[i - 1]
             avg_loss[i] = alpha * losses[i] + (1 - alpha) * avg_loss[i - 1]
         
-        # RSI
         rs = avg_gain / (avg_loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))
         
         return df.with_columns(
             pl.Series(name=f"rsi_{self.period}", values=rsi)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 60},
+        {"period": 240},
+    ]
 
 
 @dataclass
@@ -105,6 +105,12 @@ class RocMom(Feature):
             pl.Series(name=f"roc_{self.period}", values=roc)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 60},
+        {"period": 240},
+    ]
+
 
 @dataclass
 @sf_component(name="momentum/mom")
@@ -140,6 +146,13 @@ class MomMom(Feature):
         return df.with_columns(
             pl.Series(name=f"mom_{self.period}", values=mom)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 60},
+        {"period": 240},
+    ]
+        
 
 
 @dataclass
@@ -189,3 +202,9 @@ class CmoMom(Feature):
         return df.with_columns(
             pl.Series(name=f"cmo_{self.period}", values=cmo)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 60},
+        {"period": 240},
+    ]

@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -44,22 +45,24 @@ class KamaSmooth(Feature):
         kama[self.period - 1] = values[self.period - 1]
         
         for i in range(self.period, n):
-            # Efficiency Ratio
             change = abs(values[i] - values[i - self.period])
             volatility = np.sum(np.abs(np.diff(values[i - self.period:i + 1])))
             
             er = change / volatility if volatility > 0 else 0
             
-            # Smoothing constant
             sc = (er * (fast_sc - slow_sc) + slow_sc) ** 2
             
-            # KAMA
             kama[i] = sc * values[i] + (1 - sc) * kama[i - 1]
         
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_kama_{self.period}", values=kama)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "fast": 2, "slow": 30},
+        {"source_col": "close", "period": 60, "fast": 5, "slow": 120},
+        {"source_col": "close", "period": 120, "fast": 10, "slow": 240},
+    ]
 
 @dataclass
 @sf_component(name="smooth/alma")
@@ -75,7 +78,7 @@ class AlmaSmooth(Feature):
     
     source_col: str = "close"
     period: int = 10
-    offset: float = 0.85  # 0 to 1
+    offset: float = 0.85  
     sigma: float = 6.0
     
     requires = ["{source_col}"]
@@ -88,7 +91,6 @@ class AlmaSmooth(Feature):
         m = self.offset * (self.period - 1)
         s = self.period / self.sigma
         
-        # Gaussian weights
         weights = np.array([
             np.exp(-((i - m) ** 2) / (2 * s * s))
             for i in range(self.period)
@@ -102,6 +104,11 @@ class AlmaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_alma_{self.period}", values=alma)
         )
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "offset": 0.85, "sigma": 6.0},
+        {"source_col": "close", "period": 60, "offset": 0.85, "sigma": 6.0},
+        {"source_col": "close", "period": 120, "offset": 0.85, "sigma": 6.0},
+    ]
 
 
 @dataclass
@@ -132,11 +139,9 @@ class JmaSmooth(Feature):
         volty = np.zeros(n)
         v_sum = np.zeros(n)
         
-        # Initialize
         jma[0] = ma1 = uBand = lBand = values[0]
         kv = det0 = det1 = ma2 = 0.0
         
-        # Parameters
         length = 0.5 * (self.period - 1)
         pr = 0.5 if self.phase < -100 else 2.5 if self.phase > 100 else 1.5 + self.phase * 0.01
         length1 = max(np.log(np.sqrt(length)) / np.log(2.0) + 2.0, 0)
@@ -150,12 +155,10 @@ class JmaSmooth(Feature):
         for i in range(1, n):
             price = values[i]
             
-            # Price volatility
             del1 = price - uBand
             del2 = price - lBand
             volty[i] = max(abs(del1), abs(del2)) if abs(del1) != abs(del2) else 0
             
-            # Relative price volatility
             start_idx = max(i - sum_length, 0)
             v_sum[i] = v_sum[i-1] + (volty[i] - volty[start_idx]) / sum_length
             
@@ -164,17 +167,14 @@ class JmaSmooth(Feature):
             d_volty = volty[i] / avg_volty if avg_volty > 0 else 0
             r_volty = max(1.0, min(length1 ** (1/pow1), d_volty))
             
-            # Volatility bands
             pow2 = r_volty ** pow1
             kv = bet ** np.sqrt(pow2)
             uBand = price if del1 > 0 else price - kv * del1
             lBand = price if del2 < 0 else price - kv * del2
             
-            # Dynamic factor
             power = r_volty ** pow1
             alpha = beta ** power
             
-            # 3-stage smoothing
             ma1 = (1 - alpha) * price + alpha * ma1
             det0 = (price - ma1) * (1 - beta) + beta * det0
             ma2 = ma1 + pr * det0
@@ -186,6 +186,12 @@ class JmaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_jma_{self.period}", values=jma)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 7, "phase": 0},
+        {"source_col": "close", "period": 30, "phase": 0},
+        {"source_col": "close", "period": 60, "phase": 50},
+    ]
 
 
 @dataclass
@@ -213,7 +219,6 @@ class VidyaSmooth(Feature):
         
         alpha = 2 / (self.period + 1)
         
-        # Momentum
         mom = np.diff(values, prepend=np.nan)
         pos = np.where(mom > 0, mom, 0)
         neg = np.where(mom < 0, -mom, 0)
@@ -222,7 +227,6 @@ class VidyaSmooth(Feature):
         vidya[self.period] = values[self.period]
         
         for i in range(self.period + 1, n):
-            # CMO
             pos_sum = np.sum(pos[i - self.period + 1:i + 1])
             neg_sum = np.sum(neg[i - self.period + 1:i + 1])
             
@@ -234,6 +238,11 @@ class VidyaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_vidya_{self.period}", values=vidya)
         )
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 14},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]   
 
 
 @dataclass
@@ -252,7 +261,7 @@ class T3Smooth(Feature):
     
     source_col: str = "close"
     period: int = 10
-    vfactor: float = 0.7  # volume factor, 0 < a < 1
+    vfactor: float = 0.7 
     
     requires = ["{source_col}"]
     outputs = ["{source_col}_t3_{period}"]
@@ -277,7 +286,11 @@ class T3Smooth(Feature):
         return df.with_columns(
             t3.alias(f"{self.source_col}_t3_{self.period}")
         )
-
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "vfactor": 0.7},
+        {"source_col": "close", "period": 30, "vfactor": 0.7},
+        {"source_col": "close", "period": 60, "vfactor": 0.8},
+    ]
 
 @dataclass
 @sf_component(name="smooth/zlma")
@@ -304,7 +317,6 @@ class ZlmaSmooth(Feature):
         lag = int((self.period - 1) / 2)
         col = pl.col(self.source_col)
         
-        # Adjust price to remove lag
         adjusted = 2 * col - col.shift(lag)
         
         if self.ma_type == "sma":
@@ -316,6 +328,11 @@ class ZlmaSmooth(Feature):
             zlma.alias(f"{self.source_col}_zlma_{self.period}")
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20, "ma_type": "ema"},
+        {"source_col": "close", "period": 60, "ma_type": "ema"},
+        {"source_col": "close", "period": 120, "ma_type": "sma"},
+    ]
 
 @dataclass
 @sf_component(name="smooth/mcginley")
@@ -332,8 +349,7 @@ class McGinleySmooth(Feature):
     
     source_col: str = "close"
     period: int = 10
-    k: float = 0.6  # constant, typically 0.6
-    
+    k: float = 0.6  
     requires = ["{source_col}"]
     outputs = ["{source_col}_mcg_{period}"]
     
@@ -356,6 +372,11 @@ class McGinleySmooth(Feature):
             pl.Series(name=f"{self.source_col}_mcg_{self.period}", values=md)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "k": 0.6},
+        {"source_col": "close", "period": 60, "k": 0.6},
+        {"source_col": "close", "period": 120, "k": 0.6},
+    ]
 
 @dataclass
 @sf_component(name="smooth/frama")
@@ -372,7 +393,7 @@ class FramaSmooth(Feature):
     """
     
     source_col: str = "close"
-    period: int = 16  # must be even
+    period: int = 16 
     
     requires = ["{source_col}"]
     outputs = ["{source_col}_frama_{period}"]
@@ -390,25 +411,16 @@ class FramaSmooth(Feature):
         frama[self.period - 1] = values[self.period - 1]
         
         for i in range(self.period, n):
-            # First half range
             n1 = (np.max(values[i - self.period + 1:i - half + 1]) - 
                   np.min(values[i - self.period + 1:i - half + 1])) / half
-            
-            # Second half range
             n2 = (np.max(values[i - half + 1:i + 1]) - 
                   np.min(values[i - half + 1:i + 1])) / half
-            
-            # Full range
             n3 = (np.max(values[i - self.period + 1:i + 1]) - 
                   np.min(values[i - self.period + 1:i + 1])) / self.period
-            
-            # Fractal dimension
             if n1 + n2 > 0 and n3 > 0:
                 d = (np.log(n1 + n2) - np.log(n3)) / np.log(2)
             else:
                 d = 1
-            
-            # Alpha
             alpha = np.exp(-4.6 * (d - 1))
             alpha = np.clip(alpha, 0.01, 1)
             
@@ -417,3 +429,9 @@ class FramaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_frama_{self.period}", values=frama)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 16},   
+        {"source_col": "close", "period": 60},   
+        {"source_col": "close", "period": 120},  
+    ]   

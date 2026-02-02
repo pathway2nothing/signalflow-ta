@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -52,6 +53,12 @@ class LogReturn(Feature):
             .alias(self.outputs[0])
         )
         return df.with_columns(result)
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source": "close", "period": 1},
+        {"source": "close", "period": 60},
+        {"source": "close", "period": 240},
+    ]   
 
 
 @dataclass
@@ -87,3 +94,9 @@ class PctReturn(Feature):
             .alias(self.outputs[0])
         )
         return df.with_columns(result)
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source": "close", "period": 1},
+        {"source": "close", "period": 60},
+        {"source": "close", "period": 240},
+    ]   

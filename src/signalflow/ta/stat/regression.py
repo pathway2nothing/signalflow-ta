@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -57,6 +58,12 @@ class CorrelationStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_{self.target_col}_corr_{self.period}", values=corr)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "target_col": "volume", "period": 30},
+        {"source_col": "close", "target_col": "volume", "period": 60},
+        {"source_col": "high", "target_col": "low", "period": 30},
+    ]
 
 
 @dataclass
@@ -82,11 +89,10 @@ class BetaStat(Feature):
     outputs = ["{source_col}_beta_{period}"]
     
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        x = df[self.benchmark_col].to_numpy()  # benchmark = X
-        y = df[self.source_col].to_numpy()      # asset = Y
+        x = df[self.benchmark_col].to_numpy()
+        y = df[self.source_col].to_numpy()
         n = len(x)
         
-        # Use returns for beta calculation
         x_ret = np.diff(x, prepend=np.nan) / np.where(x[:-1] != 0, np.append(x[:-1], 1), 1)
         y_ret = np.diff(y, prepend=np.nan) / np.where(y[:-1] != 0, np.append(y[:-1], 1), 1)
         x_ret = np.append(np.nan, x_ret[1:])
@@ -107,6 +113,12 @@ class BetaStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_beta_{self.period}", values=beta)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "benchmark_col": "volume", "period": 30},
+        {"source_col": "close", "benchmark_col": "volume", "period": 60},
+        {"source_col": "close", "benchmark_col": "volume", "period": 120},
+    ]
 
 
 @dataclass
@@ -153,7 +165,12 @@ class RSquaredStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_r2_{self.period}", values=r2)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
 
 @dataclass
 @sf_component(name="stat/linreg_slope")
@@ -192,7 +209,12 @@ class LinRegSlopeStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_slope_{self.period}", values=slope)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
 
 @dataclass
 @sf_component(name="stat/linreg_intercept")
@@ -226,6 +248,12 @@ class LinRegInterceptStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_intercept_{self.period}", values=intercept)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
 
 
 @dataclass
@@ -266,3 +294,10 @@ class LinRegResidualStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_residual_{self.period}", values=residual)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
+    

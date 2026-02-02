@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -32,14 +33,20 @@ class VarianceStat(Feature):
               .rolling_var(window_size=self.period, ddof=self.ddof)
               .alias(f"{self.source_col}_var_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30, "ddof": 1},
+        {"source_col": "close", "period": 60, "ddof": 1},
+        {"source_col": "close", "period": 240, "ddof": 0},
+    ]
 
 
 @dataclass
-@sf_component(name="stat/stdev")
-class StdevStat(Feature):
+@sf_component(name="stat/std")
+class StdStat(Feature):
     """Rolling Standard Deviation.
     
-    STDEV = √VAR
+    STD = √VAR
     
     Reference: https://en.wikipedia.org/wiki/Standard_deviation
     """
@@ -57,7 +64,11 @@ class StdevStat(Feature):
               .rolling_std(window_size=self.period, ddof=self.ddof)
               .alias(f"{self.source_col}_std_{self.period}")
         )
-
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30, "ddof": 1},
+        {"source_col": "close", "period": 60, "ddof": 1},
+        {"source_col": "close", "period": 240, "ddof": 1},
+    ]
 
 @dataclass
 @sf_component(name="stat/mad")
@@ -89,6 +100,12 @@ class MadStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_mad_{self.period}", values=mad)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -118,7 +135,12 @@ class ZscoreStat(Feature):
         return df.with_columns(
             ((col - mean) / std).alias(f"{self.source_col}_zscore_{self.period}")
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/cv")
@@ -147,7 +169,12 @@ class CvStat(Feature):
         return df.with_columns(
             (std / mean).alias(f"{self.source_col}_cv_{self.period}")
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/range")
@@ -174,7 +201,12 @@ class RangeStat(Feature):
              col.rolling_min(window_size=self.period))
             .alias(f"{self.source_col}_range_{self.period}")
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/iqr")
@@ -202,7 +234,12 @@ class IqrStat(Feature):
         return df.with_columns(
             (q3 - q1).alias(f"{self.source_col}_iqr_{self.period}")
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/aad")
@@ -234,6 +271,12 @@ class AadStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_aad_{self.period}", values=aad)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -273,3 +316,9 @@ class RobustZscoreStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_robz_{self.period}", values=robz)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]

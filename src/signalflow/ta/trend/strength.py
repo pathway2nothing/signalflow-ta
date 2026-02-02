@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -43,7 +44,6 @@ class AdxTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # True Range
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -53,16 +53,12 @@ class AdxTrend(Feature):
         )
         tr[0] = high[0] - low[0]
         
-        # Directional Movement
         up = high - np.roll(high, 1)
         dn = np.roll(low, 1) - low
         up[0] = dn[0] = 0
         
-        # +DM and -DM
         pdm = np.where((up > dn) & (up > 0), up, 0)
         ndm = np.where((dn > up) & (dn > 0), dn, 0)
-        
-        # Smoothed TR, +DM, -DM using Wilder's smoothing (RMA)
         alpha = 1.0 / self.period
         
         atr = np.full(n, np.nan)
@@ -78,11 +74,9 @@ class AdxTrend(Feature):
             smooth_pdm[i] = alpha * pdm[i] + (1 - alpha) * smooth_pdm[i - 1]
             smooth_ndm[i] = alpha * ndm[i] + (1 - alpha) * smooth_ndm[i - 1]
         
-        # +DI and -DI
         dmp = 100 * smooth_pdm / atr
         dmn = 100 * smooth_ndm / atr
         
-        # DX and ADX
         dx = 100 * np.abs(dmp - dmn) / (dmp + dmn + 1e-10)
         
         adx = np.full(n, np.nan)
@@ -97,7 +91,12 @@ class AdxTrend(Feature):
             pl.Series(name=f"dmp_{self.period}", values=dmp),
             pl.Series(name=f"dmn_{self.period}", values=dmn),
         ])
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 30},
+        {"period": 60},
+    ]
 
 @dataclass
 @sf_component(name="trend/aroon")
@@ -138,7 +137,6 @@ class AroonTrend(Feature):
             window_high = high[i - self.period:i + 1]
             window_low = low[i - self.period:i + 1]
             
-            # Periods since highest high (0 = today, period = oldest)
             periods_from_hh = self.period - np.argmax(window_high[::-1])
             periods_from_ll = self.period - np.argmin(window_low[::-1])
             
@@ -152,6 +150,12 @@ class AroonTrend(Feature):
             pl.Series(name=f"aroon_dn_{self.period}", values=aroon_dn),
             pl.Series(name=f"aroon_osc_{self.period}", values=aroon_osc),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 25},
+        {"period": 60},
+        {"period": 120},
+    ]
 
 
 @dataclass
@@ -185,7 +189,6 @@ class VortexTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # True Range
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -195,12 +198,10 @@ class VortexTrend(Feature):
         )
         tr[0] = high[0] - low[0]
         
-        # Vortex Movement
         vm_plus = np.abs(high - np.roll(low, 1))
         vm_minus = np.abs(low - np.roll(high, 1))
         vm_plus[0] = vm_minus[0] = 0
         
-        # Rolling sums
         vi_plus = np.full(n, np.nan)
         vi_minus = np.full(n, np.nan)
         
@@ -214,6 +215,12 @@ class VortexTrend(Feature):
             pl.Series(name=f"vi_plus_{self.period}", values=vi_plus),
             pl.Series(name=f"vi_minus_{self.period}", values=vi_minus),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 30},
+        {"period": 60},
+    ]
 
 
 @dataclass
@@ -241,15 +248,14 @@ class VhfTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Absolute price changes
         diff = np.abs(np.diff(close, prepend=close[0]))
         
         vhf = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
             window = close[i - self.period + 1:i + 1]
-            hcp = np.max(window)  # Highest close
-            lcp = np.min(window)  # Lowest close
+            hcp = np.max(window)  
+            lcp = np.min(window)  
             
             diff_sum = np.sum(diff[i - self.period + 1:i + 1])
             
@@ -259,6 +265,12 @@ class VhfTrend(Feature):
         return df.with_columns(
             pl.Series(name=f"vhf_{self.period}", values=vhf)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 28},
+        {"period": 60},
+        {"period": 120},
+    ]
 
 
 @dataclass
@@ -290,7 +302,6 @@ class ChopTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # True Range
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -315,3 +326,9 @@ class ChopTrend(Feature):
         return df.with_columns(
             pl.Series(name=f"chop_{self.period}", values=chop)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 30},
+        {"period": 60},
+    ]

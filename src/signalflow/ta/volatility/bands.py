@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -69,10 +70,8 @@ class BollingerVol(Feature):
         upper = middle + self.std_dev * std
         lower = middle - self.std_dev * std
         
-        # Bandwidth: (upper - lower) / middle * 100
         width = 100 * (upper - lower) / middle
         
-        # %B: (close - lower) / (upper - lower)
         pct = (close - lower) / (upper - lower + 1e-10)
         
         return df.with_columns([
@@ -82,6 +81,12 @@ class BollingerVol(Feature):
             pl.Series(name=f"bb_width_{self.period}", values=width),
             pl.Series(name=f"bb_pct_{self.period}", values=pct),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20, "std_dev": 2.0, "ma_type": "sma"},
+        {"period": 30, "std_dev": 2.0, "ma_type": "sma"},
+        {"period": 60, "std_dev": 2.5, "ma_type": "ema"},
+    ]
 
 
 @dataclass
@@ -123,7 +128,6 @@ class KeltnerVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Range (True Range or High-Low)
         if self.use_true_range:
             prev_close = np.roll(close, 1)
             prev_close[0] = close[0]
@@ -138,7 +142,6 @@ class KeltnerVol(Feature):
         else:
             range_vals = high - low
         
-        # Compute MA of close and range
         basis = np.full(n, np.nan)
         atr = np.full(n, np.nan)
         
@@ -149,7 +152,7 @@ class KeltnerVol(Feature):
             for i in range(1, n):
                 basis[i] = alpha * close[i] + (1 - alpha) * basis[i - 1]
                 atr[i] = alpha * range_vals[i] + (1 - alpha) * atr[i - 1]
-        else:  # SMA
+        else:  
             for i in range(self.period - 1, n):
                 basis[i] = np.mean(close[i - self.period + 1:i + 1])
                 atr[i] = np.mean(range_vals[i - self.period + 1:i + 1])
@@ -162,7 +165,12 @@ class KeltnerVol(Feature):
             pl.Series(name=f"kc_basis_{self.period}", values=basis),
             pl.Series(name=f"kc_lower_{self.period}", values=lower),
         ])
-
+        
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20, "multiplier": 2.0, "ma_type": "ema", "use_true_range": True},
+        {"period": 30, "multiplier": 1.5, "ma_type": "ema", "use_true_range": True},
+        {"period": 60, "multiplier": 2.0, "ma_type": "sma", "use_true_range": False},
+    ]
 
 @dataclass
 @sf_component(name="volatility/donchian")
@@ -213,6 +221,12 @@ class DonchianVol(Feature):
             pl.Series(name=f"dc_middle_{self.period}", values=middle),
             pl.Series(name=f"dc_lower_{self.period}", values=lower),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20},
+        {"period": 55},  
+        {"period": 120},
+    ]
 
 
 @dataclass
@@ -254,16 +268,13 @@ class AccBandsVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # HL ratio
         hl_range = high - low
         hl_sum = high + low
         hl_ratio = self.factor * hl_range / (hl_sum + 1e-10)
         
-        # Adjusted prices
         upper_raw = high * (1 + hl_ratio)
         lower_raw = low * (1 - hl_ratio)
         
-        # Compute MAs
         upper = np.full(n, np.nan)
         middle = np.full(n, np.nan)
         lower = np.full(n, np.nan)
@@ -277,7 +288,7 @@ class AccBandsVol(Feature):
                 upper[i] = alpha * upper_raw[i] + (1 - alpha) * upper[i - 1]
                 middle[i] = alpha * close[i] + (1 - alpha) * middle[i - 1]
                 lower[i] = alpha * lower_raw[i] + (1 - alpha) * lower[i - 1]
-        else:  # SMA
+        else:  
             for i in range(self.period - 1, n):
                 upper[i] = np.mean(upper_raw[i - self.period + 1:i + 1])
                 middle[i] = np.mean(close[i - self.period + 1:i + 1])
@@ -288,3 +299,9 @@ class AccBandsVol(Feature):
             pl.Series(name=f"accb_middle_{self.period}", values=middle),
             pl.Series(name=f"accb_lower_{self.period}", values=lower),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20, "factor": 4.0, "ma_type": "sma"},
+        {"period": 30, "factor": 3.0, "ma_type": "sma"},
+        {"period": 60, "factor": 4.0, "ma_type": "ema"},
+    ]
