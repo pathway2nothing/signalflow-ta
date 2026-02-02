@@ -10,7 +10,7 @@ from signalflow.feature.base import Feature
 
 @dataclass
 @sf_component(name="volume/obv")
-class ObvVol(Feature):
+class ObvVolume(Feature):
     """On Balance Volume (OBV).
     
     Cumulative volume based on price direction.
@@ -50,7 +50,7 @@ class ObvVol(Feature):
 
 @dataclass
 @sf_component(name="volume/ad")
-class AdVol(Feature):
+class AdVolume(Feature):
     """Accumulation/Distribution Line (A/D).
     
     Cumulative indicator using close location within range.
@@ -102,7 +102,7 @@ class AdVol(Feature):
 
 @dataclass
 @sf_component(name="volume/pvt")
-class PvtVol(Feature):
+class PvtVolume(Feature):
     """Price-Volume Trend (PVT).
     
     Cumulative indicator using percentage price change.
@@ -144,7 +144,7 @@ class PvtVol(Feature):
 
 @dataclass
 @sf_component(name="volume/nvi")
-class NviVol(Feature):
+class NviVolume(Feature):
     """Negative Volume Index (NVI).
     
     Tracks price changes on days with lower volume.
@@ -198,7 +198,7 @@ class NviVol(Feature):
 
 @dataclass
 @sf_component(name="volume/pvi")
-class PviVol(Feature):
+class PviVolume(Feature):
     """Positive Volume Index (PVI).
     
     Tracks price changes on days with higher volume.

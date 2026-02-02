@@ -11,7 +11,7 @@ from signalflow.feature.base import Feature
 
 @dataclass
 @sf_component(name="volume/mfi")
-class MfiVol(Feature):
+class MfiVolume(Feature):
     """Money Flow Index (MFI).
     
     Volume-weighted RSI using typical price.
@@ -72,7 +72,7 @@ class MfiVol(Feature):
 
 @dataclass
 @sf_component(name="volume/cmf")
-class CmfVol(Feature):
+class CmfVolume(Feature):
     """Chaikin Money Flow (CMF).
     
     Measures buying/selling pressure over a period.
@@ -130,7 +130,7 @@ class CmfVol(Feature):
 
 @dataclass
 @sf_component(name="volume/efi")
-class EfiVol(Feature):
+class EfiVolume(Feature):
     """Elder's Force Index (EFI).
     
     Measures the force behind price movements.
@@ -177,7 +177,7 @@ class EfiVol(Feature):
 
 @dataclass
 @sf_component(name="volume/eom")
-class EomVol(Feature):
+class EomVolume(Feature):
     """Ease of Movement (EMV/EOM).
     
     Relates price change to volume.
@@ -236,7 +236,7 @@ class EomVol(Feature):
 
 @dataclass
 @sf_component(name="volume/kvo")
-class KvoVol(Feature):
+class KvoVolume(Feature):
     """Klinger Volume Oscillator (KVO).
     
     Measures long-term money flow with trend detection.
@@ -320,7 +320,7 @@ class KvoVol(Feature):
 
 @dataclass
 @sf_component(name="volume/vwap")
-class VwapVol(Feature):
+class VwapVolume(Feature):
     """Volume Weighted Average Price (VWAP).
     
     Average price weighted by volume.
@@ -363,7 +363,7 @@ class VwapVol(Feature):
 
 @dataclass
 @sf_component(name="volume/vwap_bands")
-class VwapBandsVol(Feature):
+class VwapBandsVolume(Feature):
     """VWAP with Standard Deviation Bands.
     
     VWAP with rolling standard deviation bands.
