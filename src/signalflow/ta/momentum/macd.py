@@ -1,13 +1,43 @@
-"""MACD family indicators."""
+"""MACD family indicators with reproducible EMA initialization."""
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
+
+
+def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
+    """
+    Calculate EMA with SMA initialization for reproducibility.
+    
+    Instead of ema[0] = values[0], we initialize with SMA of first `period` values.
+    This makes EMA independent of the starting point after warmup.
+    
+    Args:
+        values: Input array
+        period: EMA period (also used for SMA initialization)
+        
+    Returns:
+        EMA array with first (period-1) values as NaN
+    """
+    n = len(values)
+    alpha = 2 / (period + 1)
+    ema = np.full(n, np.nan)
+    
+    if n < period:
+        return ema
+    
+    # Initialize with SMA of first `period` values
+    ema[period - 1] = np.mean(values[:period])
+    
+    # Continue with standard EMA
+    for i in range(period, n):
+        ema[i] = alpha * values[i] + (1 - alpha) * ema[i - 1]
+    
+    return ema
 
 
 @dataclass
@@ -15,22 +45,14 @@ from typing import ClassVar
 class MacdMom(Feature):
     """Moving Average Convergence Divergence (MACD).
     
-    Trend-following momentum indicator.
+    Trend-following momentum indicator with reproducible EMA initialization.
     
     MACD = EMA(close, fast) - EMA(close, slow)
     Signal = EMA(MACD, signal)
     Histogram = MACD - Signal
     
-    Outputs:
-    - macd: MACD line
-    - macd_signal: signal line
-    - macd_hist: histogram (momentum)
-    
-    Interpretation:
-    - MACD above signal: bullish
-    - MACD below signal: bearish
-    - Histogram shows momentum strength
-    - Zero line crossovers: trend change
+    Key improvement: EMA initialized with SMA instead of first value,
+    ensuring reproducibility regardless of data entry point.
     
     Reference: Gerald Appel
     https://www.investopedia.com/terms/m/macd.asp
@@ -47,29 +69,33 @@ class MacdMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        alpha_fast = 2 / (self.fast + 1)
-        ema_fast = np.full(n, np.nan)
-        ema_fast[0] = close[0]
-        for i in range(1, n):
-            ema_fast[i] = alpha_fast * close[i] + (1 - alpha_fast) * ema_fast[i - 1]
+        # EMA with SMA initialization for reproducibility
+        ema_fast = _ema_sma_init(close, self.fast)
+        ema_slow = _ema_sma_init(close, self.slow)
         
-        alpha_slow = 2 / (self.slow + 1)
-        ema_slow = np.full(n, np.nan)
-        ema_slow[0] = close[0]
-        for i in range(1, n):
-            ema_slow[i] = alpha_slow * close[i] + (1 - alpha_slow) * ema_slow[i - 1]
-        
+        # MACD line (valid after slow period)
         macd = ema_fast - ema_slow
         
+        # Signal line - EMA of MACD with SMA init
+        # Start after slow period where MACD becomes valid
         alpha_sig = 2 / (self.signal + 1)
         signal_line = np.full(n, np.nan)
-        signal_line[self.slow - 1] = macd[self.slow - 1]
-        for i in range(self.slow, n):
-            signal_line[i] = alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
+        
+        # Find first valid MACD index
+        start_idx = self.slow - 1
+        signal_start = start_idx + self.signal - 1
+        
+        if signal_start < n:
+            # Initialize signal with SMA of first `signal` valid MACD values
+            signal_line[signal_start] = np.mean(macd[start_idx:signal_start + 1])
+            
+            for i in range(signal_start + 1, n):
+                signal_line[i] = alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
         
         histogram = macd - signal_line
         
-        macd[:self.slow - 1] = np.nan
+        # Clear invalid values
+        macd[:start_idx] = np.nan
         
         return df.with_columns([
             pl.Series(name=f"macd_{self.fast}_{self.slow}", values=macd),
@@ -89,15 +115,11 @@ class MacdMom(Feature):
 class PpoMom(Feature):
     """Percentage Price Oscillator (PPO).
     
-    MACD expressed as percentage.
+    MACD expressed as percentage with reproducible EMA initialization.
     
     PPO = 100 * (EMA_fast - EMA_slow) / EMA_slow
     Signal = EMA(PPO, signal)
     Histogram = PPO - Signal
-    
-    Advantage over MACD:
-    - Comparable across different price levels
-    - Better for comparing securities
     
     Reference: https://school.stockcharts.com/doku.php?id=technical_indicators:price_oscillators_ppo
     """
@@ -113,28 +135,28 @@ class PpoMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        alpha_fast = 2 / (self.fast + 1)
-        alpha_slow = 2 / (self.slow + 1)
+        # EMA with SMA initialization
+        ema_fast = _ema_sma_init(close, self.fast)
+        ema_slow = _ema_sma_init(close, self.slow)
         
-        ema_fast = np.full(n, np.nan)
-        ema_slow = np.full(n, np.nan)
-        ema_fast[0] = close[0]
-        ema_slow[0] = close[0]
-        
-        for i in range(1, n):
-            ema_fast[i] = alpha_fast * close[i] + (1 - alpha_fast) * ema_fast[i - 1]
-            ema_slow[i] = alpha_slow * close[i] + (1 - alpha_slow) * ema_slow[i - 1]
-        
+        # PPO as percentage
         ppo = 100 * (ema_fast - ema_slow) / (ema_slow + 1e-10)
         
+        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         signal_line = np.full(n, np.nan)
-        signal_line[self.slow - 1] = ppo[self.slow - 1]
-        for i in range(self.slow, n):
-            signal_line[i] = alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
+        
+        start_idx = self.slow - 1
+        signal_start = start_idx + self.signal - 1
+        
+        if signal_start < n:
+            signal_line[signal_start] = np.mean(ppo[start_idx:signal_start + 1])
+            
+            for i in range(signal_start + 1, n):
+                signal_line[i] = alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
         
         histogram = ppo - signal_line
-        ppo[:self.slow - 1] = np.nan
+        ppo[:start_idx] = np.nan
         
         return df.with_columns([
             pl.Series(name=f"ppo_{self.fast}_{self.slow}", values=ppo),
@@ -154,20 +176,11 @@ class PpoMom(Feature):
 class TsiMom(Feature):
     """True Strength Index (TSI).
     
-    Double-smoothed momentum indicator.
+    Double-smoothed momentum with reproducible EMA initialization.
     
     PC = close - prev_close
     TSI = 100 * EMA(EMA(PC, slow), fast) / EMA(EMA(|PC|, slow), fast)
     Signal = EMA(TSI, signal)
-    
-    Outputs:
-    - tsi: True Strength Index
-    - tsi_signal: signal line
-    
-    Bounded approximately -100 to +100:
-    - Positive: bullish momentum
-    - Negative: bearish momentum
-    - Signal crossovers: trading signals
     
     Reference: William Blau
     https://www.investopedia.com/terms/t/tsi.asp
@@ -184,39 +197,39 @@ class TsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
+        # Price change
         pc = np.diff(close, prepend=close[0])
         pc[0] = 0
         abs_pc = np.abs(pc)
         
-        alpha_slow = 2 / (self.slow + 1)
-        alpha_fast = 2 / (self.fast + 1)
-        alpha_sig = 2 / (self.signal + 1)
+        # Double smooth with SMA initialization
+        pc_ema1 = _ema_sma_init(pc, self.slow)
+        pc_ema2 = _ema_sma_init(pc_ema1, self.fast)
         
-        pc_ema1 = np.full(n, np.nan)
-        pc_ema2 = np.full(n, np.nan)
-        abs_pc_ema1 = np.full(n, np.nan)
-        abs_pc_ema2 = np.full(n, np.nan)
+        abs_pc_ema1 = _ema_sma_init(abs_pc, self.slow)
+        abs_pc_ema2 = _ema_sma_init(abs_pc_ema1, self.fast)
         
-        pc_ema1[0] = pc[0]
-        abs_pc_ema1[0] = abs_pc[0]
-        
-        for i in range(1, n):
-            pc_ema1[i] = alpha_slow * pc[i] + (1 - alpha_slow) * pc_ema1[i - 1]
-            abs_pc_ema1[i] = alpha_slow * abs_pc[i] + (1 - alpha_slow) * abs_pc_ema1[i - 1]
-        
-        pc_ema2[0] = pc_ema1[0]
-        abs_pc_ema2[0] = abs_pc_ema1[0]
-        
-        for i in range(1, n):
-            pc_ema2[i] = alpha_fast * pc_ema1[i] + (1 - alpha_fast) * pc_ema2[i - 1]
-            abs_pc_ema2[i] = alpha_fast * abs_pc_ema1[i] + (1 - alpha_fast) * abs_pc_ema2[i - 1]
-        
+        # TSI calculation
         tsi = 100 * pc_ema2 / (abs_pc_ema2 + 1e-10)
         
+        # Signal line
+        alpha_sig = 2 / (self.signal + 1)
         tsi_signal = np.full(n, np.nan)
-        tsi_signal[0] = tsi[0]
-        for i in range(1, n):
-            tsi_signal[i] = alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
+        
+        # Find first valid TSI index
+        start_idx = self.slow + self.fast - 2
+        signal_start = start_idx + self.signal - 1
+        
+        if signal_start < n:
+            # Find valid values for initialization
+            valid_tsi = tsi[start_idx:signal_start + 1]
+            valid_tsi = valid_tsi[~np.isnan(valid_tsi)]
+            if len(valid_tsi) > 0:
+                tsi_signal[signal_start] = np.mean(valid_tsi)
+                
+                for i in range(signal_start + 1, n):
+                    if not np.isnan(tsi[i]) and not np.isnan(tsi_signal[i - 1]):
+                        tsi_signal[i] = alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
         
         return df.with_columns([
             pl.Series(name=f"tsi_{self.fast}_{self.slow}", values=tsi),
@@ -235,22 +248,12 @@ class TsiMom(Feature):
 class TrixMom(Feature):
     """Triple Exponential Average (TRIX).
     
-    Rate of change of triple-smoothed EMA.
+    Rate of change of triple-smoothed EMA with reproducible initialization.
     
     EMA1 = EMA(close, period)
     EMA2 = EMA(EMA1, period)
     EMA3 = EMA(EMA2, period)
     TRIX = 100 * (EMA3 - EMA3[1]) / EMA3[1]
-    
-    Outputs:
-    - trix: TRIX oscillator
-    - trix_signal: signal line
-    
-    Very smooth indicator:
-    - Positive: bullish trend
-    - Negative: bearish trend
-    - Zero crossings: trend changes
-    - Signal crossings: trading signals
     
     Reference: Jack Hutson
     https://www.investopedia.com/terms/t/trix.asp
@@ -266,34 +269,34 @@ class TrixMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        alpha = 2 / (self.period + 1)
+        # Triple EMA with SMA initialization
+        ema1 = _ema_sma_init(close, self.period)
+        ema2 = _ema_sma_init(ema1, self.period)
+        ema3 = _ema_sma_init(ema2, self.period)
         
-        ema1 = np.full(n, np.nan)
-        ema2 = np.full(n, np.nan)
-        ema3 = np.full(n, np.nan)
-        
-        ema1[0] = close[0]
-        ema2[0] = close[0]
-        ema3[0] = close[0]
-        
-        for i in range(1, n):
-            ema1[i] = alpha * close[i] + (1 - alpha) * ema1[i - 1]
-            ema2[i] = alpha * ema1[i] + (1 - alpha) * ema2[i - 1]
-            ema3[i] = alpha * ema2[i] + (1 - alpha) * ema3[i - 1]
-        
+        # TRIX = rate of change of triple EMA
         trix = np.full(n, np.nan)
         for i in range(1, n):
-            if ema3[i - 1] != 0:
+            if not np.isnan(ema3[i]) and not np.isnan(ema3[i - 1]) and ema3[i - 1] != 0:
                 trix[i] = 100 * (ema3[i] - ema3[i - 1]) / ema3[i - 1]
         
+        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         trix_signal = np.full(n, np.nan)
         
-        start = 1
-        trix_signal[start] = trix[start]
-        for i in range(start + 1, n):
-            if not np.isnan(trix[i]) and not np.isnan(trix_signal[i - 1]):
-                trix_signal[i] = alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
+        # Find first valid TRIX index (3 * period - 2)
+        start_idx = 3 * self.period - 2
+        signal_start = start_idx + self.signal - 1
+        
+        if signal_start < n:
+            valid_trix = trix[start_idx:signal_start + 1]
+            valid_trix = valid_trix[~np.isnan(valid_trix)]
+            if len(valid_trix) > 0:
+                trix_signal[signal_start] = np.mean(valid_trix)
+                
+                for i in range(signal_start + 1, n):
+                    if not np.isnan(trix[i]) and not np.isnan(trix_signal[i - 1]):
+                        trix_signal[i] = alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
         
         return df.with_columns([
             pl.Series(name=f"trix_{self.period}", values=trix),
