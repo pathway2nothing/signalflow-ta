@@ -7,31 +7,31 @@ Modules:
 """
 
 from signalflow.ta.volume.cumulative import (
-    ObvVol,
-    AdVol,
-    PvtVol,
-    NviVol,
-    PviVol,
+    ObvVolume,
+    AdVolume,
+    PvtVolume,
+    NviVolume,
+    PviVolume,
 )
 from signalflow.ta.volume.oscillators import (
-    MfiVol,
-    CmfVol,
-    EfiVol,
-    EomVol,
-    KvoVol,
+    MfiVolume,
+    CmfVolume,
+    EfiVolume,
+    EomVolume,
+    KvoVolume,
 )
 
 __all__ = [
     # Cumulative
-    "ObvVol",
-    "AdVol",
-    "PvtVol",
-    "NviVol",
-    "PviVol",
+    "ObvVolume",
+    "AdVolume",
+    "PvtVolume",
+    "NviVolume",
+    "PviVolume",
     # Oscillators
-    "MfiVol",
-    "CmfVol",
-    "EfiVol",
-    "EomVol",
-    "KvoVol",
+    "MfiVolume",
+    "CmfVolume",
+    "EfiVolume",
+    "EomVolume",
+    "KvoVolume",
 ]
