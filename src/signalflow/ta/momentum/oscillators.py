@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -45,7 +46,6 @@ class StochMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Raw stochastic
         raw_k = np.full(n, np.nan)
         
         for i in range(self.k_period - 1, n):
@@ -55,12 +55,10 @@ class StochMom(Feature):
             if hh != ll:
                 raw_k[i] = 100 * (close[i] - ll) / (hh - ll)
         
-        # Smooth %K
         stoch_k = np.full(n, np.nan)
         for i in range(self.k_period + self.smooth_k - 2, n):
             stoch_k[i] = np.nanmean(raw_k[i - self.smooth_k + 1:i + 1])
         
-        # %D (signal)
         stoch_d = np.full(n, np.nan)
         for i in range(self.k_period + self.smooth_k + self.d_period - 3, n):
             stoch_d[i] = np.nanmean(stoch_k[i - self.d_period + 1:i + 1])
@@ -69,6 +67,12 @@ class StochMom(Feature):
             pl.Series(name=f"stoch_k_{self.k_period}", values=stoch_k),
             pl.Series(name=f"stoch_d_{self.k_period}", values=stoch_d),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"k_period": 14, "d_period": 3, "smooth_k": 3},    
+        {"k_period": 60, "d_period": 10, "smooth_k": 10},  
+        {"k_period": 120, "d_period": 20, "smooth_k": 20},
+    ]
 
 
 @dataclass
@@ -101,7 +105,6 @@ class StochRsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Calculate RSI first
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
         
@@ -121,7 +124,6 @@ class StochRsiMom(Feature):
         
         rsi = 100 - (100 / (1 + avg_gain / (avg_loss + 1e-10)))
         
-        # Stochastic of RSI
         raw_stoch = np.full(n, np.nan)
         start = self.rsi_period + self.stoch_period - 1
         
@@ -133,7 +135,6 @@ class StochRsiMom(Feature):
             if rsi_max != rsi_min:
                 raw_stoch[i] = 100 * (rsi[i] - rsi_min) / (rsi_max - rsi_min)
         
-        # Smooth %K and %D
         stoch_k = np.full(n, np.nan)
         stoch_d = np.full(n, np.nan)
         
@@ -147,6 +148,12 @@ class StochRsiMom(Feature):
             pl.Series(name=f"stochrsi_k_{self.rsi_period}", values=stoch_k),
             pl.Series(name=f"stochrsi_d_{self.rsi_period}", values=stoch_d),
         ])
+
+    test_params: ClassVar[list[dict]] = [
+        {"rsi_period": 14, "stoch_period": 14, "k_period": 3, "d_period": 3},
+        {"rsi_period": 60, "stoch_period": 60, "k_period": 10, "d_period": 10},
+        {"rsi_period": 120, "stoch_period": 120, "k_period": 20, "d_period": 20},
+    ]
 
 
 @dataclass
@@ -189,6 +196,12 @@ class WillrMom(Feature):
         return df.with_columns(
             pl.Series(name=f"willr_{self.period}", values=willr)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 60},
+        {"period": 240},
+    ]
 
 
 @dataclass
@@ -222,9 +235,8 @@ class CciMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Typical price
         tp = (high + low + close) / 3
-        
+
         cci = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
@@ -238,6 +250,12 @@ class CciMom(Feature):
         return df.with_columns(
             pl.Series(name=f"cci_{self.period}", values=cci)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20, "constant": 0.015},
+        {"period": 60, "constant": 0.015},
+        {"period": 240, "constant": 0.015},
+    ]
 
 
 @dataclass
@@ -281,7 +299,6 @@ class UoMom(Feature):
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
         
-        # Buying pressure and true range
         bp = close - np.minimum(low, prev_close)
         tr = np.maximum(high, prev_close) - np.minimum(low, prev_close)
         
@@ -312,6 +329,12 @@ class UoMom(Feature):
         return df.with_columns(
             pl.Series(name=f"uo_{self.fast}_{self.medium}_{self.slow}", values=uo)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 7, "medium": 14, "slow": 28, "fast_weight": 4.0, "medium_weight": 2.0, "slow_weight": 1.0},
+        {"fast": 15, "medium": 30, "slow": 60, "fast_weight": 4.0, "medium_weight": 2.0, "slow_weight": 1.0},
+        {"fast": 30, "medium": 60, "slow": 120, "fast_weight": 4.0, "medium_weight": 2.0, "slow_weight": 1.0},
+    ]
 
 
 @dataclass
@@ -357,3 +380,8 @@ class AoMom(Feature):
         return df.with_columns(
             pl.Series(name=f"ao_{self.fast}_{self.slow}", values=ao)
         )
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 5, "slow": 34},    
+        {"fast": 15, "slow": 100},  
+        {"fast": 30, "slow": 200},  
+    ]

@@ -6,6 +6,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -46,6 +47,8 @@ class ObvVolume(Feature):
         return df.with_columns(
             pl.Series(name="obv", values=obv)
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 
 @dataclass
@@ -81,7 +84,6 @@ class AdVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         
-        # Close Location Value (Money Flow Multiplier)
         hl_range = high - low
         clv = np.where(
             hl_range > 0,
@@ -89,16 +91,14 @@ class AdVolume(Feature):
             0
         )
         
-        # Money Flow Volume
         mfv = clv * volume
-        
-        # Cumulative A/D
         ad = np.cumsum(mfv)
         
         return df.with_columns(
             pl.Series(name="ad", values=ad)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [{}]    
 
 @dataclass
 @sf_component(name="volume/pvt")
@@ -127,19 +127,17 @@ class PvtVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         
-        # Rate of change (percentage)
         roc = np.diff(close, prepend=close[0]) / np.roll(close, 1)
         roc[0] = 0
         
-        # Price-Volume
         pv = roc * volume
-        
-        # Cumulative PVT
         pvt = np.cumsum(pv)
         
         return df.with_columns(
             pl.Series(name="pvt", values=pvt)
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 
 @dataclass
@@ -175,18 +173,12 @@ class NviVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # ROC
         roc = np.diff(close, prepend=close[0]) / np.roll(close, 1)
         roc[0] = 0
         
-        # Volume direction
         vol_down = volume < np.roll(volume, 1)
         vol_down[0] = False
-        
-        # NVI changes only on down-volume days
-        nvi_change = np.where(vol_down, roc * 100, 0)
-        
-        # Cumulative with initial value
+        nvi_change = np.where(vol_down, roc * 100, 0)      
         nvi = np.full(n, self.initial)
         for i in range(1, n):
             nvi[i] = nvi[i - 1] + nvi_change[i]
@@ -194,6 +186,11 @@ class NviVolume(Feature):
         return df.with_columns(
             pl.Series(name="nvi", values=nvi)
         )
+    test_params: ClassVar[list[dict]] = [
+        {"initial": 1000.0},
+        {"initial": 100.0},
+        {"initial": 10000.0},
+    ]
 
 
 @dataclass
@@ -229,18 +226,13 @@ class PviVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # ROC
         roc = np.diff(close, prepend=close[0]) / np.roll(close, 1)
         roc[0] = 0
         
-        # Volume direction
         vol_up = volume > np.roll(volume, 1)
         vol_up[0] = False
         
-        # PVI changes only on up-volume days
         pvi_change = np.where(vol_up, roc * 100, 0)
-        
-        # Cumulative with initial value
         pvi = np.full(n, self.initial)
         for i in range(1, n):
             pvi[i] = pvi[i - 1] + pvi_change[i]
@@ -248,3 +240,9 @@ class PviVolume(Feature):
         return df.with_columns(
             pl.Series(name="pvi", values=pvi)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"initial": 1000.0},
+        {"initial": 100.0},
+        {"initial": 10000.0},
+    ]

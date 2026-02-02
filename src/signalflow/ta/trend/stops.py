@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -27,9 +28,9 @@ class PsarTrend(Feature):
     Reference: Welles Wilder, "New Concepts in Technical Trading Systems"
     """
     
-    af: float = 0.02        # initial acceleration factor
-    af_step: float = 0.02   # AF increment
-    af_max: float = 0.2     # maximum AF
+    af: float = 0.02        
+    af_step: float = 0.02   
+    af_max: float = 0.2     
     
     requires = ["high", "low", "close"]
     outputs = ["psar", "psar_dir"]
@@ -43,11 +44,9 @@ class PsarTrend(Feature):
         psar = np.full(n, np.nan)
         direction = np.ones(n)
         
-        # Initialize
         psar[0] = close[0]
         af = self.af
         
-        # Determine initial trend
         if n > 1 and close[1] > close[0]:
             direction[0] = 1
             ep = high[0]
@@ -61,14 +60,13 @@ class PsarTrend(Feature):
             prev_psar = psar[i - 1]
             prev_dir = direction[i - 1]
             
-            if prev_dir == 1:  # Uptrend
+            if prev_dir == 1:
                 psar[i] = prev_psar + af * (ep - prev_psar)
-                # SAR cannot be above prior two lows
                 psar[i] = min(psar[i], low[i - 1])
                 if i > 1:
                     psar[i] = min(psar[i], low[i - 2])
                 
-                if low[i] < psar[i]:  # Reversal to downtrend
+                if low[i] < psar[i]:  
                     direction[i] = -1
                     psar[i] = ep
                     ep = low[i]
@@ -78,14 +76,13 @@ class PsarTrend(Feature):
                     if high[i] > ep:
                         ep = high[i]
                         af = min(af + self.af_step, self.af_max)
-            else:  # Downtrend
+            else: 
                 psar[i] = prev_psar + af * (ep - prev_psar)
-                # SAR cannot be below prior two highs
                 psar[i] = max(psar[i], high[i - 1])
                 if i > 1:
                     psar[i] = max(psar[i], high[i - 2])
                 
-                if high[i] > psar[i]:  # Reversal to uptrend
+                if high[i] > psar[i]: 
                     direction[i] = 1
                     psar[i] = ep
                     ep = high[i]
@@ -100,6 +97,12 @@ class PsarTrend(Feature):
             pl.Series(name="psar", values=psar),
             pl.Series(name="psar_dir", values=direction),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"af": 0.02, "af_step": 0.02, "af_max": 0.2},  
+        {"af": 0.01, "af_step": 0.01, "af_max": 0.1},   
+        {"af": 0.025, "af_step": 0.025, "af_max": 0.25}, 
+    ]
 
 
 @dataclass
@@ -131,7 +134,6 @@ class SupertrendTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # ATR
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -147,14 +149,11 @@ class SupertrendTrend(Feature):
         for i in range(self.period, n):
             atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
         
-        # HL2
         hl2 = (high + low) / 2
         
-        # Basic bands
         basic_upper = hl2 + self.multiplier * atr
         basic_lower = hl2 - self.multiplier * atr
         
-        # Final bands
         upper = np.full(n, np.nan)
         lower = np.full(n, np.nan)
         supertrend = np.full(n, np.nan)
@@ -164,19 +163,16 @@ class SupertrendTrend(Feature):
         lower[self.period - 1] = basic_lower[self.period - 1]
         
         for i in range(self.period, n):
-            # Upper band with trailing
             if basic_upper[i] < upper[i - 1] or close[i - 1] > upper[i - 1]:
                 upper[i] = basic_upper[i]
             else:
                 upper[i] = upper[i - 1]
             
-            # Lower band with trailing
             if basic_lower[i] > lower[i - 1] or close[i - 1] < lower[i - 1]:
                 lower[i] = basic_lower[i]
             else:
                 lower[i] = lower[i - 1]
             
-            # Direction
             if close[i] > upper[i - 1]:
                 direction[i] = 1
             elif close[i] < lower[i - 1]:
@@ -184,13 +180,18 @@ class SupertrendTrend(Feature):
             else:
                 direction[i] = direction[i - 1]
             
-            # Supertrend value
             supertrend[i] = lower[i] if direction[i] == 1 else upper[i]
         
         return df.with_columns([
             pl.Series(name=f"supertrend_{self.period}", values=supertrend),
             pl.Series(name=f"supertrend_dir_{self.period}", values=direction),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 10, "multiplier": 3.0},
+        {"period": 20, "multiplier": 2.5},
+        {"period": 30, "multiplier": 3.5},
+    ]
 
 
 @dataclass
@@ -222,7 +223,6 @@ class ChandelierTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # ATR (SMA version for Chandelier)
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -247,6 +247,12 @@ class ChandelierTrend(Feature):
             pl.Series(name=f"chandelier_long_{self.period}", values=chandelier_long),
             pl.Series(name=f"chandelier_short_{self.period}", values=chandelier_short),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 22, "multiplier": 3.0},
+        {"period": 30, "multiplier": 2.5},
+        {"period": 60, "multiplier": 3.0},
+    ]
 
 
 @dataclass
@@ -280,7 +286,6 @@ class HiloTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Compute MAs
         if self.ma_type == "ema":
             alpha_h = 2 / (self.high_period + 1)
             alpha_l = 2 / (self.low_period + 1)
@@ -293,7 +298,7 @@ class HiloTrend(Feature):
             for i in range(1, n):
                 high_ma[i] = alpha_h * high[i] + (1 - alpha_h) * high_ma[i - 1]
                 low_ma[i] = alpha_l * low[i] + (1 - alpha_l) * low_ma[i - 1]
-        else:  # SMA
+        else:  
             high_ma = np.full(n, np.nan)
             low_ma = np.full(n, np.nan)
             for i in range(self.high_period - 1, n):
@@ -301,7 +306,6 @@ class HiloTrend(Feature):
             for i in range(self.low_period - 1, n):
                 low_ma[i] = np.mean(low[i - self.low_period + 1:i + 1])
         
-        # HiLo logic
         hilo = np.full(n, np.nan)
         direction = np.zeros(n)
         
@@ -322,6 +326,12 @@ class HiloTrend(Feature):
             pl.Series(name="hilo", values=hilo),
             pl.Series(name="hilo_dir", values=direction),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"high_period": 13, "low_period": 21, "ma_type": "sma"},
+        {"high_period": 30, "low_period": 45, "ma_type": "sma"},
+        {"high_period": 20, "low_period": 30, "ma_type": "ema"},
+    ]
 
 
 @dataclass
@@ -341,9 +351,9 @@ class CkspTrend(Feature):
     Reference: Tushar Chande & Stanley Kroll, "The New Technical Trader"
     """
     
-    p: int = 10      # ATR period
-    x: float = 1.0   # ATR multiplier
-    q: int = 9       # smoothing period
+    p: int = 10     
+    x: float = 1.0  
+    q: int = 9      
     
     requires = ["high", "low", "close"]
     outputs = ["cksp_long", "cksp_short"]
@@ -354,7 +364,6 @@ class CkspTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # ATR using RMA (Wilder's smoothing)
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -370,7 +379,6 @@ class CkspTrend(Feature):
         for i in range(self.p, n):
             atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
         
-        # Initial stops
         long_stop_init = np.full(n, np.nan)
         short_stop_init = np.full(n, np.nan)
         
@@ -380,7 +388,6 @@ class CkspTrend(Feature):
             long_stop_init[i] = hh - self.x * atr[i]
             short_stop_init[i] = ll + self.x * atr[i]
         
-        # Final stops (smoothed)
         cksp_long = np.full(n, np.nan)
         cksp_short = np.full(n, np.nan)
         
@@ -393,3 +400,9 @@ class CkspTrend(Feature):
             pl.Series(name="cksp_long", values=cksp_long),
             pl.Series(name="cksp_short", values=cksp_short),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"p": 10, "x": 1.0, "q": 9},
+        {"p": 20, "x": 1.5, "q": 15},
+        {"p": 30, "x": 2.0, "q": 20},
+    ]

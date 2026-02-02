@@ -8,6 +8,7 @@ from scipy.stats import kurtosis as sp_kurtosis
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -33,6 +34,12 @@ class MedianStat(Feature):
               .rolling_median(window_size=self.period)
               .alias(f"{self.source_col}_median_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -64,6 +71,12 @@ class QuantileStat(Feature):
               .rolling_quantile(quantile=self.q, window_size=self.period)
               .alias(f"{self.source_col}_q{q_str}_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30, "q": 0.5},
+        {"source_col": "close", "period": 60, "q": 0.25},
+        {"source_col": "close", "period": 240, "q": 0.75},
+    ]
 
 
 @dataclass
@@ -98,6 +111,12 @@ class PctRankStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_pctrank_{self.period}", values=pctrank)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -128,7 +147,12 @@ class MinMaxStat(Feature):
             ((col - min_val) / (max_val - min_val))
             .alias(f"{self.source_col}_minmax_{self.period}")
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/skew")
@@ -157,6 +181,12 @@ class SkewStat(Feature):
               .rolling_skew(window_size=self.period)
               .alias(f"{self.source_col}_skew_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -193,7 +223,12 @@ class KurtosisStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_kurt_{self.period}", values=kurt)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/entropy")
@@ -237,6 +272,11 @@ class EntropyStat(Feature):
             pl.Series(name=f"{self.source_col}_entropy_{self.period}", values=entropy)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "base": 2.0},
+        {"source_col": "close", "period": 30, "base": 2.0},
+        {"source_col": "close", "period": 60, "base": 2.718281828},  # ≈ e для natural log
+    ]
 
 @dataclass
 @sf_component(name="stat/jarque_bera")
@@ -283,6 +323,11 @@ class JarqueBeraStat(Feature):
             pl.Series(name=f"{self.source_col}_jb_{self.period}", values=jb)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="stat/mode_distance")
@@ -321,7 +366,11 @@ class ModeDistanceStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_mode_dist_{self.period}", values=mode_dist)
         )
-
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30, "n_bins": 10},
+        {"source_col": "close", "period": 60, "n_bins": 10},
+        {"source_col": "close", "period": 120, "n_bins": 15},
+    ]
 
 @dataclass
 @sf_component(name="stat/above_mean_ratio")
@@ -355,3 +404,9 @@ class AboveMeanRatioStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_above_mean_{self.period}", values=ratio)
         )
+        
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]

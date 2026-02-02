@@ -3,7 +3,7 @@
 
 from signalflow.ta.stat.dispersion import (
     VarianceStat,
-    StdevStat,
+    StdStat,
     MadStat,
     ZscoreStat,
     CvStat,
@@ -48,7 +48,7 @@ from signalflow.ta.stat.realized import (
 __all__ = [
     # Dispersion
     "VarianceStat",
-    "StdevStat",
+    "StdStat",
     "MadStat",
     "ZscoreStat",
     "CvStat",
