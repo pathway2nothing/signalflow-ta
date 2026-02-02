@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -59,12 +60,10 @@ class IchimokuTrend(Feature):
         tenkan_sen = self._midprice(high, low, self.tenkan)
         kijun_sen = self._midprice(high, low, self.kijun)
         
-        # Span A: midpoint of tenkan and kijun, shifted forward
         span_a = (tenkan_sen + kijun_sen) / 2
         senkou_a = np.full(n, np.nan)
         senkou_a[self.kijun:] = span_a[:-self.kijun]
-        
-        # Span B: senkou period midprice, shifted forward
+    
         span_b = self._midprice(high, low, self.senkou)
         senkou_b = np.full(n, np.nan)
         senkou_b[self.kijun:] = span_b[:-self.kijun]
@@ -75,6 +74,11 @@ class IchimokuTrend(Feature):
             pl.Series(name="senkou_a", values=senkou_a),
             pl.Series(name="senkou_b", values=senkou_b),
         ])
+    test_params: ClassVar[list[dict]] = [
+        {"tenkan": 9, "kijun": 26, "senkou": 52},      
+        {"tenkan": 20, "kijun": 60, "senkou": 120},    
+        {"tenkan": 45, "kijun": 130, "senkou": 260},  
+    ]
 
 
 @dataclass
@@ -104,12 +108,10 @@ class DpoTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # SMA
         sma = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             sma[i] = np.mean(close[i - self.period + 1:i + 1])
         
-        # DPO: close - shifted SMA
         shift = int(self.period / 2) + 1
         dpo = np.full(n, np.nan)
         
@@ -119,6 +121,12 @@ class DpoTrend(Feature):
         return df.with_columns(
             pl.Series(name=f"dpo_{self.period}", values=dpo)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20},
+        {"period": 60},
+        {"period": 120},
+    ]
 
 
 @dataclass
@@ -158,7 +166,7 @@ class QstickTrend(Feature):
             qstick[self.period - 1] = np.mean(diff[:self.period])
             for i in range(self.period, n):
                 qstick[i] = alpha * diff[i] + (1 - alpha) * qstick[i - 1]
-        else:  # SMA
+        else: 
             for i in range(self.period - 1, n):
                 qstick[i] = np.mean(diff[i - self.period + 1:i + 1])
         
@@ -166,6 +174,11 @@ class QstickTrend(Feature):
             pl.Series(name=f"qstick_{self.period}", values=qstick)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"period": 10, "ma_type": "sma"},
+        {"period": 30, "ma_type": "sma"},
+        {"period": 60, "ma_type": "ema"},
+    ]
 
 @dataclass
 @sf_component(name="trend/ttm")
@@ -193,21 +206,23 @@ class TtmTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # HL2
-        hl2 = (high + low) / 2
-        
-        # Average HL2
+        hl2 = (high + low) / 2        
         avg_hl2 = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             avg_hl2[i] = np.mean(hl2[i - self.period + 1:i + 1])
         
-        # Trend: +1 if close > avg, -1 otherwise
         trend = np.where(close > avg_hl2, 1, -1).astype(float)
         trend[:self.period - 1] = np.nan
         
         return df.with_columns(
             pl.Series(name=f"ttm_trend_{self.period}", values=trend)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 6},
+        {"period": 15},
+        {"period": 30},
+    ]
 
 
 @dataclass
@@ -238,7 +253,6 @@ class AtrTrailingTrend(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # ATR
         tr = np.maximum(
             high - low,
             np.maximum(
@@ -254,7 +268,6 @@ class AtrTrailingTrend(Feature):
         for i in range(self.period, n):
             atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
         
-        # Trailing stops
         trail_long = np.full(n, np.nan)
         trail_short = np.full(n, np.nan)
         direction = np.zeros(n)
@@ -278,3 +291,9 @@ class AtrTrailingTrend(Feature):
             pl.Series(name=f"atr_trail_short_{self.period}", values=trail_short),
             pl.Series(name=f"atr_trail_dir_{self.period}", values=direction),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14, "multiplier": 3.0},
+        {"period": 30, "multiplier": 2.5},
+        {"period": 60, "multiplier": 3.0},
+    ]

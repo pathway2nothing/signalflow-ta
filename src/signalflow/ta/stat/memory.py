@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -51,14 +52,11 @@ class HurstStat(Feature):
         if std < 1e-10:
             return np.nan
         
-        # Cumulative deviation from mean
         y = np.cumsum(ts - mean)
-        r = np.max(y) - np.min(y)  # Range
+        r = np.max(y) - np.min(y) 
         
-        # Rescaled range
         rs = r / std
         
-        # Hurst = log(R/S) / log(n)
         if rs > 0:
             return np.log(rs) / np.log(n)
         return np.nan
@@ -75,6 +73,12 @@ class HurstStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_hurst_{self.period}", values=hurst)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 100},   
+        {"source_col": "close", "period": 200},   
+        {"source_col": "close", "period": 500},   
+    ]
 
 
 @dataclass
@@ -118,6 +122,11 @@ class AutocorrStat(Feature):
             pl.Series(name=f"{self.source_col}_acf{self.lag}_{self.period}", values=acf)
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 30, "lag": 1},
+        {"source_col": "close", "period": 60, "lag": 5},
+        {"source_col": "close", "period": 120, "lag": 10},
+    ]
 
 @dataclass
 @sf_component(name="stat/variance_ratio")
@@ -138,7 +147,7 @@ class VarianceRatioStat(Feature):
     
     source_col: str = "close"
     period: int = 50
-    k: int = 5  # horizon for comparison
+    k: int = 5  
     
     requires = ["{source_col}"]
     outputs = ["{source_col}_vr{k}_{period}"]
@@ -147,14 +156,12 @@ class VarianceRatioStat(Feature):
         values = df[self.source_col].to_numpy()
         n = len(values)
         
-        # Log returns
         log_ret = np.diff(np.log(values), prepend=np.nan)
         
         vr = np.full(n, np.nan)
         for i in range(self.period + self.k - 1, n):
             window_1 = log_ret[i - self.period + 1:i + 1]
             
-            # k-period returns
             log_ret_k = np.log(values[i - self.period + 1 + self.k:i + 1]) - \
                         np.log(values[i - self.period + 1:i + 1 - self.k])
             
@@ -167,3 +174,9 @@ class VarianceRatioStat(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_vr{self.k}_{self.period}", values=vr)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 50, "k": 5},
+        {"source_col": "close", "period": 100, "k": 10},
+        {"source_col": "close", "period": 200, "k": 20},
+    ]

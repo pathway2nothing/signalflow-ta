@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -46,34 +47,28 @@ class MacdMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Fast EMA
         alpha_fast = 2 / (self.fast + 1)
         ema_fast = np.full(n, np.nan)
         ema_fast[0] = close[0]
         for i in range(1, n):
             ema_fast[i] = alpha_fast * close[i] + (1 - alpha_fast) * ema_fast[i - 1]
         
-        # Slow EMA
         alpha_slow = 2 / (self.slow + 1)
         ema_slow = np.full(n, np.nan)
         ema_slow[0] = close[0]
         for i in range(1, n):
             ema_slow[i] = alpha_slow * close[i] + (1 - alpha_slow) * ema_slow[i - 1]
         
-        # MACD line
         macd = ema_fast - ema_slow
         
-        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         signal_line = np.full(n, np.nan)
         signal_line[self.slow - 1] = macd[self.slow - 1]
         for i in range(self.slow, n):
             signal_line[i] = alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
         
-        # Histogram
         histogram = macd - signal_line
         
-        # Set proper NaN start
         macd[:self.slow - 1] = np.nan
         
         return df.with_columns([
@@ -81,6 +76,12 @@ class MacdMom(Feature):
             pl.Series(name=f"macd_signal_{self.signal}", values=signal_line),
             pl.Series(name=f"macd_hist_{self.fast}_{self.slow}", values=histogram),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 12, "slow": 26, "signal": 9},    
+        {"fast": 24, "slow": 52, "signal": 18},   
+        {"fast": 48, "slow": 104, "signal": 36},  
+    ]
 
 
 @dataclass
@@ -112,7 +113,6 @@ class PpoMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # EMAs
         alpha_fast = 2 / (self.fast + 1)
         alpha_slow = 2 / (self.slow + 1)
         
@@ -125,10 +125,8 @@ class PpoMom(Feature):
             ema_fast[i] = alpha_fast * close[i] + (1 - alpha_fast) * ema_fast[i - 1]
             ema_slow[i] = alpha_slow * close[i] + (1 - alpha_slow) * ema_slow[i - 1]
         
-        # PPO
         ppo = 100 * (ema_fast - ema_slow) / (ema_slow + 1e-10)
         
-        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         signal_line = np.full(n, np.nan)
         signal_line[self.slow - 1] = ppo[self.slow - 1]
@@ -143,6 +141,12 @@ class PpoMom(Feature):
             pl.Series(name=f"ppo_signal_{self.signal}", values=signal_line),
             pl.Series(name=f"ppo_hist_{self.fast}_{self.slow}", values=histogram),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 12, "slow": 26, "signal": 9},
+        {"fast": 24, "slow": 52, "signal": 18},
+        {"fast": 48, "slow": 104, "signal": 36},
+    ]
 
 
 @dataclass
@@ -180,7 +184,6 @@ class TsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Price change
         pc = np.diff(close, prepend=close[0])
         pc[0] = 0
         abs_pc = np.abs(pc)
@@ -189,7 +192,6 @@ class TsiMom(Feature):
         alpha_fast = 2 / (self.fast + 1)
         alpha_sig = 2 / (self.signal + 1)
         
-        # Double smooth PC
         pc_ema1 = np.full(n, np.nan)
         pc_ema2 = np.full(n, np.nan)
         abs_pc_ema1 = np.full(n, np.nan)
@@ -209,10 +211,8 @@ class TsiMom(Feature):
             pc_ema2[i] = alpha_fast * pc_ema1[i] + (1 - alpha_fast) * pc_ema2[i - 1]
             abs_pc_ema2[i] = alpha_fast * abs_pc_ema1[i] + (1 - alpha_fast) * abs_pc_ema2[i - 1]
         
-        # TSI
         tsi = 100 * pc_ema2 / (abs_pc_ema2 + 1e-10)
         
-        # Signal
         tsi_signal = np.full(n, np.nan)
         tsi_signal[0] = tsi[0]
         for i in range(1, n):
@@ -222,6 +222,12 @@ class TsiMom(Feature):
             pl.Series(name=f"tsi_{self.fast}_{self.slow}", values=tsi),
             pl.Series(name=f"tsi_signal_{self.signal}", values=tsi_signal),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 13, "slow": 25, "signal": 13},  
+        {"fast": 26, "slow": 50, "signal": 26},  
+        {"fast": 52, "slow": 100, "signal": 52},  
+    ]
 
 
 @dataclass
@@ -262,7 +268,6 @@ class TrixMom(Feature):
         
         alpha = 2 / (self.period + 1)
         
-        # Triple EMA
         ema1 = np.full(n, np.nan)
         ema2 = np.full(n, np.nan)
         ema3 = np.full(n, np.nan)
@@ -276,17 +281,14 @@ class TrixMom(Feature):
             ema2[i] = alpha * ema1[i] + (1 - alpha) * ema2[i - 1]
             ema3[i] = alpha * ema2[i] + (1 - alpha) * ema3[i - 1]
         
-        # TRIX = percentage change of EMA3
         trix = np.full(n, np.nan)
         for i in range(1, n):
             if ema3[i - 1] != 0:
                 trix[i] = 100 * (ema3[i] - ema3[i - 1]) / ema3[i - 1]
         
-        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         trix_signal = np.full(n, np.nan)
         
-        # Find first valid trix
         start = 1
         trix_signal[start] = trix[start]
         for i in range(start + 1, n):
@@ -297,3 +299,9 @@ class TrixMom(Feature):
             pl.Series(name=f"trix_{self.period}", values=trix),
             pl.Series(name=f"trix_signal_{self.signal}", values=trix_signal),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 18, "signal": 9},    
+        {"period": 60, "signal": 30},   
+        {"period": 120, "signal": 60}, 
+    ]

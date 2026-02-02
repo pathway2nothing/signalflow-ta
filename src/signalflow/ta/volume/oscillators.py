@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -41,20 +42,12 @@ class MfiVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # Typical price
         tp = (high + low + close) / 3
-        
-        # Raw money flow
         rmf = tp * volume
-        
-        # Direction
         tp_diff = np.diff(tp, prepend=tp[0])
-        
-        # Positive and negative money flow
         pos_mf = np.where(tp_diff > 0, rmf, 0)
         neg_mf = np.where(tp_diff < 0, rmf, 0)
         
-        # Rolling sums
         mfi = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
@@ -68,6 +61,12 @@ class MfiVolume(Feature):
         return df.with_columns(
             pl.Series(name=f"mfi_{self.period}", values=mfi)
         )
+
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 30},
+        {"period": 60},
+    ]
 
 
 @dataclass
@@ -102,7 +101,6 @@ class CmfVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # Close Location Value
         hl_range = high - low
         clv = np.where(
             hl_range > 0,
@@ -110,10 +108,7 @@ class CmfVolume(Feature):
             0
         )
         
-        # Money Flow Volume
-        mfv = clv * volume
-        
-        # CMF = rolling sum of MFV / rolling sum of volume
+        mfv = clv * volume  
         cmf = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
@@ -126,6 +121,12 @@ class CmfVolume(Feature):
         return df.with_columns(
             pl.Series(name=f"cmf_{self.period}", values=cmf)
         )
+ 
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20},
+        {"period": 30},
+        {"period": 60},
+    ]
 
 
 @dataclass
@@ -158,11 +159,9 @@ class EfiVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # Force = price change * volume
         force = np.diff(close, prepend=close[0]) * volume
         force[0] = 0
         
-        # EMA of force
         alpha = 2 / (self.period + 1)
         efi = np.full(n, np.nan)
         efi[0] = force[0]
@@ -173,6 +172,11 @@ class EfiVolume(Feature):
         return df.with_columns(
             pl.Series(name=f"efi_{self.period}", values=efi)
         )
+    test_params: ClassVar[list[dict]] = [
+        {"period": 13},
+        {"period": 30},
+        {"period": 60},
+    ]
 
 
 @dataclass
@@ -208,23 +212,18 @@ class EomVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(high)
         
-        # HL2
         hl2 = (high + low) / 2
         prev_hl2 = np.roll(hl2, 1)
         prev_hl2[0] = hl2[0]
         
-        # Distance moved
         distance = hl2 - prev_hl2
         
-        # Box ratio
         hl_range = high - low
         box_ratio = (volume / self.divisor) / (hl_range + 1e-10)
         
-        # EMV
         emv = distance / (box_ratio + 1e-10)
         emv[0] = 0
         
-        # SMA
         eom = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             eom[i] = np.mean(emv[i - self.period + 1:i + 1])
@@ -232,6 +231,12 @@ class EomVolume(Feature):
         return df.with_columns(
             pl.Series(name=f"eom_{self.period}", values=eom)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14, "divisor": 100_000_000},
+        {"period": 30, "divisor": 100_000_000},
+        {"period": 60, "divisor": 1_000_000},
+    ]
 
 
 @dataclass
@@ -275,18 +280,14 @@ class KvoVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # HLC3
         hlc3 = (high + low + close) / 3
         
-        # Trend direction
         hlc3_diff = np.diff(hlc3, prepend=hlc3[0])
         trend = np.sign(hlc3_diff)
         trend[0] = 1
         
-        # Signed volume (simplified Klinger)
         sv = volume * trend
         
-        # EMA fast and slow
         alpha_fast = 2 / (self.fast + 1)
         alpha_slow = 2 / (self.slow + 1)
         alpha_sig = 2 / (self.signal + 1)
@@ -301,10 +302,8 @@ class KvoVolume(Feature):
             ema_fast[i] = alpha_fast * sv[i] + (1 - alpha_fast) * ema_fast[i - 1]
             ema_slow[i] = alpha_slow * sv[i] + (1 - alpha_slow) * ema_slow[i - 1]
         
-        # KVO
         kvo = ema_fast - ema_slow
         
-        # Signal line
         kvo_signal = np.full(n, np.nan)
         kvo_signal[0] = kvo[0]
         
@@ -316,6 +315,12 @@ class KvoVolume(Feature):
             pl.Series(name=f"kvo_{self.fast}_{self.slow}", values=kvo),
             pl.Series(name=f"kvo_signal_{self.signal}", values=kvo_signal),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"fast": 34, "slow": 55, "signal": 13}, 
+        {"fast": 20, "slow": 40, "signal": 10},
+        {"fast": 50, "slow": 80, "signal": 20},
+    ]
 
 
 @dataclass
@@ -347,10 +352,8 @@ class VwapVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         
-        # Typical price
         tp = (high + low + close) / 3
         
-        # Cumulative VWAP
         cum_tp_vol = np.cumsum(tp * volume)
         cum_vol = np.cumsum(volume)
         
@@ -359,6 +362,9 @@ class VwapVolume(Feature):
         return df.with_columns(
             pl.Series(name="vwap", values=vwap)
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]  
+
 
 
 @dataclass
@@ -392,15 +398,12 @@ class VwapBandsVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        # Typical price
         tp = (high + low + close) / 3
         
-        # Cumulative VWAP
         cum_tp_vol = np.cumsum(tp * volume)
         cum_vol = np.cumsum(volume)
         vwap = cum_tp_vol / (cum_vol + 1e-10)
         
-        # Rolling standard deviation of typical price
         upper = np.full(n, np.nan)
         lower = np.full(n, np.nan)
         
@@ -415,3 +418,9 @@ class VwapBandsVolume(Feature):
             pl.Series(name=f"vwap_upper_{self.period}", values=upper),
             pl.Series(name=f"vwap_lower_{self.period}", values=lower),
         ])
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 20, "std_dev": 2.0},
+        {"period": 30, "std_dev": 2.0},
+        {"period": 60, "std_dev": 2.5},
+    ]

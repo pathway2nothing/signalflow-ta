@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -25,7 +26,7 @@ class RealizedVolStat(Feature):
     
     period: int = 30
     annualize: bool = True
-    trading_periods: int = 252  # daily
+    trading_periods: int = 252 
     
     requires = ["close"]
     outputs = ["realized_vol_{period}"]
@@ -46,6 +47,12 @@ class RealizedVolStat(Feature):
         return df.with_columns(
             pl.Series(name=f"realized_vol_{self.period}", values=rv)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 30, "annualize": True, "trading_periods": 252},
+        {"period": 60, "annualize": True, "trading_periods": 252},
+        {"period": 120, "annualize": False, "trading_periods": 252},
+    ]
 
 
 @dataclass
@@ -86,6 +93,12 @@ class ParkinsonVolStat(Feature):
         return df.with_columns(
             pl.Series(name=f"parkinson_vol_{self.period}", values=pv)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 30, "annualize": True, "trading_periods": 252},
+        {"period": 60, "annualize": True, "trading_periods": 252},
+        {"period": 120, "annualize": True, "trading_periods": 252},
+    ]
 
 
 @dataclass
@@ -132,6 +145,12 @@ class GarmanKlassVolStat(Feature):
         return df.with_columns(
             pl.Series(name=f"gk_vol_{self.period}", values=gk)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 30, "annualize": True, "trading_periods": 252},
+        {"period": 60, "annualize": True, "trading_periods": 252},
+        {"period": 120, "annualize": True, "trading_periods": 252},
+    ]
 
 
 @dataclass
@@ -176,6 +195,12 @@ class RogersSatchellVolStat(Feature):
         return df.with_columns(
             pl.Series(name=f"rs_vol_{self.period}", values=rs)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 30, "annualize": True, "trading_periods": 252},
+        {"period": 60, "annualize": True, "trading_periods": 252},
+        {"period": 120, "annualize": True, "trading_periods": 252},
+    ]
 
 
 @dataclass
@@ -205,14 +230,11 @@ class YangZhangVolStat(Feature):
         c = df["close"].to_numpy()
         n = len(c)
         
-        # Overnight return: log(Open / prev Close)
         log_oc = np.log(o[1:] / c[:-1])
         log_oc = np.insert(log_oc, 0, np.nan)
         
-        # Open-to-close return
         log_co = np.log(c / o)
         
-        # Rogers-Satchell component
         rs_term = np.log(h / c) * np.log(h / o) + np.log(l / c) * np.log(l / o)
         
         factor_annual = np.sqrt(self.trading_periods) if self.annualize else 1.0
@@ -234,3 +256,9 @@ class YangZhangVolStat(Feature):
         return df.with_columns(
             pl.Series(name=f"yz_vol_{self.period}", values=yz)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 30, "annualize": True, "trading_periods": 252},
+        {"period": 60, "annualize": True, "trading_periods": 252},
+        {"period": 120, "annualize": True, "trading_periods": 252},
+    ]

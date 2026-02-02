@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -35,6 +36,11 @@ class SmaSmooth(Feature):
               .alias(f"{self.source_col}_sma_{self.period}")
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="smooth/ema")
@@ -61,6 +67,12 @@ class EmaSmooth(Feature):
               .ewm_mean(span=self.period, adjust=False)
               .alias(f"{self.source_col}_ema_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -97,6 +109,12 @@ class WmaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_wma_{self.period}", values=wma)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 
 @dataclass
@@ -126,7 +144,12 @@ class RmaSmooth(Feature):
               .ewm_mean(alpha=alpha, adjust=False, min_periods=self.period)
               .alias(f"{self.source_col}_rma_{self.period}")
         )
-
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 14},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="smooth/dema")
@@ -154,6 +177,12 @@ class DemaSmooth(Feature):
         return df.with_columns(
             (2 * ema1 - ema2).alias(f"{self.source_col}_dema_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
 
 
 @dataclass
@@ -183,6 +212,12 @@ class TemaSmooth(Feature):
         return df.with_columns(
             (3 * ema1 - 3 * ema2 + ema3).alias(f"{self.source_col}_tema_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
 
 
 @dataclass
@@ -231,6 +266,12 @@ class HmaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_hma_{self.period}", values=hma)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 144},  
+    ]
 
 
 @dataclass
@@ -262,6 +303,12 @@ class TrimaSmooth(Feature):
         return df.with_columns(
             trima.alias(f"{self.source_col}_trima_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 120},
+    ]
 
 
 @dataclass
@@ -303,6 +350,12 @@ class SwmaSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_swma_{self.period}", values=swma)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 4},   
+        {"source_col": "close", "period": 10},
+        {"source_col": "close", "period": 20},
+    ]
 
 
 @dataclass
@@ -359,3 +412,9 @@ class SsfSmooth(Feature):
         return df.with_columns(
             pl.Series(name=f"{self.source_col}_ssf_{self.period}", values=ssf)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "poles": 2},
+        {"source_col": "close", "period": 30, "poles": 2},
+        {"source_col": "close", "period": 60, "poles": 3},
+    ]

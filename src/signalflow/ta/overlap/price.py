@@ -6,6 +6,7 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -25,6 +26,8 @@ class Hl2Price(Feature):
         return df.with_columns(
             ((pl.col("high") + pl.col("low")) / 2).alias("hl2")
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 
 @dataclass
@@ -44,6 +47,8 @@ class Hlc3Price(Feature):
         return df.with_columns(
             ((pl.col("high") + pl.col("low") + pl.col("close")) / 3).alias("hlc3")
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 
 @dataclass
@@ -63,6 +68,8 @@ class Ohlc4Price(Feature):
         return df.with_columns(
             ((pl.col("open") + pl.col("high") + pl.col("low") + pl.col("close")) / 4).alias("ohlc4")
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 
 @dataclass
@@ -82,6 +89,8 @@ class WcpPrice(Feature):
         return df.with_columns(
             ((pl.col("high") + pl.col("low") + 2 * pl.col("close")) / 4).alias("wcp")
         )
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 
 @dataclass
@@ -109,6 +118,12 @@ class TypicalPrice(Feature):
               self.weight_low * pl.col("low") + 
               self.weight_close * pl.col("close")) / total_weight).alias("typical")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"weight_high": 1.0, "weight_low": 1.0, "weight_close": 1.0},  
+        {"weight_high": 1.0, "weight_low": 1.0, "weight_close": 2.0},  
+        {"weight_high": 2.0, "weight_low": 2.0, "weight_close": 1.0},  
+    ]
 
 
 @dataclass
@@ -136,6 +151,11 @@ class MidpointPrice(Feature):
             ((highest + lowest) / 2).alias(f"{self.source_col}_midpoint_{self.period}")
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 14},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
 
 @dataclass
 @sf_component(name="price/midprice")
@@ -160,6 +180,11 @@ class MidpricePrice(Feature):
             ((hh + ll) / 2).alias(f"midprice_{self.period}")
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14},
+        {"period": 60},
+        {"period": 240},
+    ]
 
 @dataclass
 @sf_component(name="price/log_price")
@@ -182,6 +207,9 @@ class LogPrice(Feature):
             pl.col(self.source_col).log().alias(f"{self.source_col}_log")
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close"},
+    ]
 
 @dataclass  
 @sf_component(name="price/pct_from_high")
@@ -207,6 +235,12 @@ class PctFromHighPrice(Feature):
             ((col - highest) / highest * 100).alias(f"{self.source_col}_pct_from_high_{self.period}")
         )
 
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]
+
 
 @dataclass
 @sf_component(name="price/pct_from_low")
@@ -231,3 +265,9 @@ class PctFromLowPrice(Feature):
         return df.with_columns(
             ((col - lowest) / lowest * 100).alias(f"{self.source_col}_pct_from_low_{self.period}")
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 20},
+        {"source_col": "close", "period": 60},
+        {"source_col": "close", "period": 240},
+    ]

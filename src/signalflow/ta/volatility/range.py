@@ -7,6 +7,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from typing import ClassVar
 
 
 @dataclass
@@ -47,7 +48,8 @@ class TrueRangeVol(Feature):
         return df.with_columns(
             pl.Series(name="true_range", values=tr)
         )
-
+    
+    test_params: ClassVar[list[dict]] = [{}]
 
 @dataclass
 @sf_component(name="volatility/atr")
@@ -79,7 +81,6 @@ class AtrVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # True Range
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
         
@@ -92,7 +93,6 @@ class AtrVol(Feature):
         )
         tr[0] = high[0] - low[0]
         
-        # Average TR
         atr = np.full(n, np.nan)
         
         if self.ma_type == "sma":
@@ -103,7 +103,7 @@ class AtrVol(Feature):
             atr[self.period - 1] = np.mean(tr[:self.period])
             for i in range(self.period, n):
                 atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
-        else:  # RMA (Wilder's smoothing) - default
+        else: 
             alpha = 1 / self.period
             atr[self.period - 1] = np.mean(tr[:self.period])
             for i in range(self.period, n):
@@ -112,6 +112,12 @@ class AtrVol(Feature):
         return df.with_columns(
             pl.Series(name=f"atr_{self.period}", values=atr)
         )
+    
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14, "ma_type": "rma"},
+        {"period": 30, "ma_type": "rma"},
+        {"period": 60, "ma_type": "ema"},
+    ]
 
 
 @dataclass
@@ -142,7 +148,6 @@ class NatrVol(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # True Range
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
         
@@ -155,14 +160,13 @@ class NatrVol(Feature):
         )
         tr[0] = high[0] - low[0]
         
-        # ATR
         atr = np.full(n, np.nan)
         
         if self.ma_type == "rma":
             alpha = 1 / self.period
         elif self.ma_type == "ema":
             alpha = 2 / (self.period + 1)
-        else:  # sma
+        else: 
             alpha = None
         
         if alpha is not None:
@@ -173,9 +177,14 @@ class NatrVol(Feature):
             for i in range(self.period - 1, n):
                 atr[i] = np.mean(tr[i - self.period + 1:i + 1])
         
-        # Normalize
         natr = 100 * atr / close
         
         return df.with_columns(
             pl.Series(name=f"natr_{self.period}", values=natr)
         )
+        
+    test_params: ClassVar[list[dict]] = [
+        {"period": 14, "ma_type": "rma"},
+        {"period": 30, "ma_type": "rma"},
+        {"period": 60, "ma_type": "ema"},
+    ]
