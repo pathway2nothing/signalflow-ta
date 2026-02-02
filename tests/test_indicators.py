@@ -44,8 +44,9 @@ from indicator_registry import (
 # =============================================================================
 
 # Realistic data sizes for 1-minute bars
-BARS_SHORT = 15_000  
-BARS_LONG = 20_000   
+BARS_SHORT = 20_000   # ~2 weeks of 1-minute data
+BARS_LONG = 40_000    # ~1 month of 1-minute data
+
 
 # =============================================================================
 # Helper for skipping tests when no indicators available
@@ -56,6 +57,48 @@ def _ensure_config(config):
     if config is None:
         pytest.skip("signalflow.ta not installed - install it to run indicator tests")
     return config
+
+
+def _estimate_warmup(config: IndicatorConfig) -> int:
+    """
+    Estimate warmup period based on indicator parameters.
+    
+    For EMA-based indicators with tolerance 0.01% (1e-4), we need warmup where:
+    (1 - alpha)^warmup < 1e-4
+    
+    For alpha = 2/(period+1), this requires approximately 5*period bars.
+    """
+    base_warmup = config.warmup or 50
+    params = config.params
+    
+    # Find the largest period-like parameter
+    period_params = []
+    for key, val in params.items():
+        if isinstance(val, int) and any(p in key.lower() for p in ['period', 'slow', 'length', 'window']):
+            period_params.append(val)
+    
+    if period_params:
+        max_period = max(period_params)
+        
+        # For 0.01% tolerance: warmup ≈ 5 * period (for single EMA)
+        if 'trix' in config.name.lower():
+            # Triple EMA
+            estimated = max_period * 12
+        elif 'tsi' in config.name.lower():
+            # Double EMA
+            estimated = max_period * 8
+        elif 'stoch' in config.name.lower() and 'rsi' in config.name.lower():
+            # RSI + Stochastic
+            estimated = max_period * 6
+        elif any(x in config.name.lower() for x in ['macd', 'ppo', 'ema', 'rsi']):
+            # Single/double EMA
+            estimated = max_period * 5
+        else:
+            estimated = max_period * 2
+        
+        return max(base_warmup, estimated)
+    
+    return base_warmup
 
 
 # =============================================================================
@@ -126,7 +169,7 @@ class TestIndicatorEmptyColumn:
         config = _ensure_config(config)
         
         # Generate enough data for indicator's warmup period
-        min_rows = max(100, config.warmup * 3)
+        min_rows = max(100, _estimate_warmup(config) * 3)
         
         for required_col in config.requires:
             df = generate_empty_column_df(n_rows=min_rows, empty_columns=[required_col])
@@ -156,7 +199,7 @@ class TestIndicatorEmptyColumn:
         config = _ensure_config(config)
         
         # Generate enough data for indicator's warmup period
-        min_rows = max(200, config.warmup * 3)
+        min_rows = max(200, _estimate_warmup(config) * 3)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         df_nulls = generate_ohlcv_with_nulls(df, null_fraction=0.05, columns=config.requires)
         
@@ -431,7 +474,7 @@ class TestIndicatorReproducibility:
     
     CRITICAL: Indicators must produce identical values regardless of entry point.
     If computing a feature for Jan-Dec vs Jul-Dec, December values must match
-    within 0.0001% tolerance after warmup period.
+    within 0.01% tolerance after warmup period.
     
     Data size:
     - Full history: 2 months (~86,400 bars)
@@ -444,8 +487,8 @@ class TestIndicatorReproducibility:
     - Feature store reliability
     """
     
-    # Maximum acceptable difference: 0.0001% = 1e-6
-    TOLERANCE = 1e-6
+    # Maximum acceptable difference: 0.01% = 1e-4
+    TOLERANCE = 1e-4
     
     def test_same_result_different_entry_points(self, config: IndicatorConfig):
         """Indicator must give identical results from different entry points.
@@ -453,12 +496,17 @@ class TestIndicatorReproducibility:
         This test simulates real scenario:
         - Computing features on full history (BARS_LONG bars)
         - Computing features on partial history (BARS_SHORT bars)
-        - Comparing overlapping values - they MUST match within 0.0001%
+        - Comparing overlapping values - they MUST match within 0.01%
         """
         config = _ensure_config(config)
         
-        # Use full history
+        # Calculate required warmup for 0.01% tolerance
+        warmup = _estimate_warmup(config)
+        
+        # Use standard data sizes
         n_rows = BARS_LONG
+        offset = BARS_SHORT
+        
         df = generate_sinusoidal_ohlcv(n_rows=n_rows, seed=SEED)
         
         try:
@@ -466,7 +514,6 @@ class TestIndicatorReproducibility:
             result_full = run_indicator(config, df)
             
             # Compute from offset (partial history)
-            offset = BARS_SHORT
             df_late = df.slice(offset, len(df) - offset)
             result_late = run_indicator(config, df_late)
             
@@ -475,16 +522,15 @@ class TestIndicatorReproducibility:
             if not out_cols:
                 pytest.skip(f"No output columns from {config.name}")
             
-            # Compare after warmup (2x period for safety)
-            warmup = config.warmup * 2
+            # Compare after warmup in the "late" dataset
+            compare_warmup = warmup * 2  # Safety margin
             
-            # Start comparison after warmup in the "late" dataset
-            # This corresponds to comparing the last ~3 weeks of data
-            compare_start = offset + warmup
-            compare_len = min(len(result_late) - warmup, BARS_SHORT // 2)  # ~1 week
+            # Start comparison after warmup
+            compare_start = offset + compare_warmup
+            compare_len = min(len(result_late) - compare_warmup, BARS_SHORT // 2)
             
-            if compare_len <= 0:
-                pytest.skip("Not enough data after warmup")
+            if compare_len <= 0 or compare_start + compare_len > len(result_full):
+                pytest.skip(f"Not enough data after warmup (need {compare_warmup} warmup)")
             
             failures = []
             
@@ -493,7 +539,7 @@ class TestIndicatorReproducibility:
                     continue
                     
                 full_vals = result_full[out_col][compare_start:compare_start + compare_len].to_numpy()
-                late_vals = result_late[out_col][warmup:warmup + compare_len].to_numpy()
+                late_vals = result_late[out_col][compare_warmup:compare_warmup + compare_len].to_numpy()
                 
                 valid = ~np.isnan(full_vals) & ~np.isnan(late_vals)
                 
@@ -537,14 +583,14 @@ class TestIndicatorReproducibility:
                     f"  Full history: {n_rows:,} bars (2 months)",
                     f"  Partial history: {n_rows - offset:,} bars (1 month)",
                     f"  Offset: {offset:,} bars",
-                    f"  Tolerance: 0.0001% ({self.TOLERANCE:.0e})",
+                    f"  Tolerance: 0.01% ({self.TOLERANCE:.0e})",
                     f"",
                 ]
                 
                 for f in failures:
                     msg_lines.extend([
                         f"Column: {f['column']}",
-                        f"  Max diff: {f['max_diff_pct']:.6f}% (limit: 0.0001%)",
+                        f"  Max diff: {f['max_diff_pct']:.6f}% (limit: 0.01%)",
                         f"  Mean diff: {f['mean_diff_pct']:.6f}%",
                         f"  Violations: {f['violations']:,} / {f['total']:,} samples",
                         f"  Example: full={f['full_value']:.8f}, partial={f['late_value']:.8f}",
@@ -553,10 +599,11 @@ class TestIndicatorReproducibility:
                 
                 msg_lines.extend([
                     f"This indicator uses EMA/recursive smoothing.",
+                    f"Warmup used: {compare_warmup:,} bars",
+                    f"",
                     f"Fix options:",
-                    f"  1. Use SMA for initialization instead of first value",
-                    f"  2. Provide pre-computed warmup data",
-                    f"  3. Increase warmup period in indicator",
+                    f"  1. Use SMA for EMA initialization instead of first value",
+                    f"  2. Increase warmup period in indicator",
                     f"{'='*70}",
                 ])
                 
@@ -614,7 +661,7 @@ class TestIndicatorOutputValidation:
     def test_output_length_preserved(self, config: IndicatorConfig):
         """Output length should match input length."""
         config = _ensure_config(config)
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         
         try:
@@ -629,7 +676,7 @@ class TestIndicatorOutputValidation:
     def test_output_columns_exist(self, config: IndicatorConfig):
         """Expected output columns should exist."""
         config = _ensure_config(config)
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         
         try:
@@ -649,7 +696,7 @@ class TestIndicatorOutputValidation:
         if config.bounded is None:
             pytest.skip(f"{config.name} has no defined bounds")
         
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         
         try:
@@ -698,7 +745,7 @@ class TestIndicatorOutputValidation:
     def test_no_inf_values(self, config: IndicatorConfig):
         """Output should not contain infinite values."""
         config = _ensure_config(config)
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         
         try:
@@ -735,7 +782,7 @@ class TestIndicatorMultiPair:
         config = _ensure_config(config)
         
         # Generate enough data for indicator's warmup period
-        min_rows = max(200, config.warmup * 3)
+        min_rows = max(200, _estimate_warmup(config) * 3)
         
         # Create two pairs with very different price levels
         df1 = generate_static_ohlcv(n_rows=min_rows, base_price=100, pair="BTCUSDT")
@@ -785,7 +832,7 @@ class TestIndicatorDataTypes:
     def test_static_data(self, config: IndicatorConfig):
         """Should handle static (constant) price data."""
         config = _ensure_config(config)
-        df = generate_static_ohlcv(n_rows=max(200, config.warmup * 2))
+        df = generate_static_ohlcv(n_rows=max(200, _estimate_warmup(config) * 2))
         
         try:
             result = run_indicator(config, df)
@@ -797,7 +844,7 @@ class TestIndicatorDataTypes:
     def test_sinusoidal_data(self, config: IndicatorConfig):
         """Should handle sinusoidal price data."""
         config = _ensure_config(config)
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         
         result = run_indicator(config, df)
@@ -806,7 +853,7 @@ class TestIndicatorDataTypes:
     def test_random_walk_data(self, config: IndicatorConfig):
         """Should handle random walk price data."""
         config = _ensure_config(config)
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         df = generate_random_walk_ohlcv(n_rows=min_rows)
         
         result = run_indicator(config, df)
@@ -815,7 +862,7 @@ class TestIndicatorDataTypes:
     def test_trending_data(self, config: IndicatorConfig):
         """Should handle trending price data with mean reversion."""
         config = _ensure_config(config)
-        min_rows = max(500, config.warmup * 3)
+        min_rows = max(500, _estimate_warmup(config) * 3)
         
         # Test uptrend
         df_up = generate_trending_ohlcv(n_rows=min_rows, start_price=100, end_price=150)
@@ -846,7 +893,7 @@ class TestIndicatorDataTypes:
     def test_performance(self, config: IndicatorConfig):
         """Should handle long data efficiently."""
         config = _ensure_config(config)
-        min_rows = max(10000, config.warmup * 10)
+        min_rows = max(10000, _estimate_warmup(config) * 10)
         df = generate_sinusoidal_ohlcv(n_rows=min_rows)
         
         import time

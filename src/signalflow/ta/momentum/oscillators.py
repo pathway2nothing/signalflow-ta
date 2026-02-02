@@ -1,13 +1,29 @@
-"""Stochastic and other momentum oscillators."""
+"""Stochastic and other momentum oscillators with reproducible initialization."""
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
+
+
+def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
+    """RMA with SMA initialization for reproducibility."""
+    n = len(values)
+    alpha = 1 / period
+    rma = np.full(n, np.nan)
+    
+    if n < period:
+        return rma
+    
+    rma[period - 1] = np.mean(values[:period])
+    
+    for i in range(period, n):
+        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
+    
+    return rma
 
 
 @dataclass
@@ -15,22 +31,12 @@ from typing import ClassVar
 class StochMom(Feature):
     """Stochastic Oscillator.
     
-    Compares close to high-low range over period.
+    Uses pure lookback (rolling min/max), always reproducible.
     
     %K = 100 * (close - lowest_low) / (highest_high - lowest_low)
     %D = SMA(%K, d_period)
     
-    Outputs:
-    - stoch_k: fast stochastic (smoothed)
-    - stoch_d: slow stochastic (signal line)
-    
-    Interpretation:
-    - > 80: overbought
-    - < 20: oversold
-    - %K crossing %D: signal
-    
     Reference: George Lane
-    https://www.investopedia.com/terms/s/stochasticoscillator.asp
     """
     
     k_period: int = 14
@@ -46,6 +52,7 @@ class StochMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
+        # Raw %K
         raw_k = np.full(n, np.nan)
         
         for i in range(self.k_period - 1, n):
@@ -54,14 +61,28 @@ class StochMom(Feature):
             
             if hh != ll:
                 raw_k[i] = 100 * (close[i] - ll) / (hh - ll)
+            else:
+                raw_k[i] = 50.0  # Neutral when no range
         
+        # Smoothed %K (SMA)
         stoch_k = np.full(n, np.nan)
-        for i in range(self.k_period + self.smooth_k - 2, n):
-            stoch_k[i] = np.nanmean(raw_k[i - self.smooth_k + 1:i + 1])
+        start_k = self.k_period + self.smooth_k - 2
         
+        for i in range(start_k, n):
+            window = raw_k[i - self.smooth_k + 1:i + 1]
+            valid = window[~np.isnan(window)]
+            if len(valid) > 0:
+                stoch_k[i] = np.mean(valid)
+        
+        # %D (SMA of %K)
         stoch_d = np.full(n, np.nan)
-        for i in range(self.k_period + self.smooth_k + self.d_period - 3, n):
-            stoch_d[i] = np.nanmean(stoch_k[i - self.d_period + 1:i + 1])
+        start_d = start_k + self.d_period - 1
+        
+        for i in range(start_d, n):
+            window = stoch_k[i - self.d_period + 1:i + 1]
+            valid = window[~np.isnan(window)]
+            if len(valid) > 0:
+                stoch_d[i] = np.mean(valid)
         
         return df.with_columns([
             pl.Series(name=f"stoch_k_{self.k_period}", values=stoch_k),
@@ -78,19 +99,13 @@ class StochMom(Feature):
 @dataclass
 @sf_component(name="momentum/stochrsi")
 class StochRsiMom(Feature):
-    """Stochastic RSI.
+    """Stochastic RSI with reproducible initialization.
     
-    Stochastic applied to RSI instead of price.
+    Stochastic applied to RSI. RSI uses RMA with SMA init for reproducibility.
     
     StochRSI = (RSI - lowest_RSI) / (highest_RSI - lowest_RSI)
     
-    More sensitive than standard RSI:
-    - Reaches extremes more frequently
-    - Better for ranging markets
-    - Use with trend filter
-    
     Reference: Tushar Chande & Stanley Kroll
-    https://www.investopedia.com/terms/s/stochrsi.asp
     """
     
     rsi_period: int = 14
@@ -105,44 +120,54 @@ class StochRsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
+        # Calculate RSI with reproducible initialization
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
         
         gains = np.where(diff > 0, diff, 0)
         losses = np.where(diff < 0, -diff, 0)
         
-        alpha = 1 / self.rsi_period
-        avg_gain = np.full(n, np.nan)
-        avg_loss = np.full(n, np.nan)
-        
-        avg_gain[self.rsi_period] = np.mean(gains[1:self.rsi_period + 1])
-        avg_loss[self.rsi_period] = np.mean(losses[1:self.rsi_period + 1])
-        
-        for i in range(self.rsi_period + 1, n):
-            avg_gain[i] = alpha * gains[i] + (1 - alpha) * avg_gain[i - 1]
-            avg_loss[i] = alpha * losses[i] + (1 - alpha) * avg_loss[i - 1]
+        avg_gain = _rma_sma_init(gains, self.rsi_period)
+        avg_loss = _rma_sma_init(losses, self.rsi_period)
         
         rsi = 100 - (100 / (1 + avg_gain / (avg_loss + 1e-10)))
         
+        # Stochastic of RSI (pure lookback - reproducible)
         raw_stoch = np.full(n, np.nan)
-        start = self.rsi_period + self.stoch_period - 1
+        start = self.rsi_period + self.stoch_period - 2
         
         for i in range(start, n):
             rsi_window = rsi[i - self.stoch_period + 1:i + 1]
-            rsi_min = np.nanmin(rsi_window)
-            rsi_max = np.nanmax(rsi_window)
+            valid_rsi = rsi_window[~np.isnan(rsi_window)]
             
-            if rsi_max != rsi_min:
-                raw_stoch[i] = 100 * (rsi[i] - rsi_min) / (rsi_max - rsi_min)
+            if len(valid_rsi) >= 2:
+                rsi_min = np.min(valid_rsi)
+                rsi_max = np.max(valid_rsi)
+                
+                if rsi_max != rsi_min:
+                    raw_stoch[i] = 100 * (rsi[i] - rsi_min) / (rsi_max - rsi_min)
+                else:
+                    raw_stoch[i] = 50.0
         
+        # Smoothed %K (SMA)
         stoch_k = np.full(n, np.nan)
+        start_k = start + self.k_period - 1
+        
+        for i in range(start_k, n):
+            window = raw_stoch[i - self.k_period + 1:i + 1]
+            valid = window[~np.isnan(window)]
+            if len(valid) > 0:
+                stoch_k[i] = np.mean(valid)
+        
+        # %D (SMA of %K)
         stoch_d = np.full(n, np.nan)
+        start_d = start_k + self.d_period - 1
         
-        for i in range(start + self.k_period - 1, n):
-            stoch_k[i] = np.nanmean(raw_stoch[i - self.k_period + 1:i + 1])
-        
-        for i in range(start + self.k_period + self.d_period - 2, n):
-            stoch_d[i] = np.nanmean(stoch_k[i - self.d_period + 1:i + 1])
+        for i in range(start_d, n):
+            window = stoch_k[i - self.d_period + 1:i + 1]
+            valid = window[~np.isnan(window)]
+            if len(valid) > 0:
+                stoch_d[i] = np.mean(valid)
         
         return df.with_columns([
             pl.Series(name=f"stochrsi_k_{self.rsi_period}", values=stoch_k),
@@ -161,16 +186,11 @@ class StochRsiMom(Feature):
 class WillrMom(Feature):
     """Williams %R.
     
-    Similar to Stochastic but inverted and uses close vs high.
+    Pure lookback - always reproducible.
     
     %R = -100 * (highest_high - close) / (highest_high - lowest_low)
     
-    Bounded -100 to 0:
-    - > -20: overbought
-    - < -80: oversold
-    
     Reference: Larry Williams
-    https://www.investopedia.com/terms/w/williamsr.asp
     """
     
     period: int = 14
@@ -192,6 +212,8 @@ class WillrMom(Feature):
             
             if hh != ll:
                 willr[i] = -100 * (hh - close[i]) / (hh - ll)
+            else:
+                willr[i] = -50.0
         
         return df.with_columns(
             pl.Series(name=f"willr_{self.period}", values=willr)
@@ -209,18 +231,12 @@ class WillrMom(Feature):
 class CciMom(Feature):
     """Commodity Channel Index (CCI).
     
-    Measures deviation from statistical mean.
+    Uses SMA and MAD - always reproducible.
     
     TP = (high + low + close) / 3
     CCI = (TP - SMA(TP)) / (0.015 * MAD(TP))
     
-    Unbounded but typically stays within ±100:
-    - > 100: overbought / strong uptrend
-    - < -100: oversold / strong downtrend
-    - Zero line crossovers: trend signals
-    
     Reference: Donald Lambert
-    https://www.investopedia.com/terms/c/commoditychannelindex.asp
     """
     
     period: int = 20
@@ -236,7 +252,6 @@ class CciMom(Feature):
         n = len(close)
         
         tp = (high + low + close) / 3
-
         cci = np.full(n, np.nan)
         
         for i in range(self.period - 1, n):
@@ -263,21 +278,9 @@ class CciMom(Feature):
 class UoMom(Feature):
     """Ultimate Oscillator (UO).
     
-    Multi-timeframe momentum combining three periods.
-    
-    Uses buying pressure and true range across fast/medium/slow periods
-    with weighted average.
-    
-    BP = close - min(low, prev_close)
-    TR = max(high, prev_close) - min(low, prev_close)
-    
-    Bounded 0-100:
-    - > 70: overbought
-    - < 30: oversold
-    - Divergence trading common
+    Uses rolling sums - always reproducible.
     
     Reference: Larry Williams
-    https://www.investopedia.com/terms/u/ultimateoscillator.asp
     """
     
     fast: int = 7
@@ -331,9 +334,9 @@ class UoMom(Feature):
         )
     
     test_params: ClassVar[list[dict]] = [
-        {"fast": 7, "medium": 14, "slow": 28, "fast_weight": 4.0, "medium_weight": 2.0, "slow_weight": 1.0},
-        {"fast": 15, "medium": 30, "slow": 60, "fast_weight": 4.0, "medium_weight": 2.0, "slow_weight": 1.0},
-        {"fast": 30, "medium": 60, "slow": 120, "fast_weight": 4.0, "medium_weight": 2.0, "slow_weight": 1.0},
+        {"fast": 7, "medium": 14, "slow": 28},
+        {"fast": 15, "medium": 30, "slow": 60},
+        {"fast": 30, "medium": 60, "slow": 120},
     ]
 
 
@@ -342,19 +345,12 @@ class UoMom(Feature):
 class AoMom(Feature):
     """Awesome Oscillator (AO).
     
-    Difference between fast and slow SMA of median price.
+    Uses SMA - always reproducible.
     
     Median = (high + low) / 2
     AO = SMA(Median, fast) - SMA(Median, slow)
     
-    Bill Williams indicator:
-    - Positive: bullish momentum
-    - Negative: bearish momentum
-    - Saucer pattern: continuation signal
-    - Twin peaks: reversal signal
-    
-    Reference: Bill Williams, "Trading Chaos"
-    https://www.investopedia.com/terms/a/awesome-oscillator.asp
+    Reference: Bill Williams
     """
     
     fast: int = 5
@@ -369,7 +365,6 @@ class AoMom(Feature):
         n = len(high)
         
         median = (high + low) / 2
-        
         ao = np.full(n, np.nan)
         
         for i in range(self.slow - 1, n):
@@ -380,6 +375,7 @@ class AoMom(Feature):
         return df.with_columns(
             pl.Series(name=f"ao_{self.fast}_{self.slow}", values=ao)
         )
+    
     test_params: ClassVar[list[dict]] = [
         {"fast": 5, "slow": 34},    
         {"fast": 15, "slow": 100},  

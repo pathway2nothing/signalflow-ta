@@ -1,32 +1,62 @@
-"""Core momentum indicators."""
+"""Core momentum indicators with reproducible initialization."""
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
+
+
+def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
+    """
+    Calculate RMA (Wilder's smoothing) with SMA initialization.
+    
+    RMA uses alpha = 1/period (unlike EMA which uses 2/(period+1)).
+    Initialize with SMA for reproducibility.
+    
+    Args:
+        values: Input array
+        period: RMA period
+        
+    Returns:
+        RMA array with first (period-1) values as NaN
+    """
+    n = len(values)
+    alpha = 1 / period
+    rma = np.full(n, np.nan)
+    
+    if n < period:
+        return rma
+    
+    # Initialize with SMA of first `period` values
+    rma[period - 1] = np.mean(values[:period])
+    
+    # Continue with Wilder's smoothing
+    for i in range(period, n):
+        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
+    
+    return rma
+
 
 @dataclass
 @sf_component(name="momentum/rsi")
 class RsiMom(Feature):
-    """Relative Strength Index (RSI).
+    """Relative Strength Index (RSI) with reproducible initialization.
     
     Momentum oscillator measuring speed and magnitude of price changes.
     
     RSI = 100 * avg_gain / (avg_gain + avg_loss)
     
-    Where avg_gain/avg_loss use Wilder's smoothing (RMA).
+    Where avg_gain/avg_loss use Wilder's smoothing (RMA) with SMA initialization.
+    This ensures reproducibility regardless of data entry point.
     
     Interpretation:
     - RSI > 70: overbought
     - RSI < 30: oversold
-    - Divergence from price: potential reversal
-    - Centerline (50) crossovers: trend confirmation
     
     Reference: J. Welles Wilder, "New Concepts in Technical Trading Systems"
-    https://www.investopedia.com/terms/r/rsi.asp
     """
     
     period: int = 14
@@ -38,24 +68,18 @@ class RsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
+        # Price changes
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
         
         gains = np.where(diff > 0, diff, 0)
         losses = np.where(diff < 0, -diff, 0)
         
-        alpha = 1 / self.period
+        # RMA with SMA initialization for reproducibility
+        avg_gain = _rma_sma_init(gains, self.period)
+        avg_loss = _rma_sma_init(losses, self.period)
         
-        avg_gain = np.full(n, np.nan)
-        avg_loss = np.full(n, np.nan)
-        
-        avg_gain[self.period] = np.mean(gains[1:self.period + 1])
-        avg_loss[self.period] = np.mean(losses[1:self.period + 1])
-        
-        for i in range(self.period + 1, n):
-            avg_gain[i] = alpha * gains[i] + (1 - alpha) * avg_gain[i - 1]
-            avg_loss[i] = alpha * losses[i] + (1 - alpha) * avg_loss[i - 1]
-        
+        # RSI calculation
         rs = avg_gain / (avg_loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))
         
@@ -75,14 +99,9 @@ class RsiMom(Feature):
 class RocMom(Feature):
     """Rate of Change (ROC).
     
-    Percentage change over n periods.
+    Percentage change over n periods. Pure lookback, always reproducible.
     
     ROC = 100 * (close - close[n]) / close[n]
-    
-    Unbounded oscillator:
-    - Positive: price increased
-    - Negative: price decreased
-    - Zero crossings: momentum shift
     
     Reference: https://www.investopedia.com/terms/r/rateofchange.asp
     """
@@ -99,7 +118,8 @@ class RocMom(Feature):
         roc = np.full(n, np.nan)
         
         for i in range(self.period, n):
-            roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
+            if close[i - self.period] != 0:
+                roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
         
         return df.with_columns(
             pl.Series(name=f"roc_{self.period}", values=roc)
@@ -117,14 +137,9 @@ class RocMom(Feature):
 class MomMom(Feature):
     """Momentum (MOM).
     
-    Simple price difference over n periods.
+    Simple price difference over n periods. Pure lookback, always reproducible.
     
     MOM = close - close[n]
-    
-    Unlike ROC, measures absolute change:
-    - Positive: price higher
-    - Negative: price lower
-    - Acceleration/deceleration shows in slope
     
     Reference: https://www.investopedia.com/terms/m/momentum.asp
     """
@@ -152,7 +167,6 @@ class MomMom(Feature):
         {"period": 60},
         {"period": 240},
     ]
-        
 
 
 @dataclass
@@ -160,17 +174,13 @@ class MomMom(Feature):
 class CmoMom(Feature):
     """Chande Momentum Oscillator (CMO).
     
-    Similar to RSI but uses sum instead of average.
+    Uses rolling sums, not EMA - always reproducible.
     
     CMO = 100 * (sum_gains - sum_losses) / (sum_gains + sum_losses)
     
-    Bounded -100 to +100:
-    - CMO > 50: overbought
-    - CMO < -50: oversold
-    - Closer to 0: less momentum
+    Bounded -100 to +100.
     
     Reference: Tushar Chande
-    https://www.investopedia.com/terms/c/chandemomentumoscillator.asp
     """
     
     period: int = 14
@@ -182,7 +192,6 @@ class CmoMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
         
-        # Price changes
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
         
@@ -191,7 +200,7 @@ class CmoMom(Feature):
         
         cmo = np.full(n, np.nan)
         
-        for i in range(self.period, n):
+        for i in range(self.period - 1, n):
             sum_gains = np.sum(gains[i - self.period + 1:i + 1])
             sum_losses = np.sum(losses[i - self.period + 1:i + 1])
             

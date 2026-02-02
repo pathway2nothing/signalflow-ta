@@ -111,6 +111,10 @@ def get_bounds(cls: Type, category: str) -> tuple[float, float] | None:
     """Determine value bounds based on indicator type."""
     name = cls.__name__.lower()
     
+    # Explicitly unbounded indicators (percentage change can exceed 100%)
+    if name in ['rocmom', 'mommom']:
+        return None
+    
     # RSI: 0-100
     if name in ['rsimom', 'stochmom', 'stochrsimom', 'mfimom', 'mfivolume']:
         return (0, 100)
@@ -183,14 +187,49 @@ def get_bounds(cls: Type, category: str) -> tuple[float, float] | None:
 
 
 def get_warmup(cls: Type, params: dict) -> int:
-    """Estimate warmup period based on parameters."""
-    # Check for period-like params
-    for key in ['period', 'length', 'slow', 'long_period']:
-        if key in params:
-            return int(params[key]) + 5
+    """Estimate warmup period based on parameters.
     
-    # Default warmup
-    return 20
+    Handles various indicator parameter patterns:
+    - Single period: period, length
+    - Multiple periods: slow, fast, signal, rsi_period, stoch_period
+    - Composite indicators need sum of dependent periods
+    """
+    warmup = 0
+    
+    # StochRSI-like: needs RSI warmup + Stoch warmup
+    if 'rsi_period' in params:
+        warmup += int(params['rsi_period'])
+    if 'stoch_period' in params:
+        warmup += int(params['stoch_period'])
+    if 'k_period' in params:
+        warmup += int(params['k_period'])
+    if 'd_period' in params:
+        warmup += int(params['d_period'])
+    
+    # MACD-like: slow period dominates
+    if 'slow' in params:
+        warmup = max(warmup, int(params['slow']))
+    if 'signal' in params:
+        warmup += int(params['signal'])
+    
+    # TSI/TRIX: multiple smoothing passes
+    if 'fast' in params and 'slow' in params:
+        warmup = max(warmup, int(params['slow']) + int(params['fast']))
+    
+    # Single period indicators
+    if 'period' in params:
+        warmup = max(warmup, int(params['period']))
+    if 'length' in params:
+        warmup = max(warmup, int(params['length']))
+    if 'long_period' in params:
+        warmup = max(warmup, int(params['long_period']))
+    
+    # Minimum warmup
+    if warmup == 0:
+        warmup = 20
+    
+    # Add buffer
+    return warmup + 10
 
 
 def discover_indicators() -> list[IndicatorConfig]:
@@ -403,7 +442,7 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             params={"period": 10},
             requires=["close"],
             outputs=["roc_10"],
-            bounded=None,
+            bounded=None,  # ROC is unbounded - can be >100% if price doubles
             warmup=11,
         ),
         IndicatorConfig(
