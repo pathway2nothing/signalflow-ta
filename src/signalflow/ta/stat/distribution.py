@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import polars as pl
-from scipy.stats import kurtosis as sp_kurtosis
+from scipy.stats import kurtosis as sp_kurtosis, skew as sp_skew
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
@@ -176,10 +176,17 @@ class SkewStat(Feature):
     outputs = ["{source_col}_skew_{period}"]
     
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        values = df[self.source_col].to_numpy()
+        n = len(values)
+
+        skew = np.full(n, np.nan)
+        for i in range(self.period - 1, n):
+            window = values[i - self.period + 1:i + 1]
+            if not np.any(np.isnan(window)):
+                skew[i] = sp_skew(window, bias=False)
+
         return df.with_columns(
-            pl.col(self.source_col)
-              .rolling_skew(window_size=self.period)
-              .alias(f"{self.source_col}_skew_{self.period}")
+            pl.Series(name=f"{self.source_col}_skew_{self.period}", values=skew)
         )
     
     test_params: ClassVar[list[dict]] = [
