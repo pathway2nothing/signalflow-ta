@@ -112,7 +112,7 @@ class KamaSmooth(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return self.period * 5
+        return self.period * 100
 
 @dataclass
 @sf_component(name="smooth/alma")
