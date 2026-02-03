@@ -192,17 +192,11 @@ class MacdDivergence(DivergenceBase):
         # 9. Calculate divergence strength
         all_divs = bullish_div | bearish_div | hidden_bullish_div | hidden_bearish_div
 
-        # Estimate MACD histogram range from recent data
-        if len(macd_hist) > self.lookback:
-            recent_hist = macd_hist[-self.lookback:]
-        else:
-            recent_hist = macd_hist
-
-        hist_min, hist_max = np.min(recent_hist), np.max(recent_hist)
-
+        # Use dynamic range calculation (causal - no look-ahead)
         strength = self.calculate_divergence_strength(
             close, macd_hist, all_divs,
-            indicator_range=(hist_min, hist_max)
+            indicator_range=None,  # Calculate dynamically per bar
+            lookback_for_range=self.lookback
         )
 
         # 10. Boost strength for crossovers (additional confirmation)
@@ -267,21 +261,29 @@ class MacdDivergence(DivergenceBase):
         bearish_cross = np.concatenate([[False], bearish_cross])
 
         # Apply boost for confirmed divergences
-        # Look for crossover within 5 bars of divergence
+        # Look for crossover within lookback window (CAUSAL - only backward)
         crossover_window = 5
 
         for idx in np.where(bullish_div)[0]:
             window_start = max(0, idx - crossover_window)
-            window_end = min(len(bullish_cross), idx + crossover_window + 1)
+            # Only look backward - not forward (causal)
+            window_end = idx + 1
 
             if np.any(bullish_cross[window_start:window_end]):
                 boosted[idx] += 10  # +10 points for crossover confirmation
 
         for idx in np.where(bearish_div)[0]:
             window_start = max(0, idx - crossover_window)
-            window_end = min(len(bearish_cross), idx + crossover_window + 1)
+            # Only look backward - not forward (causal)
+            window_end = idx + 1
 
             if np.any(bearish_cross[window_start:window_end]):
                 boosted[idx] += 10  # +10 points for crossover confirmation
 
         return np.clip(boosted, 0, 100)
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.slow * 5 + self.pivot_window * 2 + self.lookback

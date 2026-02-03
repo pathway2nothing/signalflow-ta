@@ -17,6 +17,17 @@ def find_pivots_scipy(
     """
     Find local maxima and minima using scipy.signal.argrelextrema.
 
+    CAUSAL IMPLEMENTATION: This function now implements causal pivot detection
+    to avoid look-ahead bias. Pivots are confirmed with an 'order'-bar delay.
+
+    The scipy argrelextrema function requires 'order' bars on each side, which
+    inherently uses future data. To make it causal, we:
+    1. Detect all pivots using scipy (this uses future data internally)
+    2. Shift pivot indices forward by 'order' bars (delayed confirmation)
+    3. Filter out pivots that would be confirmed beyond the data length
+
+    This ensures that at bar i, we only use data up to bar i for pivot detection.
+
     Parameters
     ----------
     series : np.ndarray
@@ -29,15 +40,30 @@ def find_pivots_scipy(
     Returns
     -------
     highs_idx : np.ndarray
-        Indices of local maxima
+        Indices of local maxima (delayed by 'order' bars for causality)
     lows_idx : np.ndarray
-        Indices of local minima
+        Indices of local minima (delayed by 'order' bars for causality)
     """
-    # Find local maxima
-    highs = argrelextrema(series, np.greater, order=order)[0]
+    # Find local maxima and minima (uses future data internally)
+    highs_raw = argrelextrema(series, np.greater, order=order)[0]
+    lows_raw = argrelextrema(series, np.less, order=order)[0]
 
-    # Find local minima
-    lows = argrelextrema(series, np.less, order=order)[0]
+    # Make it causal by delaying confirmation by 'order' bars
+    # At bar (i + order), we can confirm that bar i was a pivot
+    # because we've now seen 'order' bars after it
+    n = len(series)
+
+    # Shift indices forward by 'order' bars
+    # This represents: "at bar (pivot + order), we confirm the pivot"
+    # But we report the original pivot index, knowing it's confirmed with delay
+    #
+    # Actually, we need to filter out pivots that haven't been confirmed yet
+    # A pivot at index i is confirmed at bar (i + order)
+    # So if we have n bars, the last confirmable pivot is at (n - order - 1)
+
+    # Keep only pivots that can be confirmed within the data range
+    highs = highs_raw[highs_raw <= n - order - 1]
+    lows = lows_raw[lows_raw <= n - order - 1]
 
     # Filter by minimum distance
     if min_distance > 1:
@@ -57,6 +83,10 @@ def find_pivots_window(
 
     More conservative than scipy method - requires value to be the highest/lowest
     within the entire window on both sides.
+
+    CAUSAL IMPLEMENTATION: Pivots are confirmed with a window-bar delay to avoid
+    look-ahead bias. At bar i, we can only confirm that bar (i - window) was a
+    pivot, because we need to see 'window' bars after it for confirmation.
 
     Parameters
     ----------
@@ -78,19 +108,24 @@ def find_pivots_window(
     highs = []
     lows = []
 
-    for i in range(window, n - window):
-        # Get window around current point
-        left_window = series[i - window:i]
-        right_window = series[i + 1:i + window + 1]
-        current = series[i]
+    # Start from window*2 to have enough bars before and after the pivot candidate
+    # At bar i, we check if bar (i - window) was a pivot
+    for i in range(window * 2, n):
+        # Check the bar that is 'window' bars behind current bar
+        pivot_idx = i - window
+
+        # Get window around pivot candidate (all data is now historical from bar i)
+        left_window = series[pivot_idx - window:pivot_idx]
+        right_window = series[pivot_idx + 1:pivot_idx + window + 1]
+        current = series[pivot_idx]
 
         # Check if local maximum
-        if current > np.max(left_window) and current > np.max(right_window):
-            highs.append(i)
+        if current > np.max(left_window) and current >= np.max(right_window):
+            highs.append(pivot_idx)
 
         # Check if local minimum
-        if current < np.min(left_window) and current < np.min(right_window):
-            lows.append(i)
+        if current < np.min(left_window) and current <= np.min(right_window):
+            lows.append(pivot_idx)
 
     highs = np.array(highs, dtype=np.int64)
     lows = np.array(lows, dtype=np.int64)

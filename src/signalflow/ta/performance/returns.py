@@ -61,6 +61,12 @@ class LogReturn(Feature):
     ]   
 
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
 @dataclass
 @sf_component(name="perf/pct_ret")
 class PctReturn(Feature):
@@ -100,3 +106,8 @@ class PctReturn(Feature):
         {"source": "close", "period": 60},
         {"source": "close", "period": 240},
     ]   
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
