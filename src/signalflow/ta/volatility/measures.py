@@ -160,12 +160,18 @@ class RviVol(Feature):
         
         up_ema = np.full(n, np.nan)
         dn_ema = np.full(n, np.nan)
+
+        # Initialize with SMA for reproducibility
+        init_idx = self.std_period + self.period - 2
+
+        if n > init_idx:
+            # Use SMA of first `period` valid std values
+            start_std = self.std_period - 1
+            end_init = min(start_std + self.period, n)
+            up_ema[init_idx] = np.nanmean(up_std[start_std:end_init])
+            dn_ema[init_idx] = np.nanmean(dn_std[start_std:end_init])
         
-        start = self.std_period - 1
-        up_ema[start] = np.nanmean(up_std[:start + 1])
-        dn_ema[start] = np.nanmean(dn_std[:start + 1])
-        
-        for i in range(start + 1, n):
+        for i in range(init_idx + 1, n):
             up_ema[i] = alpha * up_std[i] + (1 - alpha) * up_ema[i - 1]
             dn_ema[i] = alpha * dn_std[i] + (1 - alpha) * dn_ema[i - 1]
         

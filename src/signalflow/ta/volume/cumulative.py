@@ -38,9 +38,10 @@ class ObvVolume(Feature):
         n = len(close)
         
         # Direction: +1 if up, -1 if down, 0 if unchanged
-        direction = np.sign(np.diff(close, prepend=close[0]))
+        # Use NaN for first element to avoid dependency on first value
+        direction = np.sign(np.diff(close, prepend=np.nan))
         direction[0] = 0
-        
+
         # OBV = cumsum of signed volume
         obv = np.cumsum(direction * volume)
         
@@ -126,10 +127,10 @@ class PvtVolume(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
-        
-        roc = np.diff(close, prepend=close[0]) / np.roll(close, 1)
+
+        roc = np.diff(close, prepend=np.nan) / np.roll(close, 1)
         roc[0] = 0
-        
+
         pv = roc * volume
         pvt = np.cumsum(pv)
         
@@ -172,13 +173,13 @@ class NviVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
-        roc = np.diff(close, prepend=close[0]) / np.roll(close, 1)
+
+        roc = np.diff(close, prepend=np.nan) / np.roll(close, 1)
         roc[0] = 0
-        
+
         vol_down = volume < np.roll(volume, 1)
         vol_down[0] = False
-        nvi_change = np.where(vol_down, roc * 100, 0)      
+        nvi_change = np.where(vol_down, roc * 100, 0)
         nvi = np.full(n, self.initial)
         for i in range(1, n):
             nvi[i] = nvi[i - 1] + nvi_change[i]
@@ -225,13 +226,13 @@ class PviVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
-        roc = np.diff(close, prepend=close[0]) / np.roll(close, 1)
+
+        roc = np.diff(close, prepend=np.nan) / np.roll(close, 1)
         roc[0] = 0
-        
+
         vol_up = volume > np.roll(volume, 1)
         vol_up[0] = False
-        
+
         pvi_change = np.where(vol_up, roc * 100, 0)
         pvi = np.full(n, self.initial)
         for i in range(1, n):

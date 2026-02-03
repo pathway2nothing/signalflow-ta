@@ -1,19 +1,19 @@
-# from signalflow.ta.momentum import (
-#     RsiMom,
-#     RocMom,
-#     MomMom,
-#     CmoMom,
-#     StochMom,
-#     StochRsiMom,
-#     WillrMom,
-#     CciMom,
-#     UoMom,
-#     AoMom,
-#     MacdMom,
-#     PpoMom,
-#     TsiMom,
-#     TrixMom,
-# )
+from signalflow.ta.momentum import (
+    RsiMom,
+    RocMom,
+    MomMom,
+    CmoMom,
+    StochMom,
+    StochRsiMom,
+    WillrMom,
+    CciMom,
+    UoMom,
+    AoMom,
+    MacdMom,
+    PpoMom,
+    TsiMom,
+    TrixMom,
+)
 from signalflow.ta.overlap import (
     SmaSmooth,
     EmaSmooth,
@@ -124,21 +124,33 @@ from signalflow.ta.volume import (
     KvoVolume,
 )
 
+from signalflow.ta.divergence import (
+    RsiDivergence,
+    MacdDivergence,
+    MultiDivergence,
+)
+
 __all__ = [
-    # "RsiMom",
-    # "RocMom",
-    # "MomMom",
-    # "CmoMom",
-    # "StochMom",
-    # "StochRsiMom",
-    # "WillrMom",
-    # "CciMom",
-    # "UoMom",
-    # "AoMom",
-    # "MacdMom",
-    # "PpoMom",
-    # "TsiMom",
-    # "TrixMom",
+    # Momentum indicators
+    "RsiMom",
+    "RocMom",
+    "MomMom",
+    "CmoMom",
+    "StochMom",
+    "StochRsiMom",
+    "WillrMom",
+    "CciMom",
+    "UoMom",
+    "AoMom",
+    "MacdMom",
+    "PpoMom",
+    "TsiMom",
+    "TrixMom",
+    # Divergence detectors
+    "RsiDivergence",
+    "MacdDivergence",
+    "MultiDivergence",
+    # Overlap indicators
     "SmaSmooth",
     "EmaSmooth",
     "WmaSmooth",

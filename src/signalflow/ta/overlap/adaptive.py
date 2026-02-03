@@ -10,6 +10,47 @@ from signalflow.feature.base import Feature
 from typing import ClassVar
 
 
+def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
+    """
+    Calculate EMA with SMA initialization for reproducibility.
+
+    Args:
+        values: Input array (may contain NaN)
+        period: EMA period (also used for SMA initialization)
+
+    Returns:
+        EMA array with first (period-1) values as NaN
+    """
+    n = len(values)
+    alpha = 2 / (period + 1)
+    ema = np.full(n, np.nan)
+
+    if n < period:
+        return ema
+
+    # Find first valid (non-NaN) index
+    valid_idx = np.where(~np.isnan(values))[0]
+    if len(valid_idx) == 0:
+        return ema
+
+    first_valid = valid_idx[0]
+
+    # Need at least period values after first valid
+    if first_valid + period > n:
+        return ema
+
+    # Initialize with SMA of first `period` valid values
+    init_idx = first_valid + period - 1
+    ema[init_idx] = np.mean(values[first_valid:first_valid + period])
+
+    # Continue with standard EMA
+    for i in range(init_idx + 1, n):
+        if not np.isnan(values[i]):
+            ema[i] = alpha * values[i] + (1 - alpha) * ema[i - 1]
+
+    return ema
+
+
 @dataclass
 @sf_component(name="smooth/kama")
 class KamaSmooth(Feature):
@@ -42,7 +83,10 @@ class KamaSmooth(Feature):
         slow_sc = 2 / (self.slow + 1)
         
         kama = np.full(n, np.nan)
-        kama[self.period - 1] = values[self.period - 1]
+
+        if n >= self.period:
+            # Initialize with SMA for reproducibility
+            kama[self.period - 1] = np.mean(values[:self.period])
         
         for i in range(self.period, n):
             change = abs(values[i] - values[i - self.period])
@@ -135,11 +179,18 @@ class JmaSmooth(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
         
-        jma = np.zeros(n)
+        jma = np.full(n, np.nan)
         volty = np.zeros(n)
         v_sum = np.zeros(n)
-        
-        jma[0] = ma1 = uBand = lBand = values[0]
+
+        # Initialize with SMA for reproducibility
+        warmup = min(self.period, n)
+        if warmup > 0:
+            init_val = np.mean(values[:warmup])
+        else:
+            init_val = 0.0
+
+        jma[warmup - 1] = ma1 = uBand = lBand = init_val
         kv = det0 = det1 = ma2 = 0.0
         
         length = 0.5 * (self.period - 1)
@@ -151,8 +202,8 @@ class JmaSmooth(Feature):
         beta = 0.45 * (self.period - 1) / (0.45 * (self.period - 1) + 2.0)
         
         sum_length = 10
-        
-        for i in range(1, n):
+
+        for i in range(warmup, n):
             price = values[i]
             
             del1 = price - uBand
@@ -224,7 +275,10 @@ class VidyaSmooth(Feature):
         neg = np.where(mom < 0, -mom, 0)
         
         vidya = np.full(n, np.nan)
-        vidya[self.period] = values[self.period]
+
+        if n > self.period:
+            # Initialize with SMA for reproducibility
+            vidya[self.period] = np.mean(values[:self.period + 1])
         
         for i in range(self.period + 1, n):
             pos_sum = np.sum(pos[i - self.period + 1:i + 1])
@@ -267,24 +321,26 @@ class T3Smooth(Feature):
     outputs = ["{source_col}_t3_{period}"]
     
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        values = df[self.source_col].to_numpy()
+
         a = self.vfactor
         c1 = -a ** 3
         c2 = 3 * a ** 2 + 3 * a ** 3
         c3 = -6 * a ** 2 - 3 * a - 3 * a ** 3
         c4 = 1 + 3 * a + a ** 3 + 3 * a ** 2
-        
-        col = pl.col(self.source_col)
-        e1 = col.ewm_mean(span=self.period, adjust=False)
-        e2 = e1.ewm_mean(span=self.period, adjust=False)
-        e3 = e2.ewm_mean(span=self.period, adjust=False)
-        e4 = e3.ewm_mean(span=self.period, adjust=False)
-        e5 = e4.ewm_mean(span=self.period, adjust=False)
-        e6 = e5.ewm_mean(span=self.period, adjust=False)
-        
+
+        # Calculate 6 cascaded EMAs with SMA initialization
+        e1 = _ema_sma_init(values, self.period)
+        e2 = _ema_sma_init(e1, self.period)
+        e3 = _ema_sma_init(e2, self.period)
+        e4 = _ema_sma_init(e3, self.period)
+        e5 = _ema_sma_init(e4, self.period)
+        e6 = _ema_sma_init(e5, self.period)
+
         t3 = c1 * e6 + c2 * e5 + c3 * e4 + c4 * e3
-        
+
         return df.with_columns(
-            t3.alias(f"{self.source_col}_t3_{self.period}")
+            pl.Series(name=f"{self.source_col}_t3_{self.period}", values=t3)
         )
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 10, "vfactor": 0.7},

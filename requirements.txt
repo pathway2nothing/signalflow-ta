@@ -4,3 +4,4 @@ lightning >= 2.5.0
 plotly 
 pyarrow
 kaleido
+pytest

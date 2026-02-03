@@ -55,9 +55,14 @@ class BollingerVol(Feature):
         
         if self.ma_type == "ema":
             alpha = 2 / (self.period + 1)
-            middle[0] = close[0]
-            for i in range(1, n):
+
+            if n >= self.period:
+                # Initialize with SMA for reproducibility
+                middle[self.period - 1] = np.mean(close[:self.period])
+
+            for i in range(self.period, n):
                 middle[i] = alpha * close[i] + (1 - alpha) * middle[i - 1]
+
             # Standard deviation still uses rolling window
             for i in range(self.period - 1, n):
                 std[i] = np.std(close[i - self.period + 1:i + 1], ddof=0)
