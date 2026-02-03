@@ -686,5 +686,55 @@ class TestFixtures:
         """Different seeds should produce different data."""
         df1 = generate_sinusoidal_ohlcv(seed=123)
         df2 = generate_sinusoidal_ohlcv(seed=456)
-        
+
         assert not df1.equals(df2)
+
+
+# =============================================================================
+# Pytest Configuration Hooks
+# =============================================================================
+
+def pytest_addoption(parser):
+    """Add custom command-line options for test configuration."""
+    parser.addoption(
+        "--max-params",
+        action="store",
+        type=int,
+        default=None,
+        help="Maximum number of parameter combinations to test per indicator (default: all)"
+    )
+    parser.addoption(
+        "--feature-groups",
+        action="store",
+        default=None,
+        help="Comma-separated list of feature groups to test (e.g., 'momentum,overlap'). "
+             "Available: momentum, overlap, trend, volatility, volume, stat, performance, other"
+    )
+
+
+def pytest_configure(config):
+    """Store configuration options for use in tests."""
+    config.test_max_params = config.getoption("--max-params")
+    config.test_feature_groups = config.getoption("--feature-groups")
+
+
+def pytest_generate_tests(metafunc):
+    """Dynamically generate test parameters based on command-line options."""
+    # Only apply to tests that use 'config' parameter
+    if "config" in metafunc.fixturenames:
+        from indicator_registry import filter_configs_by_options, INDICATOR_CONFIGS
+
+        # Get filtered configs based on command-line options
+        filtered_configs, filtered_ids = filter_configs_by_options(
+            INDICATOR_CONFIGS,
+            pytest_config=metafunc.config
+        )
+
+        # Parametrize with filtered configs
+        metafunc.parametrize(
+            "config",
+            filtered_configs,
+            ids=filtered_ids,
+            # Use indirect=False to pass config directly (not as a fixture)
+            indirect=False
+        )

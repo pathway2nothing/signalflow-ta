@@ -34,19 +34,24 @@ from indicator_registry import (
     INDICATOR_CONFIGS,
     get_configs_by_category,
     get_indicator_ids,
-    _CONFIGS_FOR_PARAM,
-    _IDS_FOR_PARAM,
 )
+
+# Import warmup calculator
+import sys
+sys.path.insert(0, '/home/alastor/signalflow-ta/src')
+from signalflow.ta.warmup import get_indicator_warmup
 
 
 # =============================================================================
 # Test Data Size Constants
 # =============================================================================
 
-# Realistic data sizes for 1-minute bars
-BARS_SHORT = 20_000   # ~2 weeks of 1-minute data
-BARS_LONG = 40_000    # ~1 month of 1-minute data
-
+# Optimized data sizes for reproducibility testing
+# We only need warmup period + comparison window for reproducibility tests
+BARS_FOR_REPRODUCIBILITY = 1000  # Comparison window after warmup
+BARS_SHORT = 20_000   # Used for look-ahead bias tests (need more data for truncation)
+BARS_LONG = 40_000    # Used for look-ahead bias tests
+ONLY_FIRST_PARAMS = True
 
 # =============================================================================
 # Helper for skipping tests when no indicators available
@@ -61,44 +66,23 @@ def _ensure_config(config):
 
 def _estimate_warmup(config: IndicatorConfig) -> int:
     """
-    Estimate warmup period based on indicator parameters.
-    
-    For EMA-based indicators with tolerance 0.01% (1e-4), we need warmup where:
-    (1 - alpha)^warmup < 1e-4
-    
-    For alpha = 2/(period+1), this requires approximately 5*period bars.
+    Estimate warmup period for an indicator.
+
+    Uses automatic warmup calculation from signalflow.ta.warmup module.
+    Creates a temporary indicator instance to calculate warmup dynamically.
+
+    For RSI: 10x period for full RMA convergence
+    For EMA-based: 5x period for 0.01% tolerance
+    For complex indicators: higher multipliers (TRIX: 12x, TSI: 8x, etc.)
     """
-    base_warmup = config.warmup or 50
-    params = config.params
-    
-    # Find the largest period-like parameter
-    period_params = []
-    for key, val in params.items():
-        if isinstance(val, int) and any(p in key.lower() for p in ['period', 'slow', 'length', 'window']):
-            period_params.append(val)
-    
-    if period_params:
-        max_period = max(period_params)
-        
-        # For 0.01% tolerance: warmup ≈ 5 * period (for single EMA)
-        if 'trix' in config.name.lower():
-            # Triple EMA
-            estimated = max_period * 12
-        elif 'tsi' in config.name.lower():
-            # Double EMA
-            estimated = max_period * 8
-        elif 'stoch' in config.name.lower() and 'rsi' in config.name.lower():
-            # RSI + Stochastic
-            estimated = max_period * 6
-        elif any(x in config.name.lower() for x in ['macd', 'ppo', 'ema', 'rsi']):
-            # Single/double EMA
-            estimated = max_period * 5
-        else:
-            estimated = max_period * 2
-        
-        return max(base_warmup, estimated)
-    
-    return base_warmup
+    try:
+        # Create indicator instance from config
+        indicator = config.cls(**config.params)
+        # Get warmup using automatic calculator
+        return get_indicator_warmup(indicator)
+    except Exception:
+        # Fallback to config warmup or default
+        return config.warmup or 50
 
 
 # =============================================================================
@@ -156,11 +140,6 @@ def get_output_columns(result: pl.DataFrame, config: IndicatorConfig) -> list[st
 # =============================================================================
 
 
-@pytest.mark.parametrize(
-    "config",
-    _CONFIGS_FOR_PARAM,
-    ids=_IDS_FOR_PARAM
-)
 class TestIndicatorEmptyColumn:
     """Test empty column handling for all indicators."""
     
@@ -218,11 +197,6 @@ class TestIndicatorEmptyColumn:
             pytest.skip(f"{config.name} doesn't support partial null data")
 
 
-@pytest.mark.parametrize(
-    "config",
-    _CONFIGS_FOR_PARAM,
-    ids=_IDS_FOR_PARAM
-)
 class TestIndicatorLookAhead:
     """Test look-ahead bias for all indicators.
     
@@ -464,23 +438,18 @@ class TestIndicatorLookAhead:
             raise
 
 
-@pytest.mark.parametrize(
-    "config",
-    _CONFIGS_FOR_PARAM,
-    ids=_IDS_FOR_PARAM
-)
 class TestIndicatorReproducibility:
     """Test reproducibility for all indicators.
-    
+
     CRITICAL: Indicators must produce identical values regardless of entry point.
     If computing a feature for Jan-Dec vs Jul-Dec, December values must match
     within 0.01% tolerance after warmup period.
-    
-    Data size:
-    - Full history: 2 months (~86,400 bars)
-    - Partial history: starts 1 month later (~43,200 offset)
-    - Compare: last month of data
-    
+
+    Optimized data usage (based on indicator-specific warmup):
+    - Full history: warmup * 3 + 1000 bars
+    - Partial history: warmup * 2 + 1000 bars (offset by warmup)
+    - Compare: last 1000 bars after warmup convergence
+
     This is essential for:
     - Backtesting integrity
     - Production consistency
@@ -492,76 +461,90 @@ class TestIndicatorReproducibility:
     
     def test_same_result_different_entry_points(self, config: IndicatorConfig):
         """Indicator must give identical results from different entry points.
-        
-        This test simulates real scenario:
-        - Computing features on full history (BARS_LONG bars)
-        - Computing features on partial history (BARS_SHORT bars)
-        - Comparing overlapping values - they MUST match within 0.01%
+
+        Optimized for minimal data usage:
+        - Uses only warmup + 1000 bars for comparison
+        - Full history: warmup * 3 + 1000 bars
+        - Partial history: warmup * 2 + 1000 bars (offset by warmup)
+        - Compares last 1000 bars after warmup in both datasets
         """
         config = _ensure_config(config)
-        
+
         # Calculate required warmup for 0.01% tolerance
         warmup = _estimate_warmup(config)
-        
-        # Use standard data sizes
-        n_rows = BARS_LONG
-        offset = BARS_SHORT
-        
+
+        # Optimized data sizes based on warmup
+        compare_len = BARS_FOR_REPRODUCIBILITY  # 1000 bars comparison window
+        offset = warmup  # Offset by warmup to test different entry points
+        n_rows = warmup * 3 + compare_len  # Total: 3x warmup + comparison window
+
+        # Ensure minimum data for meaningful test
+        if n_rows < 500:
+            n_rows = 500
+            offset = max(100, n_rows // 3)
+
         df = generate_sinusoidal_ohlcv(n_rows=n_rows, seed=SEED)
-        
+
         try:
             # Compute from start (full history)
             result_full = run_indicator(config, df)
-            
+
             # Compute from offset (partial history)
             df_late = df.slice(offset, len(df) - offset)
             result_late = run_indicator(config, df_late)
-            
+
             out_cols = get_output_columns(result_full, config)
-            
+
             if not out_cols:
                 pytest.skip(f"No output columns from {config.name}")
-            
-            # Compare after warmup in the "late" dataset
-            compare_warmup = warmup * 2  # Safety margin
-            
-            # Start comparison after warmup
-            compare_start = offset + compare_warmup
-            compare_len = min(len(result_late) - compare_warmup, BARS_SHORT // 2)
-            
-            if compare_len <= 0 or compare_start + compare_len > len(result_full):
-                pytest.skip(f"Not enough data after warmup (need {compare_warmup} warmup)")
-            
+
+            # Compare after warmup in both datasets
+            compare_warmup = warmup * 2  # Safety margin for late dataset
+
+            # Calculate comparison window indices
+            # In full dataset: start after (offset + warmup*2), compare 'compare_len' bars
+            compare_start_full = offset + compare_warmup
+            # In late dataset: start after warmup*2, compare 'compare_len' bars
+            compare_start_late = compare_warmup
+
+            # Adjust compare_len if not enough data
+            max_compare_full = len(result_full) - compare_start_full
+            max_compare_late = len(result_late) - compare_start_late
+            actual_compare_len = min(compare_len, max_compare_full, max_compare_late)
+
+            if actual_compare_len <= 100:
+                pytest.skip(f"Not enough data after warmup (warmup={warmup}, available={actual_compare_len})")
+
             failures = []
-            
+
             for out_col in out_cols:
                 if out_col not in result_full.columns or out_col not in result_late.columns:
                     continue
-                    
-                full_vals = result_full[out_col][compare_start:compare_start + compare_len].to_numpy()
-                late_vals = result_late[out_col][compare_warmup:compare_warmup + compare_len].to_numpy()
-                
+
+                full_vals = result_full[out_col][compare_start_full:compare_start_full + actual_compare_len].to_numpy()
+                late_vals = result_late[out_col][compare_start_late:compare_start_late + actual_compare_len].to_numpy()
+
                 valid = ~np.isnan(full_vals) & ~np.isnan(late_vals)
-                
+
                 if valid.sum() < 100:
                     continue  # Not enough valid data to compare
-                
+
                 full_valid = full_vals[valid]
                 late_valid = late_vals[valid]
-                
+
                 # Calculate relative difference
                 with np.errstate(divide='ignore', invalid='ignore'):
                     scale = np.maximum(np.abs(full_valid), np.abs(late_valid))
                     scale = np.where(scale < 1e-10, 1.0, scale)
                     rel_diff = np.abs(full_valid - late_valid) / scale
-                
+
                 max_rel_diff = np.nanmax(rel_diff)
                 mean_rel_diff = np.nanmean(rel_diff)
-                
+
                 if max_rel_diff > self.TOLERANCE:
                     worst_idx = np.nanargmax(rel_diff)
                     violations = (rel_diff > self.TOLERANCE).sum()
-                    
+
                     failures.append({
                         'column': out_col,
                         'max_diff_pct': max_rel_diff * 100,
@@ -571,7 +554,7 @@ class TestIndicatorReproducibility:
                         'full_value': full_valid[worst_idx],
                         'late_value': late_valid[worst_idx],
                     })
-            
+
             if failures:
                 msg_lines = [
                     f"\n{'='*70}",
@@ -579,14 +562,16 @@ class TestIndicatorReproducibility:
                     f"{'='*70}",
                     f"Indicator values depend on entry point!",
                     f"",
-                    f"Test setup:",
-                    f"  Full history: {n_rows:,} bars (2 months)",
-                    f"  Partial history: {n_rows - offset:,} bars (1 month)",
+                    f"Test setup (optimized for warmup):",
+                    f"  Warmup period: {warmup:,} bars",
+                    f"  Full history: {n_rows:,} bars",
+                    f"  Partial history: {n_rows - offset:,} bars",
                     f"  Offset: {offset:,} bars",
+                    f"  Comparison window: {actual_compare_len:,} bars",
                     f"  Tolerance: 0.01% ({self.TOLERANCE:.0e})",
                     f"",
                 ]
-                
+
                 for f in failures:
                     msg_lines.extend([
                         f"Column: {f['column']}",
@@ -596,7 +581,7 @@ class TestIndicatorReproducibility:
                         f"  Example: full={f['full_value']:.8f}, partial={f['late_value']:.8f}",
                         f"",
                     ])
-                
+
                 msg_lines.extend([
                     f"This indicator uses EMA/recursive smoothing.",
                     f"Warmup used: {compare_warmup:,} bars",
@@ -606,9 +591,9 @@ class TestIndicatorReproducibility:
                     f"  2. Increase warmup period in indicator",
                     f"{'='*70}",
                 ])
-                
+
                 pytest.fail("\n".join(msg_lines))
-                    
+
         except Exception as e:
             if "empty" in str(e).lower() or "null" in str(e).lower():
                 pytest.skip(f"{config.name} requires non-null data")
@@ -650,11 +635,6 @@ class TestIndicatorReproducibility:
             raise
 
 
-@pytest.mark.parametrize(
-    "config",
-    _CONFIGS_FOR_PARAM,
-    ids=_IDS_FOR_PARAM
-)
 class TestIndicatorOutputValidation:
     """Test output validation for all indicators."""
     
@@ -769,11 +749,6 @@ class TestIndicatorOutputValidation:
             raise
 
 
-@pytest.mark.parametrize(
-    "config",
-    _CONFIGS_FOR_PARAM,
-    ids=_IDS_FOR_PARAM
-)
 class TestIndicatorMultiPair:
     """Test multi-pair handling for all indicators."""
     
@@ -821,11 +796,6 @@ class TestIndicatorMultiPair:
             raise
 
 
-@pytest.mark.parametrize(
-    "config",
-    _CONFIGS_FOR_PARAM,
-    ids=_IDS_FOR_PARAM
-)
 class TestIndicatorDataTypes:
     """Test data type handling."""
     

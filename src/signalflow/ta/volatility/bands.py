@@ -94,6 +94,12 @@ class BollingerVol(Feature):
     ]
 
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 2
+
 @dataclass
 @sf_component(name="volatility/keltner")
 class KeltnerVol(Feature):
@@ -310,3 +316,21 @@ class AccBandsVol(Feature):
         {"period": 30, "factor": 3.0, "ma_type": "sma"},
         {"period": 60, "factor": 4.0, "ma_type": "ema"},
     ]
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5

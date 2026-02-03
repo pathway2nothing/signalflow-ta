@@ -41,6 +41,12 @@ class VarianceStat(Feature):
     ]
 
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
 @dataclass
 @sf_component(name="stat/std")
 class StdStat(Feature):
@@ -322,3 +328,50 @@ class RobustZscoreStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5

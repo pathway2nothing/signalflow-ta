@@ -51,6 +51,12 @@ class TrueRangeVol(Feature):
     
     test_params: ClassVar[list[dict]] = [{}]
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
 @dataclass
 @sf_component(name="volatility/atr")
 class AtrVol(Feature):
@@ -188,3 +194,14 @@ class NatrVol(Feature):
         {"period": 30, "ma_type": "rma"},
         {"period": 60, "ma_type": "ema"},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5

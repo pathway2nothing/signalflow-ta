@@ -52,6 +52,12 @@ class ObvVolume(Feature):
     test_params: ClassVar[list[dict]] = [{}]
 
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
 @dataclass
 @sf_component(name="volume/ad")
 class AdVolume(Feature):
@@ -247,3 +253,26 @@ class PviVolume(Feature):
         {"initial": 100.0},
         {"initial": 10000.0},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5

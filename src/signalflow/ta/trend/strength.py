@@ -98,6 +98,12 @@ class AdxTrend(Feature):
         {"period": 60},
     ]
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="trend/aroon")
 class AroonTrend(Feature):
@@ -332,3 +338,26 @@ class ChopTrend(Feature):
         {"period": 30},
         {"period": 60},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5

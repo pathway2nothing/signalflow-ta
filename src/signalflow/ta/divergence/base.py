@@ -107,6 +107,10 @@ class DivergenceBase(Feature):
         """
         Detect regular bullish divergence: Price LL, Indicator HL.
 
+        CAUSAL IMPLEMENTATION: Processes bar-by-bar to ensure no look-ahead bias.
+        At each bar, checks if a divergence pattern can be confirmed based only
+        on pivots that have been confirmed up to that bar.
+
         Parameters
         ----------
         price : np.ndarray
@@ -129,26 +133,48 @@ class DivergenceBase(Feature):
         if len(price_lows_idx) < 2 or len(indicator_lows_idx) < 2:
             return divergence
 
-        # Look at last few price lows within lookback
-        recent_start = max(0, n - self.lookback)
-        recent_price_lows = price_lows_idx[price_lows_idx >= recent_start]
+        # Process bar-by-bar to ensure causality
+        # At bar i, we can only use pivots that are confirmed (with window-bar delay)
+        # A pivot at index p is confirmed at bar (p + pivot_window)
+        # So at bar i, we can only use pivots where p + pivot_window <= i
+        # which means p <= i - pivot_window
 
-        if len(recent_price_lows) < 2:
-            return divergence
+        # Track which pivot pairs we've already marked to avoid duplicates
+        marked_pairs = set()
 
-        # Check last 2 lows for divergence
-        for i in range(len(recent_price_lows) - 1, 0, -1):
-            idx_current = recent_price_lows[i]
-            idx_previous = recent_price_lows[i - 1]
+        for i in range(n):
+            # Get pivots confirmed up to current bar i
+            max_pivot_idx = i - self.pivot_window
+            confirmed_price_lows = price_lows_idx[price_lows_idx <= max_pivot_idx]
+            confirmed_indicator_lows = indicator_lows_idx[indicator_lows_idx <= max_pivot_idx]
+
+            if len(confirmed_price_lows) < 2:
+                continue
+
+            # Look for divergence in the lookback window
+            lookback_start = max(0, i - self.lookback)
+            recent_price_lows = confirmed_price_lows[confirmed_price_lows >= lookback_start]
+
+            if len(recent_price_lows) < 2:
+                continue
+
+            # Check most recent pair of lows for divergence
+            idx_current = recent_price_lows[-1]
+            idx_previous = recent_price_lows[-2]
+
+            # Skip if we've already marked this pair
+            pair_key = (int(idx_previous), int(idx_current))
+            if pair_key in marked_pairs:
+                continue
 
             # Price makes lower low
             if price[idx_current] < price[idx_previous]:
                 # Find corresponding indicator lows
                 ind_current = self._find_closest_pivot(
-                    idx_current, indicator_lows_idx, self.pivot_align_tolerance
+                    idx_current, confirmed_indicator_lows, self.pivot_align_tolerance
                 )
                 ind_previous = self._find_closest_pivot(
-                    idx_previous, indicator_lows_idx, self.pivot_align_tolerance
+                    idx_previous, confirmed_indicator_lows, self.pivot_align_tolerance
                 )
 
                 if ind_current is not None and ind_previous is not None:
@@ -157,8 +183,9 @@ class DivergenceBase(Feature):
                         # Check magnitude
                         price_change = abs(price[idx_current] - price[idx_previous]) / price[idx_previous]
                         if price_change >= self.min_divergence_magnitude:
-                            divergence[idx_current] = 1
-                            break  # Only mark the most recent divergence
+                            # Mark divergence at current bar (where we detect it)
+                            divergence[i] = 1
+                            marked_pairs.add(pair_key)
 
         return divergence
 
@@ -171,6 +198,8 @@ class DivergenceBase(Feature):
     ) -> np.ndarray:
         """
         Detect regular bearish divergence: Price HH, Indicator LH.
+
+        CAUSAL IMPLEMENTATION: Processes bar-by-bar to ensure no look-ahead bias.
 
         Parameters
         ----------
@@ -194,26 +223,43 @@ class DivergenceBase(Feature):
         if len(price_highs_idx) < 2 or len(indicator_highs_idx) < 2:
             return divergence
 
-        # Look at last few price highs within lookback
-        recent_start = max(0, n - self.lookback)
-        recent_price_highs = price_highs_idx[price_highs_idx >= recent_start]
+        # Process bar-by-bar to ensure causality
+        # Track which pivot pairs we've already marked to avoid duplicates
+        marked_pairs = set()
 
-        if len(recent_price_highs) < 2:
-            return divergence
+        for i in range(n):
+            # Get pivots confirmed up to current bar i
+            max_pivot_idx = i - self.pivot_window
+            confirmed_price_highs = price_highs_idx[price_highs_idx <= max_pivot_idx]
+            confirmed_indicator_highs = indicator_highs_idx[indicator_highs_idx <= max_pivot_idx]
 
-        # Check last 2 highs for divergence
-        for i in range(len(recent_price_highs) - 1, 0, -1):
-            idx_current = recent_price_highs[i]
-            idx_previous = recent_price_highs[i - 1]
+            if len(confirmed_price_highs) < 2:
+                continue
+
+            # Look for divergence in the lookback window
+            lookback_start = max(0, i - self.lookback)
+            recent_price_highs = confirmed_price_highs[confirmed_price_highs >= lookback_start]
+
+            if len(recent_price_highs) < 2:
+                continue
+
+            # Check most recent pair of highs for divergence
+            idx_current = recent_price_highs[-1]
+            idx_previous = recent_price_highs[-2]
+
+            # Skip if we've already marked this pair
+            pair_key = (int(idx_previous), int(idx_current))
+            if pair_key in marked_pairs:
+                continue
 
             # Price makes higher high
             if price[idx_current] > price[idx_previous]:
                 # Find corresponding indicator highs
                 ind_current = self._find_closest_pivot(
-                    idx_current, indicator_highs_idx, self.pivot_align_tolerance
+                    idx_current, confirmed_indicator_highs, self.pivot_align_tolerance
                 )
                 ind_previous = self._find_closest_pivot(
-                    idx_previous, indicator_highs_idx, self.pivot_align_tolerance
+                    idx_previous, confirmed_indicator_highs, self.pivot_align_tolerance
                 )
 
                 if ind_current is not None and ind_previous is not None:
@@ -222,8 +268,9 @@ class DivergenceBase(Feature):
                         # Check magnitude
                         price_change = abs(price[idx_current] - price[idx_previous]) / price[idx_previous]
                         if price_change >= self.min_divergence_magnitude:
-                            divergence[idx_current] = 1
-                            break  # Only mark the most recent divergence
+                            # Mark divergence at current bar
+                            divergence[i] = 1
+                            marked_pairs.add(pair_key)
 
         return divergence
 
@@ -239,6 +286,8 @@ class DivergenceBase(Feature):
 
         Hidden divergences signal trend continuation rather than reversal.
 
+        CAUSAL IMPLEMENTATION: Processes bar-by-bar to ensure no look-ahead bias.
+
         Parameters
         ----------
         price : np.ndarray
@@ -261,24 +310,42 @@ class DivergenceBase(Feature):
         if len(price_lows_idx) < 2 or len(indicator_lows_idx) < 2:
             return divergence
 
-        recent_start = max(0, n - self.lookback)
-        recent_price_lows = price_lows_idx[price_lows_idx >= recent_start]
+        # Process bar-by-bar to ensure causality
+        # Track which pivot pairs we've already marked to avoid duplicates
+        marked_pairs = set()
 
-        if len(recent_price_lows) < 2:
-            return divergence
+        for i in range(n):
+            # Get pivots confirmed up to current bar i
+            max_pivot_idx = i - self.pivot_window
+            confirmed_price_lows = price_lows_idx[price_lows_idx <= max_pivot_idx]
+            confirmed_indicator_lows = indicator_lows_idx[indicator_lows_idx <= max_pivot_idx]
 
-        # Check for pattern: Price HL, Indicator LL
-        for i in range(len(recent_price_lows) - 1, 0, -1):
-            idx_current = recent_price_lows[i]
-            idx_previous = recent_price_lows[i - 1]
+            if len(confirmed_price_lows) < 2:
+                continue
+
+            # Look for divergence in the lookback window
+            lookback_start = max(0, i - self.lookback)
+            recent_price_lows = confirmed_price_lows[confirmed_price_lows >= lookback_start]
+
+            if len(recent_price_lows) < 2:
+                continue
+
+            # Check most recent pair of lows for divergence
+            idx_current = recent_price_lows[-1]
+            idx_previous = recent_price_lows[-2]
+
+            # Skip if we've already marked this pair
+            pair_key = (int(idx_previous), int(idx_current))
+            if pair_key in marked_pairs:
+                continue
 
             # Price makes higher low
             if price[idx_current] > price[idx_previous]:
                 ind_current = self._find_closest_pivot(
-                    idx_current, indicator_lows_idx, self.pivot_align_tolerance
+                    idx_current, confirmed_indicator_lows, self.pivot_align_tolerance
                 )
                 ind_previous = self._find_closest_pivot(
-                    idx_previous, indicator_lows_idx, self.pivot_align_tolerance
+                    idx_previous, confirmed_indicator_lows, self.pivot_align_tolerance
                 )
 
                 if ind_current is not None and ind_previous is not None:
@@ -286,8 +353,9 @@ class DivergenceBase(Feature):
                     if indicator[ind_current] < indicator[ind_previous]:
                         price_change = abs(price[idx_current] - price[idx_previous]) / price[idx_previous]
                         if price_change >= self.min_divergence_magnitude:
-                            divergence[idx_current] = 1
-                            break
+                            # Mark divergence at current bar
+                            divergence[i] = 1
+                            marked_pairs.add(pair_key)
 
         return divergence
 
@@ -302,6 +370,8 @@ class DivergenceBase(Feature):
         Detect hidden bearish divergence: Price LH, Indicator HH.
 
         Hidden divergences signal trend continuation rather than reversal.
+
+        CAUSAL IMPLEMENTATION: Processes bar-by-bar to ensure no look-ahead bias.
 
         Parameters
         ----------
@@ -325,24 +395,42 @@ class DivergenceBase(Feature):
         if len(price_highs_idx) < 2 or len(indicator_highs_idx) < 2:
             return divergence
 
-        recent_start = max(0, n - self.lookback)
-        recent_price_highs = price_highs_idx[price_highs_idx >= recent_start]
+        # Process bar-by-bar to ensure causality
+        # Track which pivot pairs we've already marked to avoid duplicates
+        marked_pairs = set()
 
-        if len(recent_price_highs) < 2:
-            return divergence
+        for i in range(n):
+            # Get pivots confirmed up to current bar i
+            max_pivot_idx = i - self.pivot_window
+            confirmed_price_highs = price_highs_idx[price_highs_idx <= max_pivot_idx]
+            confirmed_indicator_highs = indicator_highs_idx[indicator_highs_idx <= max_pivot_idx]
 
-        # Check for pattern: Price LH, Indicator HH
-        for i in range(len(recent_price_highs) - 1, 0, -1):
-            idx_current = recent_price_highs[i]
-            idx_previous = recent_price_highs[i - 1]
+            if len(confirmed_price_highs) < 2:
+                continue
+
+            # Look for divergence in the lookback window
+            lookback_start = max(0, i - self.lookback)
+            recent_price_highs = confirmed_price_highs[confirmed_price_highs >= lookback_start]
+
+            if len(recent_price_highs) < 2:
+                continue
+
+            # Check most recent pair of highs for divergence
+            idx_current = recent_price_highs[-1]
+            idx_previous = recent_price_highs[-2]
+
+            # Skip if we've already marked this pair
+            pair_key = (int(idx_previous), int(idx_current))
+            if pair_key in marked_pairs:
+                continue
 
             # Price makes lower high
             if price[idx_current] < price[idx_previous]:
                 ind_current = self._find_closest_pivot(
-                    idx_current, indicator_highs_idx, self.pivot_align_tolerance
+                    idx_current, confirmed_indicator_highs, self.pivot_align_tolerance
                 )
                 ind_previous = self._find_closest_pivot(
-                    idx_previous, indicator_highs_idx, self.pivot_align_tolerance
+                    idx_previous, confirmed_indicator_highs, self.pivot_align_tolerance
                 )
 
                 if ind_current is not None and ind_previous is not None:
@@ -350,8 +438,9 @@ class DivergenceBase(Feature):
                     if indicator[ind_current] > indicator[ind_previous]:
                         price_change = abs(price[idx_current] - price[idx_previous]) / price[idx_previous]
                         if price_change >= self.min_divergence_magnitude:
-                            divergence[idx_current] = 1
-                            break
+                            # Mark divergence at current bar
+                            divergence[i] = 1
+                            marked_pairs.add(pair_key)
 
         return divergence
 
@@ -360,7 +449,8 @@ class DivergenceBase(Feature):
         price: np.ndarray,
         indicator: np.ndarray,
         divergence_idx: np.ndarray,
-        indicator_range: Tuple[float, float]
+        indicator_range: Tuple[float, float] = None,
+        lookback_for_range: int = None
     ) -> np.ndarray:
         """
         Calculate strength score for detected divergences.
@@ -370,6 +460,9 @@ class DivergenceBase(Feature):
         - Magnitude of indicator divergence
         - Indicator position in range (oversold/overbought)
 
+        CAUSAL IMPLEMENTATION: If indicator_range is None, calculates range
+        dynamically for each bar using only historical data.
+
         Parameters
         ----------
         price : np.ndarray
@@ -378,8 +471,10 @@ class DivergenceBase(Feature):
             Indicator series
         divergence_idx : np.ndarray
             Indices where divergence was detected
-        indicator_range : tuple of (float, float)
-            (min, max) normal range for indicator
+        indicator_range : tuple of (float, float), optional
+            (min, max) normal range for indicator. If None, calculated dynamically.
+        lookback_for_range : int, optional
+            Lookback period for dynamic range calculation. Uses self.lookback if None.
 
         Returns
         -------
@@ -389,7 +484,10 @@ class DivergenceBase(Feature):
         n = len(price)
         strength = np.zeros(n, dtype=float)
 
-        indicator_min, indicator_max = indicator_range
+        if lookback_for_range is None:
+            lookback_for_range = self.lookback
+
+        use_dynamic_range = indicator_range is None
 
         for idx in np.where(divergence_idx)[0]:
             if idx < self.strength_window:
@@ -405,7 +503,22 @@ class DivergenceBase(Feature):
 
             # 2. Indicator extremity
             ind_value = indicator[idx]
-            if indicator_max > indicator_min:
+
+            # Calculate indicator range causally (only using data up to current bar)
+            if use_dynamic_range:
+                range_start = max(0, idx - lookback_for_range + 1)
+                indicator_window = indicator[range_start:idx + 1]
+                # Filter out NaN values
+                indicator_window = indicator_window[~np.isnan(indicator_window)]
+                if len(indicator_window) > 0:
+                    indicator_min = np.min(indicator_window)
+                    indicator_max = np.max(indicator_window)
+                else:
+                    indicator_min = indicator_max = 0
+            else:
+                indicator_min, indicator_max = indicator_range
+
+            if indicator_max > indicator_min and not np.isnan(ind_value):
                 ind_normalized = (ind_value - indicator_min) / (indicator_max - indicator_min)
                 ind_extremity = min(ind_normalized, 1 - ind_normalized)  # Distance from center
             else:
@@ -453,3 +566,9 @@ class DivergenceBase(Feature):
             return pivot_indices[min_dist_idx]
 
         return None
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5

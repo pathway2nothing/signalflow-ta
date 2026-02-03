@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Type, Any, get_type_hints
 import importlib
 
+TEST_PARAMS_LIMIT = 1
 
 @dataclass
 class IndicatorConfig:
@@ -194,7 +195,7 @@ def get_warmup(cls: Type, params: dict) -> int:
     - Multiple periods: slow, fast, signal, rsi_period, stoch_period
     - Composite indicators need sum of dependent periods
     """
-    warmup = 0
+    warmup = 2000
     
     # StochRSI-like: needs RSI warmup + Stoch warmup
     if 'rsi_period' in params:
@@ -308,7 +309,7 @@ def discover_indicators() -> list[IndicatorConfig]:
             
             # Check for test_params attribute (ClassVar[list[dict]])
             test_params = getattr(cls, 'test_params', None)
-            
+            test_params = test_params if test_params else [get_default_params(cls)]
             if test_params and isinstance(test_params, list) and len(test_params) > 0:
                 # Create config for each parameter set
                 for idx, param_set in enumerate(test_params):
@@ -1485,6 +1486,66 @@ def get_indicator_ids() -> list[str]:
     if not INDICATOR_CONFIGS:
         return []  # Empty list - tests will be skipped via pytestmark
     return [c.test_id for c in INDICATOR_CONFIGS]
+
+
+# =============================================================================
+# Test Configuration Filtering
+# =============================================================================
+
+def filter_configs_by_options(configs: list[IndicatorConfig], pytest_config=None) -> tuple[list, list]:
+    """
+    Filter indicator configs based on pytest command-line options.
+
+    Parameters
+    ----------
+    configs : list[IndicatorConfig]
+        All available indicator configurations
+    pytest_config : pytest.Config, optional
+        Pytest config object to access options
+
+    Returns
+    -------
+    filtered_configs : list[IndicatorConfig]
+        Filtered configs
+    filtered_ids : list[str]
+        IDs for the filtered configs
+    """
+    if not configs:
+        return [None], ["no_indicators"]
+
+    filtered = list(configs)  # Make a copy
+
+    # Apply feature group filtering if specified
+    if pytest_config and hasattr(pytest_config, 'test_feature_groups'):
+        feature_groups = pytest_config.test_feature_groups
+        if feature_groups:
+            allowed_groups = {g.strip().lower() for g in feature_groups.split(',')}
+            filtered = [
+                c for c in filtered
+                if c.category.lower() in allowed_groups
+            ]
+
+    # Apply max params limit if specified
+    if pytest_config and hasattr(pytest_config, 'test_max_params'):
+        max_params = pytest_config.test_max_params
+        if max_params is not None and max_params > 0:
+            # Group configs by indicator name (without params)
+            from collections import defaultdict
+            by_indicator = defaultdict(list)
+            for config in filtered:
+                # Extract base name (e.g., "momentum/RsiMom" from "momentum/RsiMom[...]")
+                base_name = config.name.split('[')[0]
+                by_indicator[base_name].append(config)
+
+            # Keep only first N param sets for each indicator
+            filtered = []
+            for base_name, param_configs in sorted(by_indicator.items()):
+                filtered.extend(param_configs[:max_params])
+
+    if not filtered:
+        return [None], ["no_matching_indicators"]
+
+    return filtered, [c.test_id for c in filtered]
 
 
 # Parametrization helpers for test_indicators.py

@@ -81,6 +81,12 @@ class HurstStat(Feature):
     ]
 
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
 @dataclass
 @sf_component(name="stat/autocorr")
 class AutocorrStat(Feature):
@@ -180,3 +186,14 @@ class VarianceRatioStat(Feature):
         {"source_col": "close", "period": 100, "k": 10},
         {"source_col": "close", "period": 200, "k": 20},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5

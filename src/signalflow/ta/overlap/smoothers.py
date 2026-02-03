@@ -42,6 +42,10 @@ class SmaSmooth(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        return self.period * 3
+
 @dataclass
 @sf_component(name="smooth/ema")
 class EmaSmooth(Feature):
@@ -74,6 +78,12 @@ class EmaSmooth(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="smooth/wma")
@@ -120,16 +130,7 @@ class WmaSmooth(Feature):
 @dataclass
 @sf_component(name="smooth/rma")
 class RmaSmooth(Feature):
-    """Wilder's Smoothed Moving Average (RMA).
-    
-    RMA = α * price + (1 - α) * RMA_prev
-    α = 1 / period
-    
-    Used in RSI, ATR. Smoother than EMA with same period.
-    Equivalent to EMA with span = 2*period - 1.
-    
-    Reference: https://www.investopedia.com/terms/w/wilders-smoothing.asp
-    """
+    """Wilder's Smoothed Moving Average (RMA)."""
     
     source_col: str = "close"
     period: int = 14
@@ -137,22 +138,17 @@ class RmaSmooth(Feature):
     requires = ["{source_col}"]
     outputs = ["{source_col}_rma_{period}"]
     
+    @property
+    def warmup(self) -> int:
+        """RMA needs ~10x period for initialization error to decay below 0.01%."""
+        return self.period * 10
+    
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
-        n = len(values)
-        alpha = 1.0 / self.period
-        rma = np.full(n, np.nan)
-
-        if n >= self.period:
-            # Initialize with SMA for reproducibility
-            rma[self.period - 1] = np.mean(values[:self.period])
-
-            # Continue with Wilder's smoothing
-            for i in range(self.period, n):
-                rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-
+        equivalent_span = 2 * self.period - 1
         return df.with_columns(
-            pl.Series(name=f"{self.source_col}_rma_{self.period}", values=rma)
+            pl.col(self.source_col)
+              .ewm_mean(span=equivalent_span, adjust=False)
+              .alias(f"{self.source_col}_rma_{self.period}")
         )
     
     test_params: ClassVar[list[dict]] = [
@@ -428,3 +424,50 @@ class SsfSmooth(Feature):
         {"source_col": "close", "period": 30, "poles": 2},
         {"source_col": "close", "period": 60, "poles": 3},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 10
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
