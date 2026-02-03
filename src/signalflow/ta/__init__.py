@@ -127,7 +127,6 @@ from signalflow.ta.volume import (
 from signalflow.ta.divergence import (
     RsiDivergence,
     MacdDivergence,
-    MultiDivergence,
 )
 
 __all__ = [
@@ -149,7 +148,6 @@ __all__ = [
     # Divergence detectors
     "RsiDivergence",
     "MacdDivergence",
-    "MultiDivergence",
     # Overlap indicators
     "SmaSmooth",
     "EmaSmooth",
