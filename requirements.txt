@@ -5,3 +5,5 @@ plotly
 pyarrow
 kaleido
 pytest
+numpy
+numba
