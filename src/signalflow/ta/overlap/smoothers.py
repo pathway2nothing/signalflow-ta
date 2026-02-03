@@ -138,11 +138,21 @@ class RmaSmooth(Feature):
     outputs = ["{source_col}_rma_{period}"]
     
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        values = df[self.source_col].to_numpy()
+        n = len(values)
         alpha = 1.0 / self.period
+        rma = np.full(n, np.nan)
+
+        if n >= self.period:
+            # Initialize with SMA for reproducibility
+            rma[self.period - 1] = np.mean(values[:self.period])
+
+            # Continue with Wilder's smoothing
+            for i in range(self.period, n):
+                rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
+
         return df.with_columns(
-            pl.col(self.source_col)
-              .ewm_mean(alpha=alpha, adjust=False, min_periods=self.period)
-              .alias(f"{self.source_col}_rma_{self.period}")
+            pl.Series(name=f"{self.source_col}_rma_{self.period}", values=rma)
         )
     
     test_params: ClassVar[list[dict]] = [

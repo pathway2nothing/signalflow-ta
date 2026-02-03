@@ -159,14 +159,17 @@ class EfiVolume(Feature):
         volume = df["volume"].to_numpy()
         n = len(close)
         
-        force = np.diff(close, prepend=close[0]) * volume
+        force = np.diff(close, prepend=np.nan) * volume
         force[0] = 0
-        
+
         alpha = 2 / (self.period + 1)
         efi = np.full(n, np.nan)
-        efi[0] = force[0]
-        
-        for i in range(1, n):
+
+        if n >= self.period:
+            # Initialize with SMA for reproducibility
+            efi[self.period - 1] = np.mean(force[:self.period])
+
+        for i in range(self.period, n):
             efi[i] = alpha * force[i] + (1 - alpha) * efi[i - 1]
         
         return df.with_columns(
@@ -281,10 +284,10 @@ class KvoVolume(Feature):
         n = len(close)
         
         hlc3 = (high + low + close) / 3
-        
-        hlc3_diff = np.diff(hlc3, prepend=hlc3[0])
+
+        hlc3_diff = np.diff(hlc3, prepend=np.nan)
         trend = np.sign(hlc3_diff)
-        trend[0] = 1
+        trend[0] = 0  # No trend on first bar
         
         sv = volume * trend
         
@@ -294,22 +297,34 @@ class KvoVolume(Feature):
         
         ema_fast = np.full(n, np.nan)
         ema_slow = np.full(n, np.nan)
-        
-        ema_fast[0] = sv[0]
-        ema_slow[0] = sv[0]
-        
-        for i in range(1, n):
+
+        # Initialize with SMA for reproducibility
+        if n >= self.fast:
+            ema_fast[self.fast - 1] = np.mean(sv[:self.fast])
+        if n >= self.slow:
+            ema_slow[self.slow - 1] = np.mean(sv[:self.slow])
+
+        for i in range(self.fast, n):
             ema_fast[i] = alpha_fast * sv[i] + (1 - alpha_fast) * ema_fast[i - 1]
+        for i in range(self.slow, n):
             ema_slow[i] = alpha_slow * sv[i] + (1 - alpha_slow) * ema_slow[i - 1]
         
         kvo = ema_fast - ema_slow
-        
+
         kvo_signal = np.full(n, np.nan)
-        kvo_signal[0] = kvo[0]
-        
-        for i in range(1, n):
-            if not np.isnan(kvo[i]) and not np.isnan(kvo_signal[i - 1]):
-                kvo_signal[i] = alpha_sig * kvo[i] + (1 - alpha_sig) * kvo_signal[i - 1]
+
+        # Initialize signal line with SMA for reproducibility
+        # Both EMAs are valid starting from slow-1 (since slow >= fast)
+        kvo_start = self.slow - 1
+
+        if n >= kvo_start + self.signal:
+            # Initialize signal with SMA of first signal_period KVO values
+            init_idx = kvo_start + self.signal - 1
+            kvo_signal[init_idx] = np.mean(kvo[kvo_start:kvo_start + self.signal])
+
+        # Continue with EMA smoothing
+        for i in range(kvo_start + self.signal, n):
+            kvo_signal[i] = alpha_sig * kvo[i] + (1 - alpha_sig) * kvo_signal[i - 1]
         
         return df.with_columns([
             pl.Series(name=f"kvo_{self.fast}_{self.slow}", values=kvo),
