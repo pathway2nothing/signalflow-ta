@@ -110,6 +110,12 @@ class MacdMom(Feature):
     ]
 
 
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.slow * 5
+
 @dataclass
 @sf_component(name="momentum/ppo")
 class PpoMom(Feature):
@@ -308,3 +314,20 @@ class TrixMom(Feature):
         {"period": 60, "signal": 30},   
         {"period": 120, "signal": 60}, 
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.slow * 5
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 8
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 12

@@ -235,3 +235,9 @@ class RsiDivergence(DivergenceBase):
             boosted[overbought_mask] += boost
 
         return np.clip(boosted, 0, 100)
+
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.rsi_period * 10 + self.pivot_window * 2 + self.lookback
