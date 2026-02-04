@@ -112,6 +112,12 @@ from signalflow.ta.stat import (
     RenyiEntropyStat,
     AutoMutualInfoStat,
     RelativeInfoGainStat,
+    SpectralFluxStat,
+    ZeroCrossingRateStat,
+    SpectralRolloffStat,
+    SpectralFlatnessStat,
+    PowerCepstrumStat,
+    CrossSectionalStat,
 )
 
 
@@ -310,6 +316,14 @@ __all__ = [
     "RenyiEntropyStat",
     "AutoMutualInfoStat",
     "RelativeInfoGainStat",
+    # Stat - Cross-Sectional
+    "CrossSectionalStat",
+    # Stat - DSP / Acoustics
+    "SpectralFluxStat",
+    "ZeroCrossingRateStat",
+    "SpectralRolloffStat",
+    "SpectralFlatnessStat",
+    "PowerCepstrumStat",
     # Trend
     "AdxTrend",
     "AroonTrend",
