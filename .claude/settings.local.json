@@ -10,7 +10,8 @@
       "Bash(python:*)",
       "Bash(pip install:*)",
       "Bash(python3:*)",
-      "Bash(git -C /home/alastor/signalflow-ta diff --name-only HEAD)"
+      "Bash(git -C /home/alastor/signalflow-ta diff --name-only HEAD)",
+      "Bash(tree:*)"
     ]
   }
 }
