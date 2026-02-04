@@ -134,6 +134,11 @@ class AutocorrStat(Feature):
         {"source_col": "close", "period": 120, "lag": 10},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return (self.period + self.lag) * 5
+
 @dataclass
 @sf_component(name="stat/variance_ratio")
 class VarianceRatioStat(Feature):
@@ -190,10 +195,4 @@ class VarianceRatioStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        return (self.period + self.k) * 5
