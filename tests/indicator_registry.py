@@ -29,13 +29,17 @@ class IndicatorConfig:
     
     @property
     def test_id(self) -> str:
-        """Generate test ID for pytest parametrization."""
-        base = f"{self.category}/{self.name}"
+        """Generate test ID for pytest parametrization.
+
+        Avoids '/' and nested '[]' which conflict with pytest node ID parsing
+        and break VSCode test discovery.
+        """
+        base = f"{self.category}-{self.name}"
         if self.variation_idx is not None:
             # Create readable param string: period=7,std=2.0
-            param_str = ",".join(f"{k}={v}" for k, v in self.params.items() 
+            param_str = ",".join(f"{k}={v}" for k, v in self.params.items()
                                   if k not in ('source_col', 'pair_col', 'ts_col'))
-            return f"{base}[{param_str}]"
+            return f"{base}({param_str})"
         return base
 
 

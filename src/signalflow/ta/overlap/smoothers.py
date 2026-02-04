@@ -1,13 +1,14 @@
 """Basic smoothing moving averages."""
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -630,5 +631,111 @@ class SsfSmooth(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
+        return self.period * 3
+
+
+@dataclass
+@sf_component(name="smooth/fft")
+class FftSmooth(Feature):
+    """FFT Low-Pass Smoother.
+
+    Applies a frequency-domain low-pass filter to remove high-frequency noise.
+    For each rolling window the algorithm:
+
+    1. Removes linear trend (avoids spectral leakage at DC).
+    2. Computes the real FFT of the detrended window.
+    3. Zeros out frequency bins above ``cutoff_ratio * f_nyquist``.
+    4. Reconstructs the signal via inverse FFT.
+    5. Adds the trend back and takes the last sample as output.
+
+    The computation is **fully deterministic** — no random state, no
+    data-dependent initialization — so the output at bar *N* depends only
+    on bars [N - period + 1 … N] and is independent of the entry point.
+
+    Parameters:
+        source_col: Price column to smooth.
+        period: Rolling window size (power-of-2 recommended for FFT speed).
+        cutoff_ratio: Fraction of frequency bins to keep, in (0, 1].
+            Lower values → heavier smoothing. Default 0.1 keeps the
+            lowest 10 % of non-DC frequencies.
+        normalized: If True, output percentage difference from source:
+            ``(source - fft_smooth) / source``.
+
+    Reference: Oppenheim, A.V. & Schafer, R.W. "Discrete-Time Signal
+    Processing", 3rd ed., Pearson, 2010.
+    """
+
+    source_col: str = "close"
+    period: int = 64
+    cutoff_ratio: float = 0.1
+    normalized: bool = False
+
+    requires = ["{source_col}"]
+    outputs = ["{source_col}_fft_{period}"]
+
+    def __post_init__(self) -> None:
+        if not (0.0 < self.cutoff_ratio <= 1.0):
+            raise ValueError(
+                f"cutoff_ratio must be in (0, 1], got {self.cutoff_ratio}"
+            )
+        if self.period < 4:
+            raise ValueError(
+                f"period must be >= 4 for meaningful FFT, got {self.period}"
+            )
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        source = df[self.source_col].to_numpy().astype(np.float64)
+        n = len(source)
+
+        result = np.full(n, np.nan)
+
+        # Number of rfft bins (including DC)
+        n_bins = self.period // 2 + 1
+        # How many non-DC bins to keep (at least 1)
+        keep = max(1, int(round((n_bins - 1) * self.cutoff_ratio)))
+
+        for i in range(self.period - 1, n):
+            window = source[i - self.period + 1 : i + 1]
+
+            # --- detrend (linear) ---
+            x = np.arange(self.period, dtype=np.float64)
+            coeffs = np.polyfit(x, window, 1)
+            trend_line = np.polyval(coeffs, x)
+            detrended = window - trend_line
+
+            # --- forward FFT ---
+            spectrum = np.fft.rfft(detrended)
+
+            # --- low-pass: zero out high-frequency bins ---
+            # spectrum[0] = DC, spectrum[1:keep+1] = kept, rest = zeroed
+            spectrum[keep + 1 :] = 0.0
+
+            # --- inverse FFT ---
+            smoothed = np.fft.irfft(spectrum, n=self.period)
+
+            # --- add trend back, take last sample ---
+            result[i] = smoothed[-1] + trend_line[-1]
+
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_ma_pct
+
+            result = normalize_ma_pct(source, result)
+
+        col_name = self._get_output_name()
+        return df.with_columns(pl.Series(name=col_name, values=result))
+
+    def _get_output_name(self) -> str:
+        suffix = "_norm" if self.normalized else ""
+        return f"{self.source_col}_fft_{self.period}{suffix}"
+
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 64, "cutoff_ratio": 0.1},
+        {"source_col": "close", "period": 64, "cutoff_ratio": 0.1, "normalized": True},
+        {"source_col": "close", "period": 128, "cutoff_ratio": 0.05},
+        {"source_col": "close", "period": 32, "cutoff_ratio": 0.2},
+    ]
+
+    @property
+    def warmup(self) -> int:
         return self.period * 3
 
