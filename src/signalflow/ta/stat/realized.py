@@ -106,6 +106,11 @@ class ParkinsonVolStat(Feature):
         {"period": 120, "annualize": True, "trading_periods": 252},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/garman_klass_vol")
@@ -158,6 +163,11 @@ class GarmanKlassVolStat(Feature):
         {"period": 120, "annualize": True, "trading_periods": 252},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/rogers_satchell_vol")
@@ -207,6 +217,11 @@ class RogersSatchellVolStat(Feature):
         {"period": 60, "annualize": True, "trading_periods": 252},
         {"period": 120, "annualize": True, "trading_periods": 252},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 
 @dataclass
@@ -269,26 +284,7 @@ class YangZhangVolStat(Feature):
         {"period": 120, "annualize": True, "trading_periods": 252},
     ]
 
-
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        return self.period * 5

@@ -134,6 +134,7 @@ class AutocorrStat(Feature):
 
     @property
     def warmup(self) -> int:
+
         return (self.period + self.lag) * 5
 
 
@@ -192,6 +193,7 @@ class VarianceRatioStat(Feature):
 
     @property
     def warmup(self) -> int:
+
         return (self.period + self.k) * 5
 
 

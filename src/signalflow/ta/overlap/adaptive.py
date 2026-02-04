@@ -192,6 +192,11 @@ class AlmaSmooth(Feature):
         {"source_col": "close", "period": 120, "offset": 0.85, "sigma": 6.0},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 3
+
 
 @dataclass
 @sf_component(name="smooth/jma")
@@ -298,6 +303,11 @@ class JmaSmooth(Feature):
         {"source_col": "close", "period": 60, "phase": 50},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 10 + 65
+
 
 @dataclass
 @sf_component(name="smooth/vidya")
@@ -367,7 +377,12 @@ class VidyaSmooth(Feature):
         {"source_col": "close", "period": 14, "normalized": True},
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 120},
-    ]   
+    ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 
 @dataclass
@@ -436,6 +451,11 @@ class T3Smooth(Feature):
         {"source_col": "close", "period": 60, "vfactor": 0.8},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 6
+
 @dataclass
 @sf_component(name="smooth/zlma")
 class ZlmaSmooth(Feature):
@@ -497,6 +517,11 @@ class ZlmaSmooth(Feature):
         {"source_col": "close", "period": 120, "ma_type": "sma"},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="smooth/mcginley")
 class McGinleySmooth(Feature):
@@ -557,6 +582,11 @@ class McGinleySmooth(Feature):
         {"source_col": "close", "period": 60, "k": 0.6},
         {"source_col": "close", "period": 120, "k": 0.6},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="smooth/frama")
