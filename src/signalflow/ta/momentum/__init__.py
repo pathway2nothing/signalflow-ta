@@ -27,6 +27,12 @@ from signalflow.ta.momentum.macd import (
     TsiMom,
     TrixMom,
 )
+from signalflow.ta.momentum.kinematics import (
+    AccelerationMom,
+    JerkMom,
+    AngularMomentumMom,
+    TorqueMom,
+)
 
 __all__ = [
     # Core
@@ -46,4 +52,9 @@ __all__ = [
     "PpoMom",
     "TsiMom",
     "TrixMom",
+    # Kinematics
+    "AccelerationMom",
+    "JerkMom",
+    "AngularMomentumMom",
+    "TorqueMom",
 ]
