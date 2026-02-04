@@ -55,6 +55,8 @@ class ObvVolume(Feature):
     """
 
     period: int = 20  # Rolling window size
+    normalized: bool = False
+    norm_period: int | None = None
 
     requires = ["close", "volume"]
     outputs = ["obv"]
@@ -73,16 +75,36 @@ class ObvVolume(Feature):
         # Fast rolling sum using numpy
         obv = rolling_sum_numpy(signed_volume, self.period)
 
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            obv = normalize_zscore(obv, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name="obv", values=obv)
+            pl.Series(name=col_name, values=obv)
         )
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"obv{suffix}"
 
     @property
     def warmup(self) -> int:
         """Minimum bars for stable output."""
-        return self.period
+        base_warmup = self.period
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
-    test_params: ClassVar[list[dict]] = [{}]
+    test_params: ClassVar[list[dict]] = [
+        {},
+        {"normalized": True},
+    ]
 
 
 @dataclass
@@ -114,6 +136,8 @@ class AdVolume(Feature):
     """
 
     period: int = 20  # Rolling window size
+    normalized: bool = False
+    norm_period: int | None = None
 
     requires = ["high", "low", "close", "volume"]
     outputs = ["ad"]
@@ -138,16 +162,36 @@ class AdVolume(Feature):
         # Fast rolling sum using numpy
         ad = rolling_sum_numpy(mfv, self.period)
 
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            ad = normalize_zscore(ad, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name="ad", values=ad)
+            pl.Series(name=col_name, values=ad)
         )
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"ad{suffix}"
 
     @property
     def warmup(self) -> int:
         """Minimum bars for stable output."""
-        return self.period
+        base_warmup = self.period
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
-    test_params: ClassVar[list[dict]] = [{}]
+    test_params: ClassVar[list[dict]] = [
+        {},
+        {"normalized": True},
+    ]
 
 
 @dataclass
@@ -173,6 +217,8 @@ class PvtVolume(Feature):
     """
 
     period: int = 20  # Rolling window size
+    normalized: bool = False
+    norm_period: int | None = None
 
     requires = ["close", "volume"]
     outputs = ["pvt"]
@@ -191,16 +237,36 @@ class PvtVolume(Feature):
         # Fast rolling sum using numpy
         pvt = rolling_sum_numpy(pv, self.period)
 
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            pvt = normalize_zscore(pvt, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name="pvt", values=pvt)
+            pl.Series(name=col_name, values=pvt)
         )
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"pvt{suffix}"
 
     @property
     def warmup(self) -> int:
         """Minimum bars for stable output."""
-        return self.period
+        base_warmup = self.period
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
-    test_params: ClassVar[list[dict]] = [{}]
+    test_params: ClassVar[list[dict]] = [
+        {},
+        {"normalized": True},
+    ]
 
 
 @dataclass
@@ -227,6 +293,8 @@ class NviVolume(Feature):
     """
 
     period: int = 255  # Standard NVI period
+    normalized: bool = False
+    norm_period: int | None = None
 
     requires = ["close", "volume"]
     outputs = ["nvi"]
@@ -247,16 +315,36 @@ class NviVolume(Feature):
         # Fast rolling sum using numpy
         nvi = rolling_sum_numpy(nvi_change, self.period)
 
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            nvi = normalize_zscore(nvi, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name="nvi", values=nvi)
+            pl.Series(name=col_name, values=nvi)
         )
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"nvi{suffix}"
 
     @property
     def warmup(self) -> int:
         """Minimum bars for stable output."""
-        return self.period
+        base_warmup = self.period
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
-    test_params: ClassVar[list[dict]] = [{}]
+    test_params: ClassVar[list[dict]] = [
+        {},
+        {"normalized": True},
+    ]
 
 
 @dataclass
@@ -283,6 +371,8 @@ class PviVolume(Feature):
     """
 
     period: int = 255  # Standard PVI period
+    normalized: bool = False
+    norm_period: int | None = None
 
     requires = ["close", "volume"]
     outputs = ["pvi"]
@@ -304,13 +394,33 @@ class PviVolume(Feature):
         # Fast rolling sum using numpy
         pvi = rolling_sum_numpy(pvi_change, self.period)
 
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            pvi = normalize_zscore(pvi, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name="pvi", values=pvi)
+            pl.Series(name=col_name, values=pvi)
         )
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"pvi{suffix}"
 
     @property
     def warmup(self) -> int:
         """Minimum bars for stable output."""
-        return self.period
+        base_warmup = self.period
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
-    test_params: ClassVar[list[dict]] = [{}]
+    test_params: ClassVar[list[dict]] = [
+        {},
+        {"normalized": True},
+    ]
