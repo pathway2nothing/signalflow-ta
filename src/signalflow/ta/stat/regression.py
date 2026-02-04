@@ -126,6 +126,11 @@ class BetaStat(Feature):
         {"source_col": "close", "benchmark_col": "volume", "period": 120},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/rsquared")
@@ -178,6 +183,11 @@ class RSquaredStat(Feature):
         {"source_col": "close", "period": 120},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/linreg_slope")
 class LinRegSlopeStat(Feature):
@@ -222,6 +232,11 @@ class LinRegSlopeStat(Feature):
         {"source_col": "close", "period": 120},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/linreg_intercept")
 class LinRegInterceptStat(Feature):
@@ -260,6 +275,11 @@ class LinRegInterceptStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 120},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 
 @dataclass
@@ -306,33 +326,8 @@ class LinRegResidualStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 120},
     ]
-    
 
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        return self.period * 5

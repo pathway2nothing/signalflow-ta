@@ -192,6 +192,11 @@ class AlmaSmooth(Feature):
         {"source_col": "close", "period": 120, "offset": 0.85, "sigma": 6.0},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 3
+
 
 @dataclass
 @sf_component(name="smooth/jma")
@@ -298,6 +303,11 @@ class JmaSmooth(Feature):
         {"source_col": "close", "period": 60, "phase": 50},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 10 + 65
+
 
 @dataclass
 @sf_component(name="smooth/vidya")
@@ -367,7 +377,12 @@ class VidyaSmooth(Feature):
         {"source_col": "close", "period": 14, "normalized": True},
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 120},
-    ]   
+    ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 
 @dataclass
@@ -436,6 +451,11 @@ class T3Smooth(Feature):
         {"source_col": "close", "period": 60, "vfactor": 0.8},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 6
+
 @dataclass
 @sf_component(name="smooth/zlma")
 class ZlmaSmooth(Feature):
@@ -464,28 +484,25 @@ class ZlmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         lag = int((self.period - 1) / 2)
-        col = pl.col(self.source_col)
 
-        adjusted = 2 * col - col.shift(lag)
+        col_series = df[self.source_col]
+        adjusted = 2 * col_series - col_series.shift(lag)
 
         if self.ma_type == "sma":
             zlma = adjusted.rolling_mean(window_size=self.period)
         else:
             zlma = adjusted.ewm_mean(span=self.period, adjust=False)
 
-        # Convert to numpy for normalization if needed
+        zlma_array = zlma.to_numpy()
+
+        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
-            zlma_array = df.with_columns(zlma.alias("_temp"))[["_temp"]].to_numpy().flatten()
             zlma_array = normalize_ma_pct(source, zlma_array)
-            col_name = self._get_output_name()
-            return df.with_columns(
-                pl.Series(name=col_name, values=zlma_array)
-            )
 
         col_name = self._get_output_name()
         return df.with_columns(
-            zlma.alias(col_name)
+            pl.Series(name=col_name, values=zlma_array)
         )
 
     def _get_output_name(self) -> str:
@@ -499,6 +516,11 @@ class ZlmaSmooth(Feature):
         {"source_col": "close", "period": 60, "ma_type": "ema"},
         {"source_col": "close", "period": 120, "ma_type": "sma"},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="smooth/mcginley")
@@ -560,6 +582,11 @@ class McGinleySmooth(Feature):
         {"source_col": "close", "period": 60, "k": 0.6},
         {"source_col": "close", "period": 120, "k": 0.6},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="smooth/frama")

@@ -76,6 +76,11 @@ class StdStat(Feature):
         {"source_col": "close", "period": 240, "ddof": 1},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/mad")
 class MadStat(Feature):
@@ -113,6 +118,11 @@ class MadStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/zscore")
@@ -148,6 +158,11 @@ class ZscoreStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/cv")
 class CvStat(Feature):
@@ -182,6 +197,11 @@ class CvStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/range")
 class RangeStat(Feature):
@@ -213,6 +233,11 @@ class RangeStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/iqr")
@@ -246,6 +271,11 @@ class IqrStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/aad")
@@ -283,6 +313,11 @@ class AadStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 
 @dataclass
@@ -332,46 +367,4 @@ class RobustZscoreStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        return self.period * 5

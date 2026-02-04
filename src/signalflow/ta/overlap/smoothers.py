@@ -36,12 +36,13 @@ class SmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         sma = (
-            pl.col(self.source_col)
-              .rolling_mean(window_size=self.period)
-              .to_numpy()
+            df.select(
+                pl.col(self.source_col)
+                  .rolling_mean(window_size=self.period)
+            ).to_series().to_numpy()
         )
 
-        # Normalization: percentage difference from source
+
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             sma = normalize_ma_pct(source, sma)
@@ -93,12 +94,12 @@ class EmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         ema = (
-            pl.col(self.source_col)
-              .ewm_mean(span=self.period, adjust=False)
-              .to_numpy()
+            df.select(
+                pl.col(self.source_col)
+                  .ewm_mean(span=self.period, adjust=False)
+            ).to_series().to_numpy()
         )
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             ema = normalize_ma_pct(source, ema)
@@ -160,7 +161,6 @@ class WmaSmooth(Feature):
             window = source[i - self.period + 1:i + 1]
             wma[i] = np.dot(window, weights) / weight_sum
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             wma = normalize_ma_pct(source, wma)
@@ -206,13 +206,15 @@ class RmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         equivalent_span = 2 * self.period - 1
+
         rma = (
-            pl.col(self.source_col)
-              .ewm_mean(span=equivalent_span, adjust=False)
-              .to_numpy()
+            df.select(
+                pl.col(self.source_col)
+                  .ewm_mean(span=equivalent_span, adjust=False)
+            ).to_series().to_numpy()
         )
 
-        # Normalization: percentage difference from source
+
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             rma = normalize_ma_pct(source, rma)
@@ -263,13 +265,11 @@ class DemaSmooth(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        col = pl.col(self.source_col)
-        ema1 = col.ewm_mean(span=self.period, adjust=False)
+        ema1 = df[self.source_col].ewm_mean(span=self.period, adjust=False)
         ema2 = ema1.ewm_mean(span=self.period, adjust=False)
 
-        dema = (2 * ema1 - ema2).to_numpy()
+        dema = df.select(2 * ema1 - ema2).to_series().to_numpy()
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             dema = normalize_ma_pct(source, dema)
@@ -320,14 +320,12 @@ class TemaSmooth(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        col = pl.col(self.source_col)
-        ema1 = col.ewm_mean(span=self.period, adjust=False)
+        ema1 = df[self.source_col].ewm_mean(span=self.period, adjust=False)
         ema2 = ema1.ewm_mean(span=self.period, adjust=False)
         ema3 = ema2.ewm_mean(span=self.period, adjust=False)
 
-        tema = (3 * ema1 - 3 * ema2 + ema3).to_numpy()
+        tema = df.select(3 * ema1 - 3 * ema2 + ema3).to_series().to_numpy()
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             tema = normalize_ma_pct(source, tema)
@@ -401,7 +399,6 @@ class HmaSmooth(Feature):
         raw_hma = 2 * wma_half - wma_full
         hma = self._wma(raw_hma, sqrt_period)
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
             hma = normalize_ma_pct(source, hma)
@@ -454,10 +451,10 @@ class TrimaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         half = int(np.ceil((self.period + 1) / 2))
-        col = pl.col(self.source_col)
 
-        sma1 = col.rolling_mean(window_size=half)
-        trima = sma1.rolling_mean(window_size=half).to_numpy()
+        sma1 = pl.col(self.source_col).rolling_mean(window_size=half)
+        trima = df.select(sma1.rolling_mean(window_size=half)).to_series().to_numpy()
+
 
         # Normalization: percentage difference from source
         if self.normalized:

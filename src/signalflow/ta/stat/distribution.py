@@ -84,6 +84,11 @@ class QuantileStat(Feature):
         {"source_col": "close", "period": 240, "q": 0.75},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/pctrank")
@@ -124,6 +129,11 @@ class PctRankStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/minmax")
@@ -159,6 +169,11 @@ class MinMaxStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/skew")
@@ -201,6 +216,11 @@ class SkewStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/kurtosis")
@@ -242,6 +262,11 @@ class KurtosisStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/entropy")
@@ -290,6 +315,11 @@ class EntropyStat(Feature):
         {"source_col": "close", "period": 30, "base": 2.0},
         {"source_col": "close", "period": 60, "base": 2.718281828},  # ≈ e для natural log
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/jarque_bera")
@@ -342,6 +372,11 @@ class JarqueBeraStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/mode_distance")
 class ModeDistanceStat(Feature):
@@ -385,6 +420,11 @@ class ModeDistanceStat(Feature):
         {"source_col": "close", "period": 120, "n_bins": 15},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/above_mean_ratio")
 class AboveMeanRatioStat(Feature):
@@ -426,53 +466,85 @@ class AboveMeanRatioStat(Feature):
 
     @property
     def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        return self.period * 5
 
+
+@dataclass
+@sf_component(name="stat/entropy_rate")
+class EntropyRateStat(Feature):
+    """Rolling Entropy Rate - speed of information change.
+
+    entropy_rate = Δ(entropy) / Δt
+
+    Rate of change of Shannon entropy over a lag.
+
+    Interpretation:
+    - Positive rate: market becoming more unpredictable (disorder increasing)
+    - Negative rate: market becoming more predictable (order forming, trend)
+    - Large absolute rate: rapid regime transition
+    - Near zero: stable regime (either ordered or disordered)
+
+    Reference: Thermodynamic entropy production rate
+    """
+
+    source_col: str = "close"
+    period: int = 10
+    lag: int = 5
+    base: float = 2.0
+    normalized: bool = False
+    norm_period: int | None = None
+
+    requires = ["{source_col}"]
+    outputs = ["{source_col}_entropy_rate_{period}"]
+
+    def _compute_entropy(self, window: np.ndarray) -> float:
+        """Compute Shannon entropy for a window."""
+        window_sum = np.sum(window)
+        if window_sum <= 0:
+            return np.nan
+        p = window / window_sum
+        p = p[p > 0]
+        return -np.sum(p * np.log(p) / np.log(self.base))
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        values = df[self.source_col].to_numpy()
+        n = len(values)
+
+        # Compute rolling entropy
+        entropy = np.full(n, np.nan)
+        for i in range(self.period - 1, n):
+            window = values[i - self.period + 1:i + 1]
+            entropy[i] = self._compute_entropy(window)
+
+        # Entropy rate = d(entropy)/dt
+        erate = np.full(n, np.nan)
+        for i in range(self.period - 1 + self.lag, n):
+            if not np.isnan(entropy[i]) and not np.isnan(entropy[i - self.lag]):
+                erate[i] = (entropy[i] - entropy[i - self.lag]) / self.lag
+
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            erate = normalize_zscore(erate, window=norm_window)
+
+        suffix = "_norm" if self.normalized else ""
+        col_name = f"{self.source_col}_entropy_rate_{self.period}{suffix}"
+        return df.with_columns(
+            pl.Series(name=col_name, values=erate)
+        )
+
+    test_params: ClassVar[list[dict]] = [
+        {"source_col": "close", "period": 10, "lag": 5},
+        {"source_col": "close", "period": 30, "lag": 10},
+        {"source_col": "close", "period": 60, "lag": 20},
+        {"source_col": "close", "period": 10, "lag": 5, "normalized": True},
+    ]
 
     @property
     def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        base = (self.period + self.lag) * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base + norm_window
+        return base
