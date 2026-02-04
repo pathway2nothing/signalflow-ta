@@ -102,6 +102,16 @@ from signalflow.ta.stat import (
     GarmanKlassVolStat,
     RogersSatchellVolStat,
     YangZhangVolStat,
+    PermutationEntropyStat,
+    SampleEntropyStat,
+    LempelZivStat,
+    FisherInformationStat,
+    DfaExponentStat,
+    KLDivergenceStat,
+    JSDivergenceStat,
+    RenyiEntropyStat,
+    AutoMutualInfoStat,
+    RelativeInfoGainStat,
 )
 
 
@@ -288,6 +298,18 @@ __all__ = [
     "GarmanKlassVolStat",
     "RogersSatchellVolStat",
     "YangZhangVolStat",
+    # Stat - Complexity & Information Theory
+    "PermutationEntropyStat",
+    "SampleEntropyStat",
+    "LempelZivStat",
+    "FisherInformationStat",
+    "DfaExponentStat",
+    # Stat - Information Theory & Information Geometry
+    "KLDivergenceStat",
+    "JSDivergenceStat",
+    "RenyiEntropyStat",
+    "AutoMutualInfoStat",
+    "RelativeInfoGainStat",
     # Trend
     "AdxTrend",
     "AroonTrend",

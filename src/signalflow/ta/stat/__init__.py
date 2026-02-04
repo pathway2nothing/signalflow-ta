@@ -50,6 +50,20 @@ from signalflow.ta.stat.cycle import (
     SpectralCentroidStat,
     SpectralEntropyStat,
 )
+from signalflow.ta.stat.complexity import (
+    PermutationEntropyStat,
+    SampleEntropyStat,
+    LempelZivStat,
+    FisherInformationStat,
+    DfaExponentStat,
+)
+from signalflow.ta.stat.information import (
+    KLDivergenceStat,
+    JSDivergenceStat,
+    RenyiEntropyStat,
+    AutoMutualInfoStat,
+    RelativeInfoGainStat,
+)
 from signalflow.ta.stat.regression import (
     CorrelationStat,
     BetaStat,
@@ -130,4 +144,16 @@ __all__ = [
     "GarmanKlassVolStat",
     "RogersSatchellVolStat",
     "YangZhangVolStat",
+    # Complexity & Information Theory
+    "PermutationEntropyStat",
+    "SampleEntropyStat",
+    "LempelZivStat",
+    "FisherInformationStat",
+    "DfaExponentStat",
+    # Information Theory & Information Geometry
+    "KLDivergenceStat",
+    "JSDivergenceStat",
+    "RenyiEntropyStat",
+    "AutoMutualInfoStat",
+    "RelativeInfoGainStat",
 ]
