@@ -50,19 +50,22 @@ def get_default_params(cls: Type) -> dict:
     # Get from dataclass fields
     if hasattr(cls, '__dataclass_fields__'):
         for name, field_info in cls.__dataclass_fields__.items():
-            # Skip inherited fields from base classes and test metadata
-            if name in ('pair_col', 'ts_col', 'offset_col', 'offset_window', 
+            # Skip inherited fields from base classes, test metadata, and private fields
+            if name in ('pair_col', 'ts_col', 'offset_col', 'offset_window',
                        'compute_last_offset', 'use_resample', 'resample_mode',
                        'resample_prefix', 'raw_data_type', 'component_type',
                        'keep_input_columns', 'requires', 'outputs',
                        'test_params'):  # ClassVar for test parameter variations
                 continue
+            if name.startswith('_'):
+                continue
             
             # Get default value
-            if field_info.default is not field_info.default_factory:
+            import dataclasses as _dc
+            if field_info.default is not _dc.MISSING:
                 if field_info.default is not None and not callable(field_info.default):
                     params[name] = field_info.default
-            elif field_info.default_factory is not field_info.default_factory:
+            elif field_info.default_factory is not _dc.MISSING:
                 try:
                     params[name] = field_info.default_factory()
                 except:
@@ -271,14 +274,14 @@ def discover_indicators() -> list[IndicatorConfig]:
     
     try:
         import signalflow.ta as ta
-        from signalflow.feature.base import Feature
+        from signalflow.feature.base import Feature, GlobalFeature
     except ImportError as e:
         print(f"Warning: Could not import signalflow.ta: {e}")
         return configs
-    
+
     # Get all exported names
     all_exports = getattr(ta, '__all__', dir(ta))
-    
+
     # Category mapping based on naming convention
     category_map = {
         'Mom': 'momentum',
@@ -303,7 +306,11 @@ def discover_indicators() -> list[IndicatorConfig]:
             # Check inheritance
             if not issubclass(cls, Feature) or cls is Feature:
                 continue
-            
+
+            # Skip GlobalFeature subclasses (they use compute(), not compute_pair())
+            if issubclass(cls, GlobalFeature) and cls is not GlobalFeature:
+                continue
+
             # Determine category
             category = 'other'
             for suffix, cat in category_map.items():
