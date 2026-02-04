@@ -35,11 +35,7 @@ class SmaSmooth(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        sma = (
-            pl.col(self.source_col)
-              .rolling_mean(window_size=self.period)
-              .to_numpy()
-        )
+        sma = df[self.source_col].rolling_mean(window_size=self.period).to_numpy()
 
         # Normalization: percentage difference from source
         if self.normalized:
@@ -92,11 +88,7 @@ class EmaSmooth(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        ema = (
-            pl.col(self.source_col)
-              .ewm_mean(span=self.period, adjust=False)
-              .to_numpy()
-        )
+        ema = df[self.source_col].ewm_mean(span=self.period, adjust=False).to_numpy()
 
         # Normalization: percentage difference from source
         if self.normalized:
@@ -206,11 +198,7 @@ class RmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         equivalent_span = 2 * self.period - 1
-        rma = (
-            pl.col(self.source_col)
-              .ewm_mean(span=equivalent_span, adjust=False)
-              .to_numpy()
-        )
+        rma = df[self.source_col].ewm_mean(span=equivalent_span, adjust=False).to_numpy()
 
         # Normalization: percentage difference from source
         if self.normalized:
@@ -263,8 +251,7 @@ class DemaSmooth(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        col = pl.col(self.source_col)
-        ema1 = col.ewm_mean(span=self.period, adjust=False)
+        ema1 = df[self.source_col].ewm_mean(span=self.period, adjust=False)
         ema2 = ema1.ewm_mean(span=self.period, adjust=False)
 
         dema = (2 * ema1 - ema2).to_numpy()
@@ -320,8 +307,7 @@ class TemaSmooth(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        col = pl.col(self.source_col)
-        ema1 = col.ewm_mean(span=self.period, adjust=False)
+        ema1 = df[self.source_col].ewm_mean(span=self.period, adjust=False)
         ema2 = ema1.ewm_mean(span=self.period, adjust=False)
         ema3 = ema2.ewm_mean(span=self.period, adjust=False)
 
@@ -454,9 +440,8 @@ class TrimaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         half = int(np.ceil((self.period + 1) / 2))
-        col = pl.col(self.source_col)
 
-        sma1 = col.rolling_mean(window_size=half)
+        sma1 = df[self.source_col].rolling_mean(window_size=half)
         trima = sma1.rolling_mean(window_size=half).to_numpy()
 
         # Normalization: percentage difference from source
