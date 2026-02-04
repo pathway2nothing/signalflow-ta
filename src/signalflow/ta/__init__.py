@@ -109,6 +109,7 @@ from signalflow.ta.volatility import (
     MassIndexVol,
     UlcerIndexVol,
     RviVol,
+    GapVol,
 )
 
 from signalflow.ta.volume import (
@@ -219,6 +220,7 @@ __all__ = [
     "MassIndexVol",
     "UlcerIndexVol",
     "RviVol",
+    "GapVol",
     "ObvVolume",
     "AdVolume",
     "PvtVolume",

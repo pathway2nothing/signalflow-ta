@@ -23,6 +23,7 @@ from signalflow.ta.volatility.measures import (
     UlcerIndexVol,
     RviVol,
 )
+from signalflow.ta.volatility.gaps import GapVol
 
 __all__ = [
     # Range
@@ -38,4 +39,5 @@ __all__ = [
     "MassIndexVol",
     "UlcerIndexVol",
     "RviVol",
+    "GapVol",
 ]

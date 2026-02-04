@@ -420,6 +420,8 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             # Volume
             ObvVolume, AdVolume, PvtVolume, NviVolume, PviVolume,
             MfiVolume, CmfVolume, EfiVolume, EomVolume, KvoVolume,
+            # Gap
+            GapVol,
         )
     except ImportError as e:
         print(f"Could not import signalflow.ta indicators: {e}")
@@ -1416,6 +1418,14 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             outputs=["kvo_34_55", "kvo_signal_13"],
             bounded=None,
             warmup=60,
+        ),
+        IndicatorConfig(
+            cls=GapVol, name="GapVol", category="volatility",
+            params={"min_gap_pct": 0.0},
+            requires=["open", "high", "low", "close"],
+            outputs=["gap_val", "gap_pct", "gap_fill_pct", "gap_run_ratio", "gap_range_ratio", "is_gap_up", "is_gap_down"],
+            bounded=None,
+            warmup=1,
         ),
     ])
     

@@ -14,24 +14,28 @@ from typing import ClassVar
 @sf_component(name="trend/psar")
 class PsarTrend(Feature):
     """Parabolic SAR (Stop and Reverse).
-    
+
     Trailing stop that accelerates with trend.
-    
+
     SAR = SAR_prev + AF * (EP - SAR_prev)
     AF: acceleration factor (starts at af, increases by af_step to af_max)
     EP: extreme point (highest high / lowest low)
-    
+
     Outputs:
     - psar: SAR value
     - psar_dir: direction (+1 bullish, -1 bearish)
-    
+
+    Unbounded. Uses z-score in normalized mode.
+
     Reference: Welles Wilder, "New Concepts in Technical Trading Systems"
     """
-    
-    af: float = 0.02        
-    af_step: float = 0.02   
-    af_max: float = 0.2     
-    
+
+    af: float = 0.02
+    af_step: float = 0.02
+    af_max: float = 0.2
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["psar", "psar_dir"]
     
@@ -92,45 +96,70 @@ class PsarTrend(Feature):
                     if low[i] < ep:
                         ep = low[i]
                         af = min(af + self.af_step, self.af_max)
-        
+
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            # Use a reasonable default period (20) since PSAR doesn't have an explicit period
+            norm_window = self.norm_period or get_norm_window(20)
+            psar = normalize_zscore(psar, window=norm_window)
+            direction = normalize_zscore(direction, window=norm_window)
+
+        col_psar, col_dir = self._get_output_names()
         return df.with_columns([
-            pl.Series(name="psar", values=psar),
-            pl.Series(name="psar_dir", values=direction),
+            pl.Series(name=col_psar, values=psar),
+            pl.Series(name=col_dir, values=direction),
         ])
-    
+
+    def _get_output_names(self) -> tuple[str, str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return (
+            f"psar{suffix}",
+            f"psar_dir{suffix}"
+        )
+
     test_params: ClassVar[list[dict]] = [
-        {"af": 0.02, "af_step": 0.02, "af_max": 0.2},  
-        {"af": 0.01, "af_step": 0.01, "af_max": 0.1},   
-        {"af": 0.025, "af_step": 0.025, "af_max": 0.25}, 
+        {"af": 0.02, "af_step": 0.02, "af_max": 0.2},
+        {"af": 0.02, "af_step": 0.02, "af_max": 0.2, "normalized": True},
+        {"af": 0.01, "af_step": 0.01, "af_max": 0.1},
+        {"af": 0.025, "af_step": 0.025, "af_max": 0.25},
     ]
-
-
 
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        base_warmup = 100  # PSAR needs time to stabilize
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(20)
+            return base_warmup + norm_window
+        return base_warmup
 
 @dataclass
 @sf_component(name="trend/supertrend")
 class SupertrendTrend(Feature):
     """Supertrend Indicator.
-    
+
     Trend-following based on ATR bands.
-    
+
     upper = HL2 + multiplier * ATR
     lower = HL2 - multiplier * ATR
-    
+
     Outputs:
     - supertrend: trend line value
     - supertrend_dir: direction (+1 bullish, -1 bearish)
-    
+
+    Unbounded. Uses z-score in normalized mode.
+
     Reference: Olivier Seban
     """
-    
+
     period: int = 10
     multiplier: float = 3.0
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["supertrend_{period}", "supertrend_dir_{period}"]
     
@@ -185,41 +214,72 @@ class SupertrendTrend(Feature):
                 direction[i] = -1
             else:
                 direction[i] = direction[i - 1]
-            
+
             supertrend[i] = lower[i] if direction[i] == 1 else upper[i]
-        
+
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            supertrend = normalize_zscore(supertrend, window=norm_window)
+            direction = normalize_zscore(direction, window=norm_window)
+
+        col_supertrend, col_dir = self._get_output_names()
         return df.with_columns([
-            pl.Series(name=f"supertrend_{self.period}", values=supertrend),
-            pl.Series(name=f"supertrend_dir_{self.period}", values=direction),
+            pl.Series(name=col_supertrend, values=supertrend),
+            pl.Series(name=col_dir, values=direction),
         ])
-    
+
+    def _get_output_names(self) -> tuple[str, str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return (
+            f"supertrend_{self.period}{suffix}",
+            f"supertrend_dir_{self.period}{suffix}"
+        )
+
     test_params: ClassVar[list[dict]] = [
         {"period": 10, "multiplier": 3.0},
+        {"period": 10, "multiplier": 3.0, "normalized": True},
         {"period": 20, "multiplier": 2.5},
         {"period": 30, "multiplier": 3.5},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 
 @dataclass
 @sf_component(name="trend/chandelier")
 class ChandelierTrend(Feature):
     """Chandelier Exit.
-    
+
     Trailing stop based on ATR from highest high / lowest low.
-    
+
     Long exit: HH - multiplier * ATR
     Short exit: LL + multiplier * ATR
-    
+
     Outputs:
     - chandelier_long: long trailing stop
     - chandelier_short: short trailing stop
-    
+
+    Unbounded. Uses z-score in normalized mode.
+
     Reference: Chuck LeBeau, Alexander Elder
     """
-    
+
     period: int = 22
     multiplier: float = 3.0
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["chandelier_long_{period}", "chandelier_short_{period}"]
     
@@ -248,41 +308,72 @@ class ChandelierTrend(Feature):
             
             chandelier_long[i] = hh - self.multiplier * atr_val
             chandelier_short[i] = ll + self.multiplier * atr_val
-        
+
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            chandelier_long = normalize_zscore(chandelier_long, window=norm_window)
+            chandelier_short = normalize_zscore(chandelier_short, window=norm_window)
+
+        col_long, col_short = self._get_output_names()
         return df.with_columns([
-            pl.Series(name=f"chandelier_long_{self.period}", values=chandelier_long),
-            pl.Series(name=f"chandelier_short_{self.period}", values=chandelier_short),
+            pl.Series(name=col_long, values=chandelier_long),
+            pl.Series(name=col_short, values=chandelier_short),
         ])
-    
+
+    def _get_output_names(self) -> tuple[str, str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return (
+            f"chandelier_long_{self.period}{suffix}",
+            f"chandelier_short_{self.period}{suffix}"
+        )
+
     test_params: ClassVar[list[dict]] = [
         {"period": 22, "multiplier": 3.0},
+        {"period": 22, "multiplier": 3.0, "normalized": True},
         {"period": 30, "multiplier": 2.5},
         {"period": 60, "multiplier": 3.0},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 
 @dataclass
 @sf_component(name="trend/hilo")
 class HiloTrend(Feature):
     """Gann HiLo Activator.
-    
+
     Trend indicator using moving averages of highs and lows.
-    
+
     Switches between:
     - MA(low) when close > MA(high) [uptrend]
     - MA(high) when close < MA(low) [downtrend]
-    
+
     Outputs:
     - hilo: current stop level
     - hilo_dir: direction (+1 bullish, -1 bearish)
-    
+
+    Unbounded. Uses z-score in normalized mode.
+
     Reference: Robert Krausz, Stocks & Commodities 1998
     """
-    
+
     high_period: int = 13
     low_period: int = 21
     ma_type: Literal["sma", "ema"] = "sma"
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["hilo", "hilo_dir"]
     
@@ -327,40 +418,73 @@ class HiloTrend(Feature):
             else:
                 hilo[i] = hilo[i - 1]
                 direction[i] = direction[i - 1]
-        
+
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            max_period = max(self.high_period, self.low_period)
+            norm_window = self.norm_period or get_norm_window(max_period)
+            hilo = normalize_zscore(hilo, window=norm_window)
+            direction = normalize_zscore(direction, window=norm_window)
+
+        col_hilo, col_dir = self._get_output_names()
         return df.with_columns([
-            pl.Series(name="hilo", values=hilo),
-            pl.Series(name="hilo_dir", values=direction),
+            pl.Series(name=col_hilo, values=hilo),
+            pl.Series(name=col_dir, values=direction),
         ])
-    
+
+    def _get_output_names(self) -> tuple[str, str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return (
+            f"hilo{suffix}",
+            f"hilo_dir{suffix}"
+        )
+
     test_params: ClassVar[list[dict]] = [
         {"high_period": 13, "low_period": 21, "ma_type": "sma"},
+        {"high_period": 13, "low_period": 21, "ma_type": "sma", "normalized": True},
         {"high_period": 30, "low_period": 45, "ma_type": "sma"},
         {"high_period": 20, "low_period": 30, "ma_type": "ema"},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        max_period = max(self.high_period, self.low_period)
+        base_warmup = max_period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(max_period)
+            return base_warmup + norm_window
+        return base_warmup
 
 
 @dataclass
 @sf_component(name="trend/cksp")
 class CkspTrend(Feature):
     """Chande Kroll Stop.
-    
+
     ATR-based trailing stop with two-step smoothing.
-    
+
     Step 1: Initial stop = HH - x*ATR or LL + x*ATR
     Step 2: Final stop = max/min of initial over q periods
-    
+
     Outputs:
     - cksp_long: long trailing stop
     - cksp_short: short trailing stop
-    
+
+    Unbounded. Uses z-score in normalized mode.
+
     Reference: Tushar Chande & Stanley Kroll, "The New Technical Trader"
     """
-    
-    p: int = 10     
-    x: float = 1.0  
-    q: int = 9      
-    
+
+    p: int = 10
+    x: float = 1.0
+    q: int = 9
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["cksp_long", "cksp_short"]
     
@@ -401,14 +525,31 @@ class CkspTrend(Feature):
         for i in range(start, n):
             cksp_long[i] = np.nanmax(long_stop_init[i - self.q + 1:i + 1])
             cksp_short[i] = np.nanmin(short_stop_init[i - self.q + 1:i + 1])
-        
+
+        # Normalization: z-score for unbounded oscillator
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.p + self.q)
+            cksp_long = normalize_zscore(cksp_long, window=norm_window)
+            cksp_short = normalize_zscore(cksp_short, window=norm_window)
+
+        col_long, col_short = self._get_output_names()
         return df.with_columns([
-            pl.Series(name="cksp_long", values=cksp_long),
-            pl.Series(name="cksp_short", values=cksp_short),
+            pl.Series(name=col_long, values=cksp_long),
+            pl.Series(name=col_short, values=cksp_short),
         ])
-    
+
+    def _get_output_names(self) -> tuple[str, str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return (
+            f"cksp_long{suffix}",
+            f"cksp_short{suffix}"
+        )
+
     test_params: ClassVar[list[dict]] = [
         {"p": 10, "x": 1.0, "q": 9},
+        {"p": 10, "x": 1.0, "q": 9, "normalized": True},
         {"p": 20, "x": 1.5, "q": 15},
         {"p": 30, "x": 2.0, "q": 20},
     ]
@@ -416,22 +557,9 @@ class CkspTrend(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        base_warmup = (self.p + self.q) * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.p + self.q)
+            return base_warmup + norm_window
+        return base_warmup

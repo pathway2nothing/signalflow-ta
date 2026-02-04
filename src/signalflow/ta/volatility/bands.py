@@ -14,45 +14,47 @@ from typing import ClassVar
 @sf_component(name="volatility/bollinger")
 class BollingerVol(Feature):
     """Bollinger Bands.
-    
+
     Volatility bands around a moving average.
-    
+
     Middle = MA(close, period)
     Upper = Middle + std_dev * StdDev(close, period)
     Lower = Middle - std_dev * StdDev(close, period)
-    
+
     Outputs:
     - bb_upper: upper band
     - bb_middle: middle band (MA)
     - bb_lower: lower band
     - bb_width: (upper - lower) / middle * 100 (bandwidth)
     - bb_pct: (close - lower) / (upper - lower) (%B)
-    
+
     Interpretation:
     - Price at upper band: overbought / strong uptrend
     - Price at lower band: oversold / strong downtrend
     - Band squeeze: low volatility, potential breakout
     - Band expansion: high volatility
-    
+
     Reference: John Bollinger
     https://www.investopedia.com/terms/b/bollingerbands.asp
     """
-    
+
     period: int = 20
     std_dev: float = 2.0
     ma_type: Literal["sma", "ema"] = "sma"
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["close"]
-    outputs = ["bb_upper_{period}", "bb_middle_{period}", "bb_lower_{period}", 
+    outputs = ["bb_upper_{period}", "bb_middle_{period}", "bb_lower_{period}",
                "bb_width_{period}", "bb_pct_{period}"]
     
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         n = len(close)
-        
+
         middle = np.full(n, np.nan)
         std = np.full(n, np.nan)
-        
+
         if self.ma_type == "ema":
             alpha = 2 / (self.period + 1)
 
@@ -71,65 +73,92 @@ class BollingerVol(Feature):
                 window = close[i - self.period + 1:i + 1]
                 middle[i] = np.mean(window)
                 std[i] = np.std(window, ddof=0)
-        
+
         upper = middle + self.std_dev * std
         lower = middle - self.std_dev * std
-        
+
         width = 100 * (upper - lower) / middle
-        
+
         pct = (close - lower) / (upper - lower + 1e-10)
-        
+
+        # Normalization for unbounded outputs
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            upper = normalize_zscore(upper, window=norm_window)
+            middle = normalize_zscore(middle, window=norm_window)
+            lower = normalize_zscore(lower, window=norm_window)
+            width = normalize_zscore(width, window=norm_window)
+
+        output_names = self._get_output_names()
         return df.with_columns([
-            pl.Series(name=f"bb_upper_{self.period}", values=upper),
-            pl.Series(name=f"bb_middle_{self.period}", values=middle),
-            pl.Series(name=f"bb_lower_{self.period}", values=lower),
-            pl.Series(name=f"bb_width_{self.period}", values=width),
-            pl.Series(name=f"bb_pct_{self.period}", values=pct),
+            pl.Series(name=output_names[0], values=upper),
+            pl.Series(name=output_names[1], values=middle),
+            pl.Series(name=output_names[2], values=lower),
+            pl.Series(name=output_names[3], values=width),
+            pl.Series(name=output_names[4], values=pct),
         ])
     
+    def _get_output_names(self) -> list[str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return [
+            f"bb_upper_{self.period}{suffix}",
+            f"bb_middle_{self.period}{suffix}",
+            f"bb_lower_{self.period}{suffix}",
+            f"bb_width_{self.period}{suffix}",
+            f"bb_pct_{self.period}",  # %B is already [0,1], not normalized
+        ]
+
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "std_dev": 2.0, "ma_type": "sma"},
+        {"period": 20, "std_dev": 2.0, "ma_type": "sma", "normalized": True},
         {"period": 30, "std_dev": 2.0, "ma_type": "sma"},
         {"period": 60, "std_dev": 2.5, "ma_type": "ema"},
     ]
 
-
-
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return self.period * 2
+        base_warmup = self.period * 2
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 @dataclass
 @sf_component(name="volatility/keltner")
 class KeltnerVol(Feature):
     """Keltner Channels.
-    
+
     Volatility envelope based on ATR.
-    
+
     Basis = EMA(close, period)
     Upper = Basis + multiplier * ATR(period)
     Lower = Basis - multiplier * ATR(period)
-    
+
     Outputs:
     - kc_upper: upper channel
     - kc_basis: middle line (EMA)
     - kc_lower: lower channel
-    
+
     Compared to Bollinger:
     - Uses ATR instead of standard deviation
     - Generally smoother bands
     - Less reactive to sudden price spikes
-    
+
     Reference: Chester Keltner (original), Linda Raschke (modern version)
     https://school.stockcharts.com/doku.php?id=technical_indicators:keltner_channels
     """
-    
+
     period: int = 20
     multiplier: float = 2.0
     ma_type: Literal["ema", "sma"] = "ema"
     use_true_range: bool = True
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["kc_upper_{period}", "kc_basis_{period}", "kc_lower_{period}"]
     
@@ -138,7 +167,7 @@ class KeltnerVol(Feature):
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         n = len(close)
-        
+
         if self.use_true_range:
             prev_close = np.roll(close, 1)
             prev_close[0] = close[0]
@@ -152,10 +181,10 @@ class KeltnerVol(Feature):
             range_vals[0] = high[0] - low[0]
         else:
             range_vals = high - low
-        
+
         basis = np.full(n, np.nan)
         atr = np.full(n, np.nan)
-        
+
         if self.ma_type == "ema":
             alpha = 2 / (self.period + 1)
             basis[0] = close[0]
@@ -163,53 +192,84 @@ class KeltnerVol(Feature):
             for i in range(1, n):
                 basis[i] = alpha * close[i] + (1 - alpha) * basis[i - 1]
                 atr[i] = alpha * range_vals[i] + (1 - alpha) * atr[i - 1]
-        else:  
+        else:
             for i in range(self.period - 1, n):
                 basis[i] = np.mean(close[i - self.period + 1:i + 1])
                 atr[i] = np.mean(range_vals[i - self.period + 1:i + 1])
-        
+
         upper = basis + self.multiplier * atr
         lower = basis - self.multiplier * atr
-        
+
+        # Normalization for unbounded outputs
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            upper = normalize_zscore(upper, window=norm_window)
+            basis = normalize_zscore(basis, window=norm_window)
+            lower = normalize_zscore(lower, window=norm_window)
+
+        output_names = self._get_output_names()
         return df.with_columns([
-            pl.Series(name=f"kc_upper_{self.period}", values=upper),
-            pl.Series(name=f"kc_basis_{self.period}", values=basis),
-            pl.Series(name=f"kc_lower_{self.period}", values=lower),
+            pl.Series(name=output_names[0], values=upper),
+            pl.Series(name=output_names[1], values=basis),
+            pl.Series(name=output_names[2], values=lower),
         ])
-        
+
+    def _get_output_names(self) -> list[str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return [
+            f"kc_upper_{self.period}{suffix}",
+            f"kc_basis_{self.period}{suffix}",
+            f"kc_lower_{self.period}{suffix}",
+        ]
+
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "multiplier": 2.0, "ma_type": "ema", "use_true_range": True},
+        {"period": 20, "multiplier": 2.0, "ma_type": "ema", "use_true_range": True, "normalized": True},
         {"period": 30, "multiplier": 1.5, "ma_type": "ema", "use_true_range": True},
         {"period": 60, "multiplier": 2.0, "ma_type": "sma", "use_true_range": False},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 @dataclass
 @sf_component(name="volatility/donchian")
 class DonchianVol(Feature):
     """Donchian Channels.
-    
+
     Price channel based on highest high and lowest low.
-    
+
     Upper = Highest High over period
     Lower = Lowest Low over period
     Middle = (Upper + Lower) / 2
-    
+
     Outputs:
     - dc_upper: upper channel (resistance)
     - dc_middle: midline
     - dc_lower: lower channel (support)
-    
+
     Classic breakout indicator:
     - Price breaks above upper: bullish breakout
     - Price breaks below lower: bearish breakout
     - Width shows volatility
-    
+
     Reference: Richard Donchian (Turtle Trading)
     https://school.stockcharts.com/doku.php?id=technical_indicators:donchian_channels
     """
-    
+
     period: int = 20
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low"]
     outputs = ["dc_upper_{period}", "dc_middle_{period}", "dc_lower_{period}"]
     
@@ -217,27 +277,56 @@ class DonchianVol(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         n = len(high)
-        
+
         upper = np.full(n, np.nan)
         lower = np.full(n, np.nan)
-        
+
         for i in range(self.period - 1, n):
             upper[i] = np.max(high[i - self.period + 1:i + 1])
             lower[i] = np.min(low[i - self.period + 1:i + 1])
-        
+
         middle = (upper + lower) / 2
-        
+
+        # Normalization for unbounded outputs
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            upper = normalize_zscore(upper, window=norm_window)
+            middle = normalize_zscore(middle, window=norm_window)
+            lower = normalize_zscore(lower, window=norm_window)
+
+        output_names = self._get_output_names()
         return df.with_columns([
-            pl.Series(name=f"dc_upper_{self.period}", values=upper),
-            pl.Series(name=f"dc_middle_{self.period}", values=middle),
-            pl.Series(name=f"dc_lower_{self.period}", values=lower),
+            pl.Series(name=output_names[0], values=upper),
+            pl.Series(name=output_names[1], values=middle),
+            pl.Series(name=output_names[2], values=lower),
         ])
-    
+
+    def _get_output_names(self) -> list[str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return [
+            f"dc_upper_{self.period}{suffix}",
+            f"dc_middle_{self.period}{suffix}",
+            f"dc_lower_{self.period}{suffix}",
+        ]
+
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
-        {"period": 55},  
+        {"period": 20, "normalized": True},
+        {"period": 55},
         {"period": 120},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 
 @dataclass
