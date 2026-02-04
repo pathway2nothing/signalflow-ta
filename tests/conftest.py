@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 
 SEED = 42
 DEFAULT_PAIR = "BTCUSDT"
+DEFAULT_ROWS = 1000
 
 
 # =============================================================================

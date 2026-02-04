@@ -18,6 +18,7 @@ from signalflow.ta.overlap.smoothers import (
     TrimaSmooth,
     SwmaSmooth,
     SsfSmooth,
+    FftSmooth,
 )
 from signalflow.ta.overlap.adaptive import (
     KamaSmooth,
@@ -57,6 +58,7 @@ __all__ = [
     "TrimaSmooth",
     "SwmaSmooth",
     "SsfSmooth",
+    "FftSmooth",
     # Adaptive Smoothers
     "KamaSmooth",
     "AlmaSmooth",
