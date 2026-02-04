@@ -464,28 +464,25 @@ class ZlmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         lag = int((self.period - 1) / 2)
-        col = pl.col(self.source_col)
 
-        adjusted = 2 * col - col.shift(lag)
+        col_series = df[self.source_col]
+        adjusted = 2 * col_series - col_series.shift(lag)
 
         if self.ma_type == "sma":
             zlma = adjusted.rolling_mean(window_size=self.period)
         else:
             zlma = adjusted.ewm_mean(span=self.period, adjust=False)
 
-        # Convert to numpy for normalization if needed
+        zlma_array = zlma.to_numpy()
+
+        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
-            zlma_array = df.with_columns(zlma.alias("_temp"))[["_temp"]].to_numpy().flatten()
             zlma_array = normalize_ma_pct(source, zlma_array)
-            col_name = self._get_output_name()
-            return df.with_columns(
-                pl.Series(name=col_name, values=zlma_array)
-            )
 
         col_name = self._get_output_name()
         return df.with_columns(
-            zlma.alias(col_name)
+            pl.Series(name=col_name, values=zlma_array)
         )
 
     def _get_output_name(self) -> str:
