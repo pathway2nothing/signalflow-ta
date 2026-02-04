@@ -23,11 +23,56 @@ from signalflow.ta.stat.distribution import (
     JarqueBeraStat,
     ModeDistanceStat,
     AboveMeanRatioStat,
+    EntropyRateStat,
 )
 from signalflow.ta.stat.memory import (
     HurstStat,
     AutocorrStat,
     VarianceRatioStat,
+    DiffusionCoeffStat,
+    AnomalousDiffusionStat,
+    MsdRatioStat,
+    SpringConstantStat,
+    DampingRatioStat,
+    NaturalFrequencyStat,
+    PlasticStrainStat,
+    EscapeVelocityStat,
+    CorrelationLengthStat,
+)
+from signalflow.ta.stat.cycle import (
+    InstAmplitudeStat,
+    InstPhaseStat,
+    InstFrequencyStat,
+    PhaseAccelerationStat,
+    ConstructiveInterferenceStat,
+    BeatFrequencyStat,
+    StandingWaveRatioStat,
+    SpectralCentroidStat,
+    SpectralEntropyStat,
+)
+from signalflow.ta.stat.complexity import (
+    PermutationEntropyStat,
+    SampleEntropyStat,
+    LempelZivStat,
+    FisherInformationStat,
+    DfaExponentStat,
+)
+from signalflow.ta.stat.information import (
+    KLDivergenceStat,
+    JSDivergenceStat,
+    RenyiEntropyStat,
+    AutoMutualInfoStat,
+    RelativeInfoGainStat,
+)
+from signalflow.ta.stat.cross_sectional import (
+    CrossSectionalStat,
+)
+from signalflow.ta.stat.dsp import (
+    SpectralFluxStat,
+    ZeroCrossingRateStat,
+    SpectralRolloffStat,
+    SpectralFlatnessStat,
+    PowerCepstrumStat,
 )
 from signalflow.ta.stat.regression import (
     CorrelationStat,
@@ -71,6 +116,31 @@ __all__ = [
     "HurstStat",
     "AutocorrStat",
     "VarianceRatioStat",
+    # Diffusion
+    "DiffusionCoeffStat",
+    "AnomalousDiffusionStat",
+    "MsdRatioStat",
+    # Oscillator dynamics
+    "SpringConstantStat",
+    "DampingRatioStat",
+    "NaturalFrequencyStat",
+    # Distribution (extended)
+    "EntropyRateStat",
+    # Elasticity & Escape
+    "PlasticStrainStat",
+    "EscapeVelocityStat",
+    "CorrelationLengthStat",
+    # Cycle analysis
+    "InstAmplitudeStat",
+    "InstPhaseStat",
+    "InstFrequencyStat",
+    "PhaseAccelerationStat",
+    # Wave interference & Spectral
+    "ConstructiveInterferenceStat",
+    "BeatFrequencyStat",
+    "StandingWaveRatioStat",
+    "SpectralCentroidStat",
+    "SpectralEntropyStat",
     # Regression
     "CorrelationStat",
     "BetaStat",
@@ -84,4 +154,24 @@ __all__ = [
     "GarmanKlassVolStat",
     "RogersSatchellVolStat",
     "YangZhangVolStat",
+    # Complexity & Information Theory
+    "PermutationEntropyStat",
+    "SampleEntropyStat",
+    "LempelZivStat",
+    "FisherInformationStat",
+    "DfaExponentStat",
+    # Information Theory & Information Geometry
+    "KLDivergenceStat",
+    "JSDivergenceStat",
+    "RenyiEntropyStat",
+    "AutoMutualInfoStat",
+    "RelativeInfoGainStat",
+    # Cross-Sectional
+    "CrossSectionalStat",
+    # DSP / Acoustics
+    "SpectralFluxStat",
+    "ZeroCrossingRateStat",
+    "SpectralRolloffStat",
+    "SpectralFlatnessStat",
+    "PowerCepstrumStat",
 ]
