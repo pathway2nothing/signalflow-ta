@@ -452,7 +452,7 @@ class TrimaSmooth(Feature):
         source = df[self.source_col].to_numpy()
         half = int(np.ceil((self.period + 1) / 2))
 
-        sma1 = col.rolling_mean(window_size=half)
+        sma1 = pl.col(self.source_col).rolling_mean(window_size=half)
         trima = df.select(sma1.rolling_mean(window_size=half)).to_series().to_numpy()
 
 
