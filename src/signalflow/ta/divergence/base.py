@@ -571,4 +571,4 @@ class DivergenceBase(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return self.period * 5
+        return self.pivot_window * 2 + self.lookback

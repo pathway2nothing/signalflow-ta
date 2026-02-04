@@ -84,6 +84,11 @@ class QuantileStat(Feature):
         {"source_col": "close", "period": 240, "q": 0.75},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/pctrank")
@@ -124,6 +129,11 @@ class PctRankStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/minmax")
@@ -159,6 +169,11 @@ class MinMaxStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/skew")
@@ -201,6 +216,11 @@ class SkewStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="stat/kurtosis")
@@ -242,6 +262,11 @@ class KurtosisStat(Feature):
         {"source_col": "close", "period": 60},
         {"source_col": "close", "period": 240},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/entropy")
@@ -290,6 +315,11 @@ class EntropyStat(Feature):
         {"source_col": "close", "period": 30, "base": 2.0},
         {"source_col": "close", "period": 60, "base": 2.718281828},  # ≈ e для natural log
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
 
 @dataclass
 @sf_component(name="stat/jarque_bera")
@@ -342,6 +372,11 @@ class JarqueBeraStat(Feature):
         {"source_col": "close", "period": 240},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/mode_distance")
 class ModeDistanceStat(Feature):
@@ -385,6 +420,11 @@ class ModeDistanceStat(Feature):
         {"source_col": "close", "period": 120, "n_bins": 15},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 @dataclass
 @sf_component(name="stat/above_mean_ratio")
 class AboveMeanRatioStat(Feature):
@@ -427,52 +467,4 @@ class AboveMeanRatioStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        return self.period * 5

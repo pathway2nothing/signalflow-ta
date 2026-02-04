@@ -215,6 +215,11 @@ class AroonTrend(Feature):
         {"period": 120},
     ]
 
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.period * 5
+
 
 @dataclass
 @sf_component(name="trend/vortex")
