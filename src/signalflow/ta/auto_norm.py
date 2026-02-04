@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 import json
-import math
 
 import polars as pl
 
@@ -44,6 +43,12 @@ class AutoFeatureNormalizer:
 
     artifact: Optional[Dict[str, Any]] = None
 
+    _CHANNEL_TO_METHOD: Dict[str, str] = {
+        "robust": "rolling_robust",
+        "z": "rolling_z",
+        "rank": "rolling_rank",
+    }
+
     def fit(self, df: pl.DataFrame) -> Dict[str, Any]:
         df = self._ensure_sorted(df)
         feature_cols = self._feature_cols(df)
@@ -60,19 +65,29 @@ class AutoFeatureNormalizer:
             "config": self._config_dict(),
             "feature_cols": feature_cols,
             "plan": plan,
-
         }
         self.artifact = artifact
         return artifact
+
+    def fit_transform(self, df: pl.DataFrame) -> pl.DataFrame:
+        art = self.fit(df)
+        return self.transform(df, art)
 
     def transform(self, df: pl.DataFrame, artifact: Optional[Dict[str, Any]] = None) -> pl.DataFrame:
         art = artifact or self.artifact
         if art is None:
             raise ValueError("No artifact. Call fit() or pass artifact to transform().")
 
+        if art.get("version", 0) != 1:
+            raise ValueError(f"Unsupported artifact version: {art.get('version')}")
+
         df = self._ensure_sorted(df)
         feature_cols: List[str] = art["feature_cols"]
         plan: Dict[str, Dict[str, Any]] = art["plan"]
+
+        missing = set(feature_cols) - set(df.columns)
+        if missing:
+            raise ValueError(f"Missing feature columns in DataFrame: {sorted(missing)}")
 
         exprs: List[pl.Expr] = []
         for col in feature_cols:
@@ -129,7 +144,6 @@ class AutoFeatureNormalizer:
         if skew >= self.skew_hi:
             methods.append("signed_log1p")
 
-     
         if scale_cv >= self.scale_cv_hi:
             methods.append("rolling_robust")
             if self.allow_multi:
@@ -142,17 +156,10 @@ class AutoFeatureNormalizer:
                 if self.allow_multi and skew < (self.skew_hi * 1.5):
                     methods.append("rolling_z")
 
-        base = []
         for b in self.always_include:
-            if b == "robust":
-                base.append("rolling_robust")
-            elif b == "z":
-                base.append("rolling_z")
-            elif b == "rank":
-                base.append("rolling_rank")
-        for b in base:
-            if b not in methods:
-                methods.insert(0, b)
+            method = self._CHANNEL_TO_METHOD.get(b)
+            if method and method not in methods:
+                methods.insert(0, method)
 
         seen = set()
         methods = [m for m in methods if not (m in seen or seen.add(m))]
@@ -165,7 +172,7 @@ class AutoFeatureNormalizer:
         if method == "signed_log1p":
             return pl.when(x.is_null()).then(None).otherwise(
                 pl.when(x >= 0)
-                .then((x + pl.lit(0.0)).abs().log1p())
+                .then(x.log1p())
                 .otherwise(-(x.abs().log1p()))
             )
 
@@ -230,7 +237,6 @@ class AutoFeatureNormalizer:
         per_pair = df.group_by(self.pair_col).agg(aggs)
 
         out: Dict[str, Dict[str, Any]] = {}
-        pairs_n = per_pair.height
 
         for c in feature_cols:
             mean_col = pl.col(f"{c}__mean")
@@ -289,4 +295,12 @@ class AutoFeatureNormalizer:
         return [c for c in df.columns if c not in meta]
 
     def _ensure_sorted(self, df: pl.DataFrame) -> pl.DataFrame:
-        return df.sort([self.pair_col, self.ts_col])
+        sort_cols = [self.pair_col, self.ts_col]
+        pair = df[self.pair_col]
+        if pair.is_sorted():
+            ts_ok = df.select(
+                (pl.col(self.ts_col).diff().over(self.pair_col).drop_nulls() >= 0).all()
+            ).item()
+            if ts_ok:
+                return df
+        return df.sort(sort_cols)

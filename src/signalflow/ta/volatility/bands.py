@@ -358,10 +358,12 @@ class AccBandsVol(Feature):
     period: int = 20
     factor: float = 4.0
     ma_type: Literal["sma", "ema"] = "sma"
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["accb_upper_{period}", "accb_middle_{period}", "accb_lower_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
@@ -393,33 +395,44 @@ class AccBandsVol(Feature):
                 upper[i] = np.mean(upper_raw[i - self.period + 1:i + 1])
                 middle[i] = np.mean(close[i - self.period + 1:i + 1])
                 lower[i] = np.mean(lower_raw[i - self.period + 1:i + 1])
-        
+
+        # Normalization for unbounded outputs
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            upper = normalize_zscore(upper, window=norm_window)
+            middle = normalize_zscore(middle, window=norm_window)
+            lower = normalize_zscore(lower, window=norm_window)
+
+        output_names = self._get_output_names()
         return df.with_columns([
-            pl.Series(name=f"accb_upper_{self.period}", values=upper),
-            pl.Series(name=f"accb_middle_{self.period}", values=middle),
-            pl.Series(name=f"accb_lower_{self.period}", values=lower),
+            pl.Series(name=output_names[0], values=upper),
+            pl.Series(name=output_names[1], values=middle),
+            pl.Series(name=output_names[2], values=lower),
         ])
-    
+
+    def _get_output_names(self) -> list[str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return [
+            f"accb_upper_{self.period}{suffix}",
+            f"accb_middle_{self.period}{suffix}",
+            f"accb_lower_{self.period}{suffix}",
+        ]
+
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "factor": 4.0, "ma_type": "sma"},
         {"period": 30, "factor": 3.0, "ma_type": "sma"},
         {"period": 60, "factor": 4.0, "ma_type": "ema"},
+        {"period": 20, "factor": 4.0, "ma_type": "sma", "normalized": True},
     ]
 
-
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup

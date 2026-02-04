@@ -31,10 +31,12 @@ class MassIndexVol(Feature):
     
     fast: int = 9
     slow: int = 25
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low"]
     outputs = ["massi_{fast}_{slow}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
@@ -59,23 +61,39 @@ class MassIndexVol(Feature):
         massi = np.full(n, np.nan)
         for i in range(self.slow - 1, n):
             massi[i] = np.sum(ratio[i - self.slow + 1:i + 1])
-        
+
+        # Normalization for unbounded output
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.slow)
+            massi = normalize_zscore(massi, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name=f"massi_{self.fast}_{self.slow}", values=massi)
+            pl.Series(name=col_name, values=massi)
         )
-    
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"massi_{self.fast}_{self.slow}{suffix}"
+
     test_params: ClassVar[list[dict]] = [
         {"fast": 9, "slow": 25},
         {"fast": 9, "slow": 50},
         {"fast": 15, "slow": 40},
+        {"fast": 9, "slow": 25, "normalized": True},
     ]
-
-
 
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
+        base_warmup = self.slow * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.slow)
+            return base_warmup + norm_window
+        return base_warmup
 
 @dataclass
 @sf_component(name="volatility/ulcer_index")
@@ -97,10 +115,12 @@ class UlcerIndexVol(Feature):
     """
     
     period: int = 14
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["close"]
     outputs = ["ulcer_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         n = len(close)
@@ -112,16 +132,39 @@ class UlcerIndexVol(Feature):
             highest = np.maximum.accumulate(window)
             pct_dd = 100 * (window - highest) / highest
             ui[i] = np.sqrt(np.mean(pct_dd ** 2))
-        
+
+        # Normalization for unbounded output
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            ui = normalize_zscore(ui, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name=f"ulcer_{self.period}", values=ui)
+            pl.Series(name=col_name, values=ui)
         )
-    
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"ulcer_{self.period}{suffix}"
+
     test_params: ClassVar[list[dict]] = [
         {"period": 14},
         {"period": 30},
         {"period": 60},
+        {"period": 14, "normalized": True},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 
 @dataclass
@@ -145,10 +188,12 @@ class RviVol(Feature):
     
     period: int = 14
     std_period: int = 10
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["close"]
     outputs = ["rvi_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         n = len(close)
@@ -182,16 +227,32 @@ class RviVol(Feature):
             dn_ema[i] = alpha * dn_std[i] + (1 - alpha) * dn_ema[i - 1]
         
         rvi = 100 * up_ema / (up_ema + dn_ema + 1e-10)
-        
+
+        # Normalization for bounded output [0,100] → [0,1]
+        if self.normalized:
+            rvi = rvi / 100
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name=f"rvi_{self.period}", values=rvi)
+            pl.Series(name=col_name, values=rvi)
         )
-    
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"rvi_{self.period}{suffix}"
+
     test_params: ClassVar[list[dict]] = [
         {"period": 14, "std_period": 10},
         {"period": 20, "std_period": 14},
         {"period": 30, "std_period": 20},
+        {"period": 14, "std_period": 10, "normalized": True},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return (self.std_period + self.period) * 5
 
 @dataclass
 @sf_component(name="volatility/historical_vol")
@@ -213,10 +274,12 @@ class HistoricalVol(Feature):
     
     period: int = 20
     annualize: int = 252  # trading days
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["close"]
     outputs = ["hv_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         n = len(close)
@@ -228,16 +291,39 @@ class HistoricalVol(Feature):
         
         for i in range(self.period - 1, n):
             hv[i] = np.std(log_ret[i - self.period + 1:i + 1], ddof=1) * np.sqrt(self.annualize)
-        
+
+        # Normalization for unbounded output
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            hv = normalize_zscore(hv, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name=f"hv_{self.period}", values=hv)
+            pl.Series(name=col_name, values=hv)
         )
-    
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"hv_{self.period}{suffix}"
+
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "annualize": 252},
         {"period": 30, "annualize": 252},
-        {"period": 60, "annualize": 365}, 
+        {"period": 60, "annualize": 365},
+        {"period": 20, "annualize": 252, "normalized": True},
     ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup
 
 @dataclass
 @sf_component(name="volatility/atr_percent")
@@ -255,10 +341,12 @@ class AtrPercentVol(Feature):
     """
     
     period: int = 14
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["high", "low", "close"]
     outputs = ["atr_pct_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
@@ -284,36 +372,36 @@ class AtrPercentVol(Feature):
             atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
         
         atr_pct = 100 * atr / close
-        
+
+        # Normalization for unbounded output
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            atr_pct = normalize_zscore(atr_pct, window=norm_window)
+
+        col_name = self._get_output_name()
         return df.with_columns(
-            pl.Series(name=f"atr_pct_{self.period}", values=atr_pct)
+            pl.Series(name=col_name, values=atr_pct)
         )
-    
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"atr_pct_{self.period}{suffix}"
+
     test_params: ClassVar[list[dict]] = [
         {"period": 14},
         {"period": 30},
         {"period": 60},
+        {"period": 14, "normalized": True},
     ]
 
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-
-    @property
-    def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return self.period * 5
+        base_warmup = self.period * 5
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(self.period)
+            return base_warmup + norm_window
+        return base_warmup

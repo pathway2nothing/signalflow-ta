@@ -30,7 +30,9 @@ class GapVol(Feature):
     """
 
     min_gap_pct: float = 0.0  # Minimum % change to be considered a gap
-    
+    normalized: bool = False
+    norm_period: int | None = None
+
     requires = ["open", "high", "low", "close"]
     outputs = ["gap_val", "gap_pct", "gap_fill_pct", "gap_run_ratio", "gap_range_ratio", "is_gap_up", "is_gap_down"]
 
@@ -81,21 +83,51 @@ class GapVol(Feature):
         is_gap_up_signal = np.where(gap_pct > self.min_gap_pct, 1.0, 0.0)
         is_gap_down_signal = np.where(gap_pct < -self.min_gap_pct, 1.0, 0.0)
 
+        # Normalization for unbounded outputs
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            norm_window = self.norm_period or get_norm_window(20)
+            gap_val = normalize_zscore(gap_val, window=norm_window)
+            gap_pct = normalize_zscore(gap_pct, window=norm_window)
+            gap_fill_pct = normalize_zscore(gap_fill_pct, window=norm_window)
+            gap_run_ratio = normalize_zscore(gap_run_ratio, window=norm_window)
+            gap_range_ratio = normalize_zscore(gap_range_ratio, window=norm_window)
+
+        output_names = self._get_output_names()
         return df.with_columns([
-            pl.Series(name="gap_val", values=gap_val),
-            pl.Series(name="gap_pct", values=gap_pct),
-            pl.Series(name="gap_fill_pct", values=gap_fill_pct),
-            pl.Series(name="gap_run_ratio", values=gap_run_ratio),
-            pl.Series(name="gap_range_ratio", values=gap_range_ratio),
-            pl.Series(name="is_gap_up", values=is_gap_up_signal),
-            pl.Series(name="is_gap_down", values=is_gap_down_signal),
+            pl.Series(name=output_names[0], values=gap_val),
+            pl.Series(name=output_names[1], values=gap_pct),
+            pl.Series(name=output_names[2], values=gap_fill_pct),
+            pl.Series(name=output_names[3], values=gap_run_ratio),
+            pl.Series(name=output_names[4], values=gap_range_ratio),
+            pl.Series(name=output_names[5], values=is_gap_up_signal),
+            pl.Series(name=output_names[6], values=is_gap_down_signal),
         ])
+
+    def _get_output_names(self) -> list[str]:
+        """Generate output column names with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return [
+            f"gap_val{suffix}",
+            f"gap_pct{suffix}",
+            f"gap_fill_pct{suffix}",
+            f"gap_run_ratio{suffix}",
+            f"gap_range_ratio{suffix}",
+            "is_gap_up",
+            "is_gap_down",
+        ]
 
     test_params: ClassVar[list[dict]] = [
         {"min_gap_pct": 0.0},
         {"min_gap_pct": 0.5},
+        {"min_gap_pct": 0.0, "normalized": True},
     ]
 
     @property
     def warmup(self) -> int:
-        return 1
+        base_warmup = 20
+        if self.normalized:
+            from signalflow.ta._normalization import get_norm_window
+            norm_window = self.norm_period or get_norm_window(20)
+            return base_warmup + norm_window
+        return base_warmup
