@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signalflow-ta"
-version = "0.3.3"
+version = "0.3.6"
 description = "Technical analysis extension for signalflow-trading."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "signalflow-trading>=0.3.3",
+  "signalflow-trading>=0.3.5",
   "pandas-ta>=0.4.67b0",
 ]
 
@@ -23,4 +23,4 @@ include = ["signalflow.ta*"]
 [project.optional-dependencies]
 test = [
   "pytest>=8",
-]
+]''
