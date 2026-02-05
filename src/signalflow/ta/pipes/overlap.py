@@ -1,15 +1,35 @@
 """Preset pipes for overlap indicators (smoothers & price transforms)."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature
 from signalflow.ta.overlap import (
-    SmaSmooth, EmaSmooth, WmaSmooth, RmaSmooth,
-    DemaSmooth, TemaSmooth, HmaSmooth, TrimaSmooth,
-    SwmaSmooth, SsfSmooth, FftSmooth,
-    KamaSmooth, AlmaSmooth, JmaSmooth, VidyaSmooth,
-    T3Smooth, ZlmaSmooth, McGinleySmooth, FramaSmooth,
-    Hl2Price, Hlc3Price, Ohlc4Price, WcpPrice,
-    MidpointPrice, MidpricePrice, TypicalPrice,
+    SmaSmooth,
+    EmaSmooth,
+    WmaSmooth,
+    RmaSmooth,
+    DemaSmooth,
+    TemaSmooth,
+    HmaSmooth,
+    TrimaSmooth,
+    SwmaSmooth,
+    SsfSmooth,
+    FftSmooth,
+    KamaSmooth,
+    AlmaSmooth,
+    JmaSmooth,
+    VidyaSmooth,
+    T3Smooth,
+    ZlmaSmooth,
+    McGinleySmooth,
+    FramaSmooth,
+    Hl2Price,
+    Hlc3Price,
+    Ohlc4Price,
+    WcpPrice,
+    MidpointPrice,
+    MidpricePrice,
+    TypicalPrice,
 )
 
 

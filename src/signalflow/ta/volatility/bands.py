@@ -1,4 +1,5 @@
 """Channel and envelope volatility indicators."""
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -45,9 +46,14 @@ class BollingerVol(Feature):
     norm_period: int | None = None
 
     requires = ["close"]
-    outputs = ["bb_upper_{period}", "bb_middle_{period}", "bb_lower_{period}",
-               "bb_width_{period}", "bb_pct_{period}"]
-    
+    outputs = [
+        "bb_upper_{period}",
+        "bb_middle_{period}",
+        "bb_lower_{period}",
+        "bb_width_{period}",
+        "bb_pct_{period}",
+    ]
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         n = len(close)
@@ -60,17 +66,17 @@ class BollingerVol(Feature):
 
             if n >= self.period:
                 # Initialize with SMA for reproducibility
-                middle[self.period - 1] = np.mean(close[:self.period])
+                middle[self.period - 1] = np.mean(close[: self.period])
 
             for i in range(self.period, n):
                 middle[i] = alpha * close[i] + (1 - alpha) * middle[i - 1]
 
             # Standard deviation still uses rolling window
             for i in range(self.period - 1, n):
-                std[i] = np.std(close[i - self.period + 1:i + 1], ddof=0)
+                std[i] = np.std(close[i - self.period + 1 : i + 1], ddof=0)
         else:  # SMA
             for i in range(self.period - 1, n):
-                window = close[i - self.period + 1:i + 1]
+                window = close[i - self.period + 1 : i + 1]
                 middle[i] = np.mean(window)
                 std[i] = np.std(window, ddof=0)
 
@@ -84,6 +90,7 @@ class BollingerVol(Feature):
         # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             upper = normalize_zscore(upper, window=norm_window)
             middle = normalize_zscore(middle, window=norm_window)
@@ -91,14 +98,16 @@ class BollingerVol(Feature):
             width = normalize_zscore(width, window=norm_window)
 
         output_names = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=output_names[0], values=upper),
-            pl.Series(name=output_names[1], values=middle),
-            pl.Series(name=output_names[2], values=lower),
-            pl.Series(name=output_names[3], values=width),
-            pl.Series(name=output_names[4], values=pct),
-        ])
-    
+        return df.with_columns(
+            [
+                pl.Series(name=output_names[0], values=upper),
+                pl.Series(name=output_names[1], values=middle),
+                pl.Series(name=output_names[2], values=lower),
+                pl.Series(name=output_names[3], values=width),
+                pl.Series(name=output_names[4], values=pct),
+            ]
+        )
+
     def _get_output_names(self) -> list[str]:
         """Generate output column names with normalization suffix."""
         suffix = "_norm" if self.normalized else ""
@@ -123,9 +132,11 @@ class BollingerVol(Feature):
         base_warmup = self.period * 2
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
+
 
 @dataclass
 @sf_component(name="volatility/keltner")
@@ -161,7 +172,7 @@ class KeltnerVol(Feature):
 
     requires = ["high", "low", "close"]
     outputs = ["kc_upper_{period}", "kc_basis_{period}", "kc_lower_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
@@ -173,10 +184,7 @@ class KeltnerVol(Feature):
             prev_close[0] = close[0]
             range_vals = np.maximum(
                 high - low,
-                np.maximum(
-                    np.abs(high - prev_close),
-                    np.abs(low - prev_close)
-                )
+                np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)),
             )
             range_vals[0] = high[0] - low[0]
         else:
@@ -194,8 +202,8 @@ class KeltnerVol(Feature):
                 atr[i] = alpha * range_vals[i] + (1 - alpha) * atr[i - 1]
         else:
             for i in range(self.period - 1, n):
-                basis[i] = np.mean(close[i - self.period + 1:i + 1])
-                atr[i] = np.mean(range_vals[i - self.period + 1:i + 1])
+                basis[i] = np.mean(close[i - self.period + 1 : i + 1])
+                atr[i] = np.mean(range_vals[i - self.period + 1 : i + 1])
 
         upper = basis + self.multiplier * atr
         lower = basis - self.multiplier * atr
@@ -203,17 +211,20 @@ class KeltnerVol(Feature):
         # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             upper = normalize_zscore(upper, window=norm_window)
             basis = normalize_zscore(basis, window=norm_window)
             lower = normalize_zscore(lower, window=norm_window)
 
         output_names = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=output_names[0], values=upper),
-            pl.Series(name=output_names[1], values=basis),
-            pl.Series(name=output_names[2], values=lower),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=output_names[0], values=upper),
+                pl.Series(name=output_names[1], values=basis),
+                pl.Series(name=output_names[2], values=lower),
+            ]
+        )
 
     def _get_output_names(self) -> list[str]:
         """Generate output column names with normalization suffix."""
@@ -226,7 +237,13 @@ class KeltnerVol(Feature):
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "multiplier": 2.0, "ma_type": "ema", "use_true_range": True},
-        {"period": 20, "multiplier": 2.0, "ma_type": "ema", "use_true_range": True, "normalized": True},
+        {
+            "period": 20,
+            "multiplier": 2.0,
+            "ma_type": "ema",
+            "use_true_range": True,
+            "normalized": True,
+        },
         {"period": 30, "multiplier": 1.5, "ma_type": "ema", "use_true_range": True},
         {"period": 60, "multiplier": 2.0, "ma_type": "sma", "use_true_range": False},
     ]
@@ -237,9 +254,11 @@ class KeltnerVol(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
+
 
 @dataclass
 @sf_component(name="volatility/donchian")
@@ -272,7 +291,7 @@ class DonchianVol(Feature):
 
     requires = ["high", "low"]
     outputs = ["dc_upper_{period}", "dc_middle_{period}", "dc_lower_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
@@ -282,25 +301,28 @@ class DonchianVol(Feature):
         lower = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
-            upper[i] = np.max(high[i - self.period + 1:i + 1])
-            lower[i] = np.min(low[i - self.period + 1:i + 1])
+            upper[i] = np.max(high[i - self.period + 1 : i + 1])
+            lower[i] = np.min(low[i - self.period + 1 : i + 1])
 
         middle = (upper + lower) / 2
 
         # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             upper = normalize_zscore(upper, window=norm_window)
             middle = normalize_zscore(middle, window=norm_window)
             lower = normalize_zscore(lower, window=norm_window)
 
         output_names = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=output_names[0], values=upper),
-            pl.Series(name=output_names[1], values=middle),
-            pl.Series(name=output_names[2], values=lower),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=output_names[0], values=upper),
+                pl.Series(name=output_names[1], values=middle),
+                pl.Series(name=output_names[2], values=lower),
+            ]
+        )
 
     def _get_output_names(self) -> list[str]:
         """Generate output column names with normalization suffix."""
@@ -324,6 +346,7 @@ class DonchianVol(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -333,28 +356,28 @@ class DonchianVol(Feature):
 @sf_component(name="volatility/accbands")
 class AccBandsVol(Feature):
     """Acceleration Bands.
-    
+
     Envelope bands that widen with volatility.
-    
+
     HL_Ratio = c * (High - Low) / (High + Low)
     Upper = MA(High * (1 + HL_Ratio), period)
     Lower = MA(Low * (1 - HL_Ratio), period)
     Middle = MA(Close, period)
-    
+
     Outputs:
     - accb_upper: upper band
     - accb_middle: middle band
     - accb_lower: lower band
-    
+
     Breakout indicator:
     - Close above upper band: strong uptrend
     - Close below lower band: strong downtrend
     - Inside bands: consolidation
-    
+
     Reference: Price Headley
     https://www.tradingtechnologies.com/help/x-study/technical-indicator-definitions/acceleration-bands-abands/
     """
-    
+
     period: int = 20
     factor: float = 4.0
     ma_type: Literal["sma", "ema"] = "sma"
@@ -369,18 +392,18 @@ class AccBandsVol(Feature):
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         n = len(close)
-        
+
         hl_range = high - low
         hl_sum = high + low
         hl_ratio = self.factor * hl_range / (hl_sum + 1e-10)
-        
+
         upper_raw = high * (1 + hl_ratio)
         lower_raw = low * (1 - hl_ratio)
-        
+
         upper = np.full(n, np.nan)
         middle = np.full(n, np.nan)
         lower = np.full(n, np.nan)
-        
+
         if self.ma_type == "ema":
             alpha = 2 / (self.period + 1)
             upper[0] = upper_raw[0]
@@ -390,26 +413,29 @@ class AccBandsVol(Feature):
                 upper[i] = alpha * upper_raw[i] + (1 - alpha) * upper[i - 1]
                 middle[i] = alpha * close[i] + (1 - alpha) * middle[i - 1]
                 lower[i] = alpha * lower_raw[i] + (1 - alpha) * lower[i - 1]
-        else:  
+        else:
             for i in range(self.period - 1, n):
-                upper[i] = np.mean(upper_raw[i - self.period + 1:i + 1])
-                middle[i] = np.mean(close[i - self.period + 1:i + 1])
-                lower[i] = np.mean(lower_raw[i - self.period + 1:i + 1])
+                upper[i] = np.mean(upper_raw[i - self.period + 1 : i + 1])
+                middle[i] = np.mean(close[i - self.period + 1 : i + 1])
+                lower[i] = np.mean(lower_raw[i - self.period + 1 : i + 1])
 
         # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             upper = normalize_zscore(upper, window=norm_window)
             middle = normalize_zscore(middle, window=norm_window)
             lower = normalize_zscore(lower, window=norm_window)
 
         output_names = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=output_names[0], values=upper),
-            pl.Series(name=output_names[1], values=middle),
-            pl.Series(name=output_names[2], values=lower),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=output_names[0], values=upper),
+                pl.Series(name=output_names[1], values=middle),
+                pl.Series(name=output_names[2], values=lower),
+            ]
+        )
 
     def _get_output_names(self) -> list[str]:
         """Generate output column names with normalization suffix."""
@@ -433,6 +459,7 @@ class AccBandsVol(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup

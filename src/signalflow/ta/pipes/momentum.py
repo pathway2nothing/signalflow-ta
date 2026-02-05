@@ -1,12 +1,27 @@
 """Preset pipes for momentum indicators."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature
 from signalflow.ta.momentum import (
-    RsiMom, RocMom, MomMom, CmoMom,
-    StochMom, StochRsiMom, WillrMom, CciMom, UoMom, AoMom,
-    MacdMom, PpoMom, TsiMom, TrixMom,
-    AccelerationMom, JerkMom, AngularMomentumMom, TorqueMom,
+    RsiMom,
+    RocMom,
+    MomMom,
+    CmoMom,
+    StochMom,
+    StochRsiMom,
+    WillrMom,
+    CciMom,
+    UoMom,
+    AoMom,
+    MacdMom,
+    PpoMom,
+    TsiMom,
+    TrixMom,
+    AccelerationMom,
+    JerkMom,
+    AngularMomentumMom,
+    TorqueMom,
 )
 
 
@@ -24,7 +39,13 @@ def momentum_oscillators_pipe(*, normalized: bool = False) -> list[Feature]:
     """Stochastic family: Stoch, StochRSI, Williams %R, CCI, UO, AO."""
     return [
         StochMom(k_period=14, d_period=3, smooth_k=3, normalized=normalized),
-        StochRsiMom(rsi_period=14, stoch_period=14, k_period=3, d_period=3, normalized=normalized),
+        StochRsiMom(
+            rsi_period=14,
+            stoch_period=14,
+            k_period=3,
+            d_period=3,
+            normalized=normalized,
+        ),
         WillrMom(period=14, normalized=normalized),
         CciMom(period=20, normalized=normalized),
         UoMom(normalized=normalized),

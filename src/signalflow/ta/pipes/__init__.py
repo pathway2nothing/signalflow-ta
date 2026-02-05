@@ -15,6 +15,7 @@ Usage::
     # Or use everything at once
     pipeline = FeaturePipeline(features=all_ta_pipe())
 """
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature

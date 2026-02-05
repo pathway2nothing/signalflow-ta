@@ -14,7 +14,9 @@
       "Bash(tree:*)",
       "Bash(wc:*)",
       "Bash(ls:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(grep:*)",
+      "Bash(pip show:*)"
     ]
   }
 }

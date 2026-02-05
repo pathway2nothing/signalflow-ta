@@ -89,6 +89,13 @@ from signalflow.ta.stat.realized import (
     RogersSatchellVolStat,
     YangZhangVolStat,
 )
+from signalflow.ta.stat.control import (
+    KalmanInnovationStat,
+    ARCoefficientStat,
+    LyapunovExponentStat,
+    PIDErrorStat,
+    PredictionErrorDecompositionStat,
+)
 
 __all__ = [
     # Dispersion
@@ -174,4 +181,10 @@ __all__ = [
     "SpectralRolloffStat",
     "SpectralFlatnessStat",
     "PowerCepstrumStat",
+    # Control Theory & Systems Engineering
+    "KalmanInnovationStat",
+    "ARCoefficientStat",
+    "LyapunovExponentStat",
+    "PIDErrorStat",
+    "PredictionErrorDecompositionStat",
 ]

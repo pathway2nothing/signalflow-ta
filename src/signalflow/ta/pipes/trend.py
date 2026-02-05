@@ -1,14 +1,31 @@
 """Preset pipes for trend indicators."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature
 from signalflow.ta.trend import (
-    AdxTrend, AroonTrend, VortexTrend, VhfTrend, ChopTrend,
-    ViscosityTrend, ReynoldsTrend, RotationalInertiaTrend,
-    MarketImpedanceTrend, RCTimeConstantTrend, SNRTrend,
-    OrderParameterTrend, SusceptibilityTrend,
-    PsarTrend, SupertrendTrend, ChandelierTrend, HiloTrend, CkspTrend,
-    IchimokuTrend, DpoTrend, QstickTrend, TtmTrend,
+    AdxTrend,
+    AroonTrend,
+    VortexTrend,
+    VhfTrend,
+    ChopTrend,
+    ViscosityTrend,
+    ReynoldsTrend,
+    RotationalInertiaTrend,
+    MarketImpedanceTrend,
+    RCTimeConstantTrend,
+    SNRTrend,
+    OrderParameterTrend,
+    SusceptibilityTrend,
+    PsarTrend,
+    SupertrendTrend,
+    ChandelierTrend,
+    HiloTrend,
+    CkspTrend,
+    IchimokuTrend,
+    DpoTrend,
+    QstickTrend,
+    TtmTrend,
 )
 
 

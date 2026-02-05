@@ -12,6 +12,7 @@ References:
     - Dubnov (2004) - Spectral Flatness (Wiener Entropy)
     - Bogert et al. (1963) - Power Cepstrum
 """
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -25,6 +26,7 @@ from signalflow.feature.base import Feature
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _detrend_window(window: np.ndarray) -> np.ndarray | None:
     """Remove linear trend from window.
@@ -43,8 +45,9 @@ def _detrend_window(window: np.ndarray) -> np.ndarray | None:
     return detrended
 
 
-def _power_spectrum(detrended: np.ndarray, skip_dc: bool = True
-                    ) -> tuple[np.ndarray, np.ndarray]:
+def _power_spectrum(
+    detrended: np.ndarray, skip_dc: bool = True
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute power spectrum and frequency bins from a detrended window.
 
     Args:
@@ -116,7 +119,7 @@ class SpectralFluxStat(Feature):
 
         prev_power_norm = None
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             detrended = _detrend_window(window)
             if detrended is None:
@@ -130,20 +133,23 @@ class SpectralFluxStat(Feature):
                 continue
 
             # L2-normalize the power spectrum
-            norm = np.sqrt(np.sum(power ** 2))
+            norm = np.sqrt(np.sum(power**2))
             if norm < 1e-10:
                 prev_power_norm = None
                 continue
             curr_power_norm = power / norm
 
-            if prev_power_norm is not None and len(prev_power_norm) == len(curr_power_norm):
+            if prev_power_norm is not None and len(prev_power_norm) == len(
+                curr_power_norm
+            ):
                 diff = curr_power_norm - prev_power_norm
-                flux[i] = float(np.sum(diff ** 2))
+                flux[i] = float(np.sum(diff**2))
 
             prev_power_norm = curr_power_norm
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             flux = normalize_zscore(flux, window=norm_window)
 
@@ -163,6 +169,7 @@ class SpectralFluxStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -210,7 +217,7 @@ class ZeroCrossingRateStat(Feature):
 
         zcr = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             detrended = _detrend_window(window)
             if detrended is None:
@@ -224,6 +231,7 @@ class ZeroCrossingRateStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             zcr = normalize_zscore(zcr, window=norm_window)
 
@@ -243,6 +251,7 @@ class ZeroCrossingRateStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -288,9 +297,7 @@ class SpectralRolloffStat(Feature):
 
     def __post_init__(self):
         if not (0.0 < self.rolloff_pct < 1.0):
-            raise ValueError(
-                f"rolloff_pct must be in (0, 1), got {self.rolloff_pct}"
-            )
+            raise ValueError(f"rolloff_pct must be in (0, 1), got {self.rolloff_pct}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -298,7 +305,7 @@ class SpectralRolloffStat(Feature):
 
         rolloff = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             detrended = _detrend_window(window)
             if detrended is None:
@@ -320,6 +327,7 @@ class SpectralRolloffStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             rolloff = normalize_zscore(rolloff, window=norm_window)
 
@@ -339,6 +347,7 @@ class SpectralRolloffStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -390,7 +399,7 @@ class SpectralFlatnessStat(Feature):
 
         flatness = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             detrended = _detrend_window(window)
             if detrended is None:
@@ -413,6 +422,7 @@ class SpectralFlatnessStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             flatness = normalize_zscore(flatness, window=norm_window)
 
@@ -432,6 +442,7 @@ class SpectralFlatnessStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -484,9 +495,7 @@ class PowerCepstrumStat(Feature):
 
     def __post_init__(self):
         if self.min_quefrency < 1:
-            raise ValueError(
-                f"min_quefrency must be >= 1, got {self.min_quefrency}"
-            )
+            raise ValueError(f"min_quefrency must be >= 1, got {self.min_quefrency}")
         if self.min_quefrency >= self.period // 2:
             raise ValueError(
                 f"min_quefrency must be < period // 2, got "
@@ -499,7 +508,7 @@ class PowerCepstrumStat(Feature):
 
         cepstrum_peak = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             detrended = _detrend_window(window)
             if detrended is None:
@@ -522,12 +531,13 @@ class PowerCepstrumStat(Feature):
             # Find dominant peak in valid quefrency range
             max_quefrency = self.period // 2
             if self.min_quefrency < max_quefrency:
-                search_range = cepstrum_mag[self.min_quefrency:max_quefrency]
+                search_range = cepstrum_mag[self.min_quefrency : max_quefrency]
                 if len(search_range) > 0:
                     cepstrum_peak[i] = float(np.max(search_range))
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             cepstrum_peak = normalize_zscore(cepstrum_peak, window=norm_window)
 
@@ -547,6 +557,7 @@ class PowerCepstrumStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base

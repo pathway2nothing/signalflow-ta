@@ -1,4 +1,5 @@
 """Basic smoothing moving averages."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -37,21 +38,18 @@ class SmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         sma = (
-            df.select(
-                pl.col(self.source_col)
-                  .rolling_mean(window_size=self.period)
-            ).to_series().to_numpy()
+            df.select(pl.col(self.source_col).rolling_mean(window_size=self.period))
+            .to_series()
+            .to_numpy()
         )
-
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             sma = normalize_ma_pct(source, sma)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=sma)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=sma))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -68,6 +66,7 @@ class SmaSmooth(Feature):
     @property
     def warmup(self) -> int:
         return self.period * 3
+
 
 @dataclass
 @sf_component(name="smooth/ema")
@@ -95,20 +94,18 @@ class EmaSmooth(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         ema = (
-            df.select(
-                pl.col(self.source_col)
-                  .ewm_mean(span=self.period, adjust=False)
-            ).to_series().to_numpy()
+            df.select(pl.col(self.source_col).ewm_mean(span=self.period, adjust=False))
+            .to_series()
+            .to_numpy()
         )
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             ema = normalize_ma_pct(source, ema)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=ema)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=ema))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -126,6 +123,7 @@ class EmaSmooth(Feature):
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
         return self.period * 5
+
 
 @dataclass
 @sf_component(name="smooth/wma")
@@ -159,17 +157,16 @@ class WmaSmooth(Feature):
 
         wma = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = source[i - self.period + 1:i + 1]
+            window = source[i - self.period + 1 : i + 1]
             wma[i] = np.dot(window, weights) / weight_sum
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             wma = normalize_ma_pct(source, wma)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=wma)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=wma))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -210,20 +207,19 @@ class RmaSmooth(Feature):
 
         rma = (
             df.select(
-                pl.col(self.source_col)
-                  .ewm_mean(span=equivalent_span, adjust=False)
-            ).to_series().to_numpy()
+                pl.col(self.source_col).ewm_mean(span=equivalent_span, adjust=False)
+            )
+            .to_series()
+            .to_numpy()
         )
-
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             rma = normalize_ma_pct(source, rma)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=rma)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=rma))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -241,6 +237,7 @@ class RmaSmooth(Feature):
     def warmup(self) -> int:
         """RMA needs ~10x period for initialization error to decay below 0.01%."""
         return self.period * 10
+
 
 @dataclass
 @sf_component(name="smooth/dema")
@@ -273,12 +270,11 @@ class DemaSmooth(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             dema = normalize_ma_pct(source, dema)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=dema)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=dema))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -329,12 +325,11 @@ class TemaSmooth(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             tema = normalize_ma_pct(source, tema)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=tema)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=tema))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -384,7 +379,7 @@ class HmaSmooth(Feature):
 
         result = np.full(n, np.nan)
         for i in range(period - 1, n):
-            window = values[i - period + 1:i + 1]
+            window = values[i - period + 1 : i + 1]
             result[i] = np.dot(window, weights) / weight_sum
         return result
 
@@ -402,12 +397,11 @@ class HmaSmooth(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             hma = normalize_ma_pct(source, hma)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=hma)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=hma))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -456,16 +450,14 @@ class TrimaSmooth(Feature):
         sma1 = pl.col(self.source_col).rolling_mean(window_size=half)
         trima = df.select(sma1.rolling_mean(window_size=half)).to_series().to_numpy()
 
-
         # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             trima = normalize_ma_pct(source, trima)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=trima)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=trima))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -514,25 +506,26 @@ class SwmaSmooth(Feature):
         if self.period % 2 == 0:
             weights = np.concatenate([np.arange(1, half + 1), np.arange(half, 0, -1)])
         else:
-            weights = np.concatenate([np.arange(1, half + 1), np.arange(half - 1, 0, -1)])
+            weights = np.concatenate(
+                [np.arange(1, half + 1), np.arange(half - 1, 0, -1)]
+            )
 
-        weights = weights[:self.period].astype(np.float64)
+        weights = weights[: self.period].astype(np.float64)
         weight_sum = weights.sum()
 
         swma = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = source[i - self.period + 1:i + 1]
+            window = source[i - self.period + 1 : i + 1]
             swma[i] = np.dot(window, weights) / weight_sum
 
         # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             swma = normalize_ma_pct(source, swma)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=swma)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=swma))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -593,7 +586,9 @@ class SsfSmooth(Feature):
             c1 = 1 - c2 - c3 - c4
 
             for i in range(3, n):
-                ssf[i] = c1 * source[i] + c2 * ssf[i-1] + c3 * ssf[i-2] + c4 * ssf[i-3]
+                ssf[i] = (
+                    c1 * source[i] + c2 * ssf[i - 1] + c3 * ssf[i - 2] + c4 * ssf[i - 3]
+                )
         else:  # poles == 2
             x = np.pi * np.sqrt(2) / self.period
             a0 = np.exp(-x)
@@ -602,19 +597,18 @@ class SsfSmooth(Feature):
             c1 = 1 - a1 - b1
 
             for i in range(2, n):
-                ssf[i] = c1 * source[i] + b1 * ssf[i-1] + a1 * ssf[i-2]
+                ssf[i] = c1 * source[i] + b1 * ssf[i - 1] + a1 * ssf[i - 2]
 
-        ssf[:self.period - 1] = np.nan
+        ssf[: self.period - 1] = np.nan
 
         # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
+
             ssf = normalize_ma_pct(source, ssf)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=ssf)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=ssf))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -675,9 +669,7 @@ class FftSmooth(Feature):
 
     def __post_init__(self) -> None:
         if not (0.0 < self.cutoff_ratio <= 1.0):
-            raise ValueError(
-                f"cutoff_ratio must be in (0, 1], got {self.cutoff_ratio}"
-            )
+            raise ValueError(f"cutoff_ratio must be in (0, 1], got {self.cutoff_ratio}")
         if self.period < 4:
             raise ValueError(
                 f"period must be >= 4 for meaningful FFT, got {self.period}"
@@ -738,4 +730,3 @@ class FftSmooth(Feature):
     @property
     def warmup(self) -> int:
         return self.period * 3
-

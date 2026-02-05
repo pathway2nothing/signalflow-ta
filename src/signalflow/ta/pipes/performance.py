@@ -1,4 +1,5 @@
 """Preset pipes for performance (returns) indicators."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature

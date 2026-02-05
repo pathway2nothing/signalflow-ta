@@ -1,14 +1,28 @@
 """Preset pipes for volatility indicators."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature
 from signalflow.ta.volatility import (
-    TrueRangeVol, AtrVol, NatrVol,
-    BollingerVol, KeltnerVol, DonchianVol, AccBandsVol,
-    MassIndexVol, UlcerIndexVol, RviVol, GapVol,
-    KineticEnergyVol, PotentialEnergyVol, TotalEnergyVol,
-    EnergyFlowVol, ElasticStrainVol,
-    TemperatureVol, HeatCapacityVol, FreeEnergyVol,
+    TrueRangeVol,
+    AtrVol,
+    NatrVol,
+    BollingerVol,
+    KeltnerVol,
+    DonchianVol,
+    AccBandsVol,
+    MassIndexVol,
+    UlcerIndexVol,
+    RviVol,
+    GapVol,
+    KineticEnergyVol,
+    PotentialEnergyVol,
+    TotalEnergyVol,
+    EnergyFlowVol,
+    ElasticStrainVol,
+    TemperatureVol,
+    HeatCapacityVol,
+    FreeEnergyVol,
 )
 
 

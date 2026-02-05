@@ -1,4 +1,5 @@
 """Volume-based oscillators."""
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -35,25 +36,25 @@ class MfiVolume(Feature):
 
     requires = ["high", "low", "close", "volume"]
     outputs = ["mfi_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
+
         tp = (high + low + close) / 3
         rmf = tp * volume
         tp_diff = np.diff(tp, prepend=tp[0])
         pos_mf = np.where(tp_diff > 0, rmf, 0)
         neg_mf = np.where(tp_diff < 0, rmf, 0)
-        
+
         mfi = np.full(n, np.nan)
-        
+
         for i in range(self.period - 1, n):
-            pos_sum = np.sum(pos_mf[i - self.period + 1:i + 1])
-            neg_sum = np.sum(neg_mf[i - self.period + 1:i + 1])
+            pos_sum = np.sum(pos_mf[i - self.period + 1 : i + 1])
+            neg_sum = np.sum(neg_mf[i - self.period + 1 : i + 1])
             total = pos_sum + neg_sum
 
             if total > 0:
@@ -64,9 +65,7 @@ class MfiVolume(Feature):
             mfi = mfi / 100
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=mfi)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=mfi))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -84,6 +83,7 @@ class MfiVolume(Feature):
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
         return self.period * 5
+
 
 @dataclass
 @sf_component(name="volume/cmf")
@@ -111,27 +111,23 @@ class CmfVolume(Feature):
 
     requires = ["high", "low", "close", "volume"]
     outputs = ["cmf_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
+
         hl_range = high - low
-        clv = np.where(
-            hl_range > 0,
-            ((close - low) - (high - close)) / hl_range,
-            0
-        )
-        
-        mfv = clv * volume  
+        clv = np.where(hl_range > 0, ((close - low) - (high - close)) / hl_range, 0)
+
+        mfv = clv * volume
         cmf = np.full(n, np.nan)
-        
+
         for i in range(self.period - 1, n):
-            mfv_sum = np.sum(mfv[i - self.period + 1:i + 1])
-            vol_sum = np.sum(volume[i - self.period + 1:i + 1])
+            mfv_sum = np.sum(mfv[i - self.period + 1 : i + 1])
+            vol_sum = np.sum(volume[i - self.period + 1 : i + 1])
 
             if vol_sum > 0:
                 cmf[i] = mfv_sum / vol_sum
@@ -139,13 +135,12 @@ class CmfVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             cmf = normalize_zscore(cmf, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=cmf)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=cmf))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -165,6 +160,7 @@ class CmfVolume(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -196,12 +192,12 @@ class EfiVolume(Feature):
 
     requires = ["close", "volume"]
     outputs = ["efi_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
+
         force = np.diff(close, prepend=np.nan) * volume
         force[0] = 0
 
@@ -210,7 +206,7 @@ class EfiVolume(Feature):
 
         if n >= self.period:
             # Initialize with SMA for reproducibility
-            efi[self.period - 1] = np.mean(force[:self.period])
+            efi[self.period - 1] = np.mean(force[: self.period])
 
         for i in range(self.period, n):
             efi[i] = alpha * force[i] + (1 - alpha) * efi[i - 1]
@@ -218,13 +214,12 @@ class EfiVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             efi = normalize_zscore(efi, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=efi)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=efi))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -244,6 +239,7 @@ class EfiVolume(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -277,39 +273,38 @@ class EomVolume(Feature):
 
     requires = ["high", "low", "volume"]
     outputs = ["eom_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(high)
-        
+
         hl2 = (high + low) / 2
         prev_hl2 = np.roll(hl2, 1)
         prev_hl2[0] = hl2[0]
-        
+
         distance = hl2 - prev_hl2
-        
+
         hl_range = high - low
         box_ratio = (volume / self.divisor) / (hl_range + 1e-10)
-        
+
         emv = distance / (box_ratio + 1e-10)
         emv[0] = 0
-        
+
         eom = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            eom[i] = np.mean(emv[i - self.period + 1:i + 1])
+            eom[i] = np.mean(emv[i - self.period + 1 : i + 1])
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             eom = normalize_zscore(eom, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=eom)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=eom))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -329,6 +324,7 @@ class EomVolume(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -369,40 +365,40 @@ class KvoVolume(Feature):
 
     requires = ["high", "low", "close", "volume"]
     outputs = ["kvo_{fast}_{slow}", "kvo_signal_{signal}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
+
         hlc3 = (high + low + close) / 3
 
         hlc3_diff = np.diff(hlc3, prepend=np.nan)
         trend = np.sign(hlc3_diff)
         trend[0] = 0  # No trend on first bar
-        
+
         sv = volume * trend
-        
+
         alpha_fast = 2 / (self.fast + 1)
         alpha_slow = 2 / (self.slow + 1)
         alpha_sig = 2 / (self.signal + 1)
-        
+
         ema_fast = np.full(n, np.nan)
         ema_slow = np.full(n, np.nan)
 
         # Initialize with SMA for reproducibility
         if n >= self.fast:
-            ema_fast[self.fast - 1] = np.mean(sv[:self.fast])
+            ema_fast[self.fast - 1] = np.mean(sv[: self.fast])
         if n >= self.slow:
-            ema_slow[self.slow - 1] = np.mean(sv[:self.slow])
+            ema_slow[self.slow - 1] = np.mean(sv[: self.slow])
 
         for i in range(self.fast, n):
             ema_fast[i] = alpha_fast * sv[i] + (1 - alpha_fast) * ema_fast[i - 1]
         for i in range(self.slow, n):
             ema_slow[i] = alpha_slow * sv[i] + (1 - alpha_slow) * ema_slow[i - 1]
-        
+
         kvo = ema_fast - ema_slow
 
         kvo_signal = np.full(n, np.nan)
@@ -414,7 +410,7 @@ class KvoVolume(Feature):
         if n >= kvo_start + self.signal:
             # Initialize signal with SMA of first signal_period KVO values
             init_idx = kvo_start + self.signal - 1
-            kvo_signal[init_idx] = np.mean(kvo[kvo_start:kvo_start + self.signal])
+            kvo_signal[init_idx] = np.mean(kvo[kvo_start : kvo_start + self.signal])
 
         # Continue with EMA smoothing
         for i in range(kvo_start + self.signal, n):
@@ -423,24 +419,26 @@ class KvoVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             kvo = normalize_zscore(kvo, window=norm_window)
             kvo_signal = normalize_zscore(kvo_signal, window=norm_window)
 
         col_kvo, col_signal = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_kvo, values=kvo),
-            pl.Series(name=col_signal, values=kvo_signal),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_kvo, values=kvo),
+                pl.Series(name=col_signal, values=kvo_signal),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str]:
         """Generate output column names with normalization suffix."""
         suffix = "_norm" if self.normalized else ""
         return (
             f"kvo_{self.fast}_{self.slow}{suffix}",
-            f"kvo_signal_{self.signal}{suffix}"
+            f"kvo_signal_{self.signal}{suffix}",
         )
-
 
     test_params: ClassVar[list[dict]] = [
         {"fast": 34, "slow": 55, "signal": 13},
@@ -455,6 +453,7 @@ class KvoVolume(Feature):
         base_warmup = (self.slow + self.signal) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             return base_warmup + norm_window
         return base_warmup
@@ -485,13 +484,13 @@ class VwapVolume(Feature):
 
     requires = ["high", "low", "close", "volume"]
     outputs = ["vwap"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
-        
+
         tp = (high + low + close) / 3
 
         cum_tp_vol = np.cumsum(tp * volume)
@@ -502,13 +501,12 @@ class VwapVolume(Feature):
         # Normalization: z-score for unbounded price-like indicator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(20)
             vwap = normalize_zscore(vwap, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=vwap)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=vwap))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -526,10 +524,10 @@ class VwapVolume(Feature):
         base_warmup = 100  # Cumulative indicator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(20)
             return base_warmup + norm_window
-        return base_warmup  
-
+        return base_warmup
 
 
 @dataclass
@@ -557,16 +555,16 @@ class VwapBandsVolume(Feature):
 
     requires = ["high", "low", "close", "volume"]
     outputs = ["vwap", "vwap_upper_{period}", "vwap_lower_{period}"]
-    
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
         n = len(close)
-        
+
         tp = (high + low + close) / 3
-        
+
         cum_tp_vol = np.cumsum(tp * volume)
         cum_vol = np.cumsum(volume)
         vwap = cum_tp_vol / (cum_vol + 1e-10)
@@ -575,7 +573,7 @@ class VwapBandsVolume(Feature):
         lower = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
-            window = tp[i - self.period + 1:i + 1]
+            window = tp[i - self.period + 1 : i + 1]
             std = np.std(window, ddof=1)
             upper[i] = vwap[i] + self.std_dev * std
             lower[i] = vwap[i] - self.std_dev * std
@@ -583,17 +581,20 @@ class VwapBandsVolume(Feature):
         # Normalization: z-score for unbounded price-like indicators
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             vwap = normalize_zscore(vwap, window=norm_window)
             upper = normalize_zscore(upper, window=norm_window)
             lower = normalize_zscore(lower, window=norm_window)
 
         col_vwap, col_upper, col_lower = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_vwap, values=vwap),
-            pl.Series(name=col_upper, values=upper),
-            pl.Series(name=col_lower, values=lower),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_vwap, values=vwap),
+                pl.Series(name=col_upper, values=upper),
+                pl.Series(name=col_lower, values=lower),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str, str]:
         """Generate output column names with normalization suffix."""
@@ -601,9 +602,8 @@ class VwapBandsVolume(Feature):
         return (
             f"vwap{suffix}",
             f"vwap_upper_{self.period}{suffix}",
-            f"vwap_lower_{self.period}{suffix}"
+            f"vwap_lower_{self.period}{suffix}",
         )
-
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "std_dev": 2.0},
@@ -618,6 +618,7 @@ class VwapBandsVolume(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup

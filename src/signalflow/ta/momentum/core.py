@@ -1,4 +1,5 @@
 """Core momentum indicators with reproducible initialization."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -12,31 +13,31 @@ from signalflow.feature.base import Feature
 def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     """
     Calculate RMA (Wilder's smoothing) with SMA initialization.
-    
+
     RMA uses alpha = 1/period (unlike EMA which uses 2/(period+1)).
     Initialize with SMA for reproducibility.
-    
+
     Args:
         values: Input array
         period: RMA period
-        
+
     Returns:
         RMA array with first (period-1) values as NaN
     """
     n = len(values)
     alpha = 1 / period
     rma = np.full(n, np.nan)
-    
+
     if n < period:
         return rma
-    
+
     # Initialize with SMA of first `period` values
     rma[period - 1] = np.mean(values[:period])
-    
+
     # Continue with Wilder's smoothing
     for i in range(period, n):
         rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-    
+
     return rma
 
 
@@ -93,9 +94,7 @@ class RsiMom(Feature):
             rsi = rsi / 100
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=rsi)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=rsi))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -113,6 +112,7 @@ class RsiMom(Feature):
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
         return self.period * 10
+
 
 @dataclass
 @sf_component(name="momentum/roc")
@@ -143,18 +143,19 @@ class RocMom(Feature):
 
         for i in range(self.period, n):
             if close[i - self.period] != 0:
-                roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
+                roc[i] = (
+                    100 * (close[i] - close[i - self.period]) / close[i - self.period]
+                )
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             roc = normalize_zscore(roc, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=roc)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=roc))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -174,6 +175,7 @@ class RocMom(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -212,13 +214,12 @@ class MomMom(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             mom = normalize_zscore(mom, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=mom)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=mom))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -238,6 +239,7 @@ class MomMom(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -276,8 +278,8 @@ class CmoMom(Feature):
         cmo = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
-            sum_gains = np.sum(gains[i - self.period + 1:i + 1])
-            sum_losses = np.sum(losses[i - self.period + 1:i + 1])
+            sum_gains = np.sum(gains[i - self.period + 1 : i + 1])
+            sum_losses = np.sum(losses[i - self.period + 1 : i + 1])
 
             total = sum_gains + sum_losses
             if total > 0:
@@ -288,9 +290,7 @@ class CmoMom(Feature):
             cmo = cmo / 100
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=cmo)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=cmo))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""

@@ -1,12 +1,25 @@
 """Preset pipes for volume indicators."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature
 from signalflow.ta.volume import (
-    ObvVolume, AdVolume, PvtVolume, NviVolume, PviVolume,
-    MfiVolume, CmfVolume, EfiVolume, EomVolume, KvoVolume,
-    MarketForceVolume, ImpulseVolume, MarketMomentumVolume,
-    MarketPowerVolume, MarketCapacitanceVolume, GravitationalPullVolume,
+    ObvVolume,
+    AdVolume,
+    PvtVolume,
+    NviVolume,
+    PviVolume,
+    MfiVolume,
+    CmfVolume,
+    EfiVolume,
+    EomVolume,
+    KvoVolume,
+    MarketForceVolume,
+    ImpulseVolume,
+    MarketMomentumVolume,
+    MarketPowerVolume,
+    MarketCapacitanceVolume,
+    GravitationalPullVolume,
 )
 
 

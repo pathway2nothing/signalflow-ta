@@ -1,4 +1,5 @@
 """Stochastic and other momentum oscillators with reproducible initialization."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -14,15 +15,15 @@ def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     n = len(values)
     alpha = 1 / period
     rma = np.full(n, np.nan)
-    
+
     if n < period:
         return rma
-    
+
     rma[period - 1] = np.mean(values[:period])
-    
+
     for i in range(period, n):
         rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-    
+
     return rma
 
 
@@ -59,8 +60,8 @@ class StochMom(Feature):
         raw_k = np.full(n, np.nan)
 
         for i in range(self.k_period - 1, n):
-            hh = np.max(high[i - self.k_period + 1:i + 1])
-            ll = np.min(low[i - self.k_period + 1:i + 1])
+            hh = np.max(high[i - self.k_period + 1 : i + 1])
+            ll = np.min(low[i - self.k_period + 1 : i + 1])
 
             if hh != ll:
                 raw_k[i] = 100 * (close[i] - ll) / (hh - ll)
@@ -72,7 +73,7 @@ class StochMom(Feature):
         start_k = self.k_period + self.smooth_k - 2
 
         for i in range(start_k, n):
-            window = raw_k[i - self.smooth_k + 1:i + 1]
+            window = raw_k[i - self.smooth_k + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 stoch_k[i] = np.mean(valid)
@@ -82,7 +83,7 @@ class StochMom(Feature):
         start_d = start_k + self.d_period - 1
 
         for i in range(start_d, n):
-            window = stoch_k[i - self.d_period + 1:i + 1]
+            window = stoch_k[i - self.d_period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 stoch_d[i] = np.mean(valid)
@@ -93,18 +94,17 @@ class StochMom(Feature):
             stoch_d = stoch_d / 100
 
         col_k, col_d = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_k, values=stoch_k),
-            pl.Series(name=col_d, values=stoch_d),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_k, values=stoch_k),
+                pl.Series(name=col_d, values=stoch_d),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str]:
         """Generate output column names with normalization suffix."""
         suffix = "_norm" if self.normalized else ""
-        return (
-            f"stoch_k_{self.k_period}{suffix}",
-            f"stoch_d_{self.k_period}{suffix}"
-        )
+        return (f"stoch_k_{self.k_period}{suffix}", f"stoch_d_{self.k_period}{suffix}")
 
     test_params: ClassVar[list[dict]] = [
         {"k_period": 14, "d_period": 3, "smooth_k": 3},
@@ -117,6 +117,7 @@ class StochMom(Feature):
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
         return (self.k_period + self.smooth_k + self.d_period) * 3
+
 
 @dataclass
 @sf_component(name="momentum/stochrsi")
@@ -162,7 +163,7 @@ class StochRsiMom(Feature):
         start = self.rsi_period + self.stoch_period - 2
 
         for i in range(start, n):
-            rsi_window = rsi[i - self.stoch_period + 1:i + 1]
+            rsi_window = rsi[i - self.stoch_period + 1 : i + 1]
             valid_rsi = rsi_window[~np.isnan(rsi_window)]
 
             if len(valid_rsi) >= 2:
@@ -179,7 +180,7 @@ class StochRsiMom(Feature):
         start_k = start + self.k_period - 1
 
         for i in range(start_k, n):
-            window = raw_stoch[i - self.k_period + 1:i + 1]
+            window = raw_stoch[i - self.k_period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 stoch_k[i] = np.mean(valid)
@@ -189,7 +190,7 @@ class StochRsiMom(Feature):
         start_d = start_k + self.d_period - 1
 
         for i in range(start_d, n):
-            window = stoch_k[i - self.d_period + 1:i + 1]
+            window = stoch_k[i - self.d_period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 stoch_d[i] = np.mean(valid)
@@ -200,22 +201,30 @@ class StochRsiMom(Feature):
             stoch_d = stoch_d / 100
 
         col_k, col_d = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_k, values=stoch_k),
-            pl.Series(name=col_d, values=stoch_d),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_k, values=stoch_k),
+                pl.Series(name=col_d, values=stoch_d),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str]:
         """Generate output column names with normalization suffix."""
         suffix = "_norm" if self.normalized else ""
         return (
             f"stochrsi_k_{self.rsi_period}{suffix}",
-            f"stochrsi_d_{self.rsi_period}{suffix}"
+            f"stochrsi_d_{self.rsi_period}{suffix}",
         )
 
     test_params: ClassVar[list[dict]] = [
         {"rsi_period": 14, "stoch_period": 14, "k_period": 3, "d_period": 3},
-        {"rsi_period": 14, "stoch_period": 14, "k_period": 3, "d_period": 3, "normalized": True},
+        {
+            "rsi_period": 14,
+            "stoch_period": 14,
+            "k_period": 3,
+            "d_period": 3,
+            "normalized": True,
+        },
         {"rsi_period": 60, "stoch_period": 60, "k_period": 10, "d_period": 10},
         {"rsi_period": 120, "stoch_period": 120, "k_period": 20, "d_period": 20},
     ]
@@ -255,8 +264,8 @@ class WillrMom(Feature):
         willr = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
-            hh = np.max(high[i - self.period + 1:i + 1])
-            ll = np.min(low[i - self.period + 1:i + 1])
+            hh = np.max(high[i - self.period + 1 : i + 1])
+            ll = np.min(low[i - self.period + 1 : i + 1])
 
             if hh != ll:
                 willr[i] = -100 * (hh - close[i]) / (hh - ll)
@@ -268,9 +277,7 @@ class WillrMom(Feature):
             willr = (willr + 100) / 100
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=willr)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=willr))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -323,7 +330,7 @@ class CciMom(Feature):
         cci = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
-            window = tp[i - self.period + 1:i + 1]
+            window = tp[i - self.period + 1 : i + 1]
             sma = np.mean(window)
             mad = np.mean(np.abs(window - sma))
 
@@ -333,13 +340,12 @@ class CciMom(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             cci = normalize_zscore(cci, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=cci)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=cci))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -359,6 +365,7 @@ class CciMom(Feature):
         base_warmup = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -402,14 +409,14 @@ class UoMom(Feature):
         uo = np.full(n, np.nan)
 
         for i in range(self.slow - 1, n):
-            fast_bp = np.sum(bp[i - self.fast + 1:i + 1])
-            fast_tr = np.sum(tr[i - self.fast + 1:i + 1])
+            fast_bp = np.sum(bp[i - self.fast + 1 : i + 1])
+            fast_tr = np.sum(tr[i - self.fast + 1 : i + 1])
 
-            med_bp = np.sum(bp[i - self.medium + 1:i + 1])
-            med_tr = np.sum(tr[i - self.medium + 1:i + 1])
+            med_bp = np.sum(bp[i - self.medium + 1 : i + 1])
+            med_tr = np.sum(tr[i - self.medium + 1 : i + 1])
 
-            slow_bp = np.sum(bp[i - self.slow + 1:i + 1])
-            slow_tr = np.sum(tr[i - self.slow + 1:i + 1])
+            slow_bp = np.sum(bp[i - self.slow + 1 : i + 1])
+            slow_tr = np.sum(tr[i - self.slow + 1 : i + 1])
 
             if fast_tr > 0 and med_tr > 0 and slow_tr > 0:
                 fast_avg = fast_bp / fast_tr
@@ -417,9 +424,11 @@ class UoMom(Feature):
                 slow_avg = slow_bp / slow_tr
 
                 total_weight = self.fast_weight + self.medium_weight + self.slow_weight
-                weighted = (self.fast_weight * fast_avg +
-                           self.medium_weight * med_avg +
-                           self.slow_weight * slow_avg)
+                weighted = (
+                    self.fast_weight * fast_avg
+                    + self.medium_weight * med_avg
+                    + self.slow_weight * slow_avg
+                )
 
                 uo[i] = 100 * weighted / total_weight
 
@@ -428,9 +437,7 @@ class UoMom(Feature):
             uo = uo / 100
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=uo)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=uo))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -482,20 +489,19 @@ class AoMom(Feature):
         ao = np.full(n, np.nan)
 
         for i in range(self.slow - 1, n):
-            fast_sma = np.mean(median[i - self.fast + 1:i + 1])
-            slow_sma = np.mean(median[i - self.slow + 1:i + 1])
+            fast_sma = np.mean(median[i - self.fast + 1 : i + 1])
+            slow_sma = np.mean(median[i - self.slow + 1 : i + 1])
             ao[i] = fast_sma - slow_sma
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             ao = normalize_zscore(ao, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=ao)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=ao))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -515,6 +521,7 @@ class AoMom(Feature):
         base_warmup = self.slow * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             return base_warmup + norm_window
         return base_warmup

@@ -169,21 +169,27 @@ class RsiDivergence(DivergenceBase):
         # 8. Calculate divergence strength
         all_divs = bullish_div | bearish_div | hidden_bullish_div | hidden_bearish_div
         strength = self.calculate_divergence_strength(
-            close, rsi, all_divs,
-            indicator_range=(0, 100)  # RSI ranges from 0-100
+            close,
+            rsi,
+            all_divs,
+            indicator_range=(0, 100),  # RSI ranges from 0-100
         )
 
         # 9. Boost strength for extreme RSI levels
-        strength = self._apply_rsi_extremity_boost(rsi, strength, bullish_div, bearish_div)
+        strength = self._apply_rsi_extremity_boost(
+            rsi, strength, bullish_div, bearish_div
+        )
 
         # 10. Add divergence columns to dataframe
-        df = df.with_columns([
-            pl.Series("rsi_div_bullish", bullish_div),
-            pl.Series("rsi_div_bearish", bearish_div),
-            pl.Series("rsi_div_hidden_bullish", hidden_bullish_div),
-            pl.Series("rsi_div_hidden_bearish", hidden_bearish_div),
-            pl.Series("rsi_div_strength", strength),
-        ])
+        df = df.with_columns(
+            [
+                pl.Series("rsi_div_bullish", bullish_div),
+                pl.Series("rsi_div_bearish", bearish_div),
+                pl.Series("rsi_div_hidden_bullish", hidden_bullish_div),
+                pl.Series("rsi_div_hidden_bearish", hidden_bearish_div),
+                pl.Series("rsi_div_strength", strength),
+            ]
+        )
 
         return df
 
@@ -192,7 +198,7 @@ class RsiDivergence(DivergenceBase):
         rsi: np.ndarray,
         strength: np.ndarray,
         bullish_div: np.ndarray,
-        bearish_div: np.ndarray
+        bearish_div: np.ndarray,
     ) -> np.ndarray:
         """
         Boost divergence strength when RSI is in extreme zones.
@@ -222,7 +228,9 @@ class RsiDivergence(DivergenceBase):
         oversold_mask = bullish_div & (rsi < self.rsi_oversold)
         if np.any(oversold_mask):
             # More oversold = bigger boost (up to +15 points)
-            oversold_depth = (self.rsi_oversold - rsi[oversold_mask]) / self.rsi_oversold
+            oversold_depth = (
+                self.rsi_oversold - rsi[oversold_mask]
+            ) / self.rsi_oversold
             boost = oversold_depth * 15
             boosted[oversold_mask] += boost
 
@@ -230,12 +238,13 @@ class RsiDivergence(DivergenceBase):
         overbought_mask = bearish_div & (rsi > self.rsi_overbought)
         if np.any(overbought_mask):
             # More overbought = bigger boost (up to +15 points)
-            overbought_depth = (rsi[overbought_mask] - self.rsi_overbought) / (100 - self.rsi_overbought)
+            overbought_depth = (rsi[overbought_mask] - self.rsi_overbought) / (
+                100 - self.rsi_overbought
+            )
             boost = overbought_depth * 15
             boosted[overbought_mask] += boost
 
         return np.clip(boosted, 0, 100)
-
 
     @property
     def warmup(self) -> int:

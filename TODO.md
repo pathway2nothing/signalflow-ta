@@ -63,7 +63,17 @@
 
 **Relevance:** Treats price as output of a dynamical system. Kalman innovations measure how "surprised" an optimal filter is — spikes indicate model breakdown. System identification parameters track changing market dynamics.
 
-**Status:** Candidate for future batch.
+**Status:** **SELECTED** — 5 indicators implemented in `stat/control.py`.
+
+## Implemented Indicators — Control Theory
+
+| Indicator | Source Field | What It Measures | Key Insight |
+|-----------|-------------|-----------------|-------------|
+| **Kalman Innovation** | Harvey (1989) | Normalized innovation statistic from 1-D Kalman filter | NIS >> 1 signals regime shift / model breakdown |
+| **AR Coefficient** | Ljung (1999) | First autoregressive coefficient via rolling OLS | Positive = momentum; negative = mean-reversion; tracking = system identification |
+| **Lyapunov Exponent** | Rosenstein et al. (1993) | Maximum Lyapunov exponent via phase-space embedding | MLE > 0 = chaos; MLE < 0 = convergent dynamics |
+| **PID Error** | Astrom & Murray (2008) | RMS of PID composite tracking error | High = breakout/regime shift; low = stable equilibrium |
+| **Prediction Error Decomposition** | Geman et al. (1992) | Bias ratio of linear prediction errors | High = systematic model failure; low = noise-dominated |
 
 ---
 

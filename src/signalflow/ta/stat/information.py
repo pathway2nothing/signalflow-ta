@@ -12,6 +12,7 @@ References:
     - Kraskov et al. (2004) - Mutual Information estimation
     - Schreiber (2000) - Transfer Entropy / Information Gain
 """
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -25,6 +26,7 @@ from signalflow.feature.base import Feature
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _log_returns(values: np.ndarray) -> np.ndarray:
     """Compute log-returns with NaN for first element."""
@@ -79,8 +81,9 @@ def _jensen_shannon_divergence(p: np.ndarray, q: np.ndarray) -> float:
     p_s = p_s / p_s.sum()
     q_s = q_s / q_s.sum()
     m = 0.5 * (p_s + q_s)
-    return float(0.5 * np.sum(p_s * np.log2(p_s / m)) +
-                 0.5 * np.sum(q_s * np.log2(q_s / m)))
+    return float(
+        0.5 * np.sum(p_s * np.log2(p_s / m)) + 0.5 * np.sum(q_s * np.log2(q_s / m))
+    )
 
 
 def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
@@ -116,7 +119,7 @@ def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
         h = -float(np.sum(p_nz * np.log2(p_nz)))
         return h / h_max
 
-    sum_p_alpha = float(np.sum(p_nz ** alpha))
+    sum_p_alpha = float(np.sum(p_nz**alpha))
     if sum_p_alpha <= 0:
         return np.nan
 
@@ -139,7 +142,7 @@ def _auto_mutual_information(x: np.ndarray, lag: int, bins: int) -> float:
         return np.nan
 
     x_current = x[lag:]
-    x_lagged = x[:n - lag]
+    x_lagged = x[: n - lag]
 
     # Remove pairs with NaN
     valid = ~(np.isnan(x_current) | np.isnan(x_lagged))
@@ -188,7 +191,7 @@ def _relative_information_gain(x: np.ndarray, sub_window: int, bins: int) -> flo
 
     # Split into two consecutive sub-windows
     first_half = x[:sub_window]
-    second_half = x[n - sub_window:]
+    second_half = x[n - sub_window :]
 
     valid_first = first_half[~np.isnan(first_half)]
     valid_second = second_half[~np.isnan(second_half)]
@@ -285,8 +288,8 @@ class KLDivergenceStat(Feature):
 
         kl = np.full(n, np.nan)
         for i in range(self.period, n):
-            baseline = log_ret[i - self.period + 1:i + 1]
-            recent = log_ret[i - self.short_period + 1:i + 1]
+            baseline = log_ret[i - self.period + 1 : i + 1]
+            recent = log_ret[i - self.short_period + 1 : i + 1]
 
             valid_base = baseline[~np.isnan(baseline)]
             valid_recent = recent[~np.isnan(recent)]
@@ -312,6 +315,7 @@ class KLDivergenceStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             kl = normalize_zscore(kl, window=norm_window)
 
@@ -330,6 +334,7 @@ class KLDivergenceStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -408,8 +413,8 @@ class JSDivergenceStat(Feature):
 
         jsd = np.full(n, np.nan)
         for i in range(self.period, n):
-            baseline = log_ret[i - self.period + 1:i + 1]
-            recent = log_ret[i - self.short_period + 1:i + 1]
+            baseline = log_ret[i - self.period + 1 : i + 1]
+            recent = log_ret[i - self.short_period + 1 : i + 1]
 
             valid_base = baseline[~np.isnan(baseline)]
             valid_recent = recent[~np.isnan(recent)]
@@ -436,6 +441,7 @@ class JSDivergenceStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             jsd = normalize_zscore(jsd, window=norm_window)
 
@@ -454,6 +460,7 @@ class JSDivergenceStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -533,13 +540,14 @@ class RenyiEntropyStat(Feature):
 
         renyi = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) >= self.bins * 2:
                 renyi[i] = _renyi_entropy(valid, self.bins, self.alpha)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             renyi = normalize_zscore(renyi, window=norm_window)
 
@@ -558,6 +566,7 @@ class RenyiEntropyStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -630,13 +639,14 @@ class AutoMutualInfoStat(Feature):
 
         ami = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) >= self.lag + self.bins * 2:
                 ami[i] = _auto_mutual_information(valid, self.lag, self.bins)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             ami = normalize_zscore(ami, window=norm_window)
 
@@ -655,6 +665,7 @@ class AutoMutualInfoStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -720,13 +731,14 @@ class RelativeInfoGainStat(Feature):
         sub_window = self.period // 2
 
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) >= sub_window * 2:
                 ig[i] = _relative_information_gain(valid, sub_window, self.bins)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             ig = normalize_zscore(ig, window=norm_window)
 
@@ -745,6 +757,7 @@ class RelativeInfoGainStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base

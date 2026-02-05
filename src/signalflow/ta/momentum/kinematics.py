@@ -1,5 +1,6 @@
 # src/signalflow/ta/momentum/kinematics.py
 """Kinematic indicators - higher-order derivatives of price movement."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -58,21 +59,20 @@ class AccelerationMom(Feature):
             raw = accel.copy()
             accel = np.full(n, np.nan)
             for i in range(2 * self.lag + self.smooth - 1, n):
-                window = raw[i - self.smooth + 1:i + 1]
+                window = raw[i - self.smooth + 1 : i + 1]
                 valid = window[~np.isnan(window)]
                 if len(valid) == self.smooth:
                     accel[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(max(self.lag * 2, 10))
             accel = normalize_zscore(accel, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_accel_{self.lag}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=accel)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=accel))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "lag": 1},
@@ -86,6 +86,7 @@ class AccelerationMom(Feature):
         base = (self.lag * 2 + self.smooth) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(max(self.lag * 2, 10))
             return base + norm_window
         return base
@@ -147,21 +148,20 @@ class JerkMom(Feature):
             raw = jerk.copy()
             jerk = np.full(n, np.nan)
             for i in range(3 * self.lag + self.smooth - 1, n):
-                window = raw[i - self.smooth + 1:i + 1]
+                window = raw[i - self.smooth + 1 : i + 1]
                 valid = window[~np.isnan(window)]
                 if len(valid) == self.smooth:
                     jerk[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(max(self.lag * 3, 10))
             jerk = normalize_zscore(jerk, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_jerk_{self.lag}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=jerk)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=jerk))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "lag": 1},
@@ -175,6 +175,7 @@ class JerkMom(Feature):
         base = (self.lag * 3 + self.smooth) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(max(self.lag * 3, 10))
             return base + norm_window
         return base
@@ -219,7 +220,7 @@ class AngularMomentumMom(Feature):
         # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         # Displacement
         log_values = np.log(np.maximum(values, 1e-10))
@@ -239,21 +240,20 @@ class AngularMomentumMom(Feature):
         L = np.full(n, np.nan)
         start = max(self.ma_period, self.period)
         for i in range(start, n):
-            window = L_raw[i - self.period + 1:i + 1]
+            window = L_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 L[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             L = normalize_zscore(L, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_angmom_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=L)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=L))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 20, "ma_period": 50},
@@ -267,6 +267,7 @@ class AngularMomentumMom(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             return base + norm_window
         return base
@@ -305,7 +306,7 @@ class TorqueMom(Feature):
         # MA
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         # Displacement & velocity
         log_values = np.log(np.maximum(values, 1e-10))
@@ -322,7 +323,7 @@ class TorqueMom(Feature):
         L = np.full(n, np.nan)
         start = max(self.ma_period, self.period)
         for i in range(start, n):
-            window = L_raw[i - self.period + 1:i + 1]
+            window = L_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 L[i] = np.mean(valid)
@@ -335,14 +336,13 @@ class TorqueMom(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             torque = normalize_zscore(torque, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_torque_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=torque)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=torque))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 20, "ma_period": 50},
@@ -356,6 +356,7 @@ class TorqueMom(Feature):
         base = (max(self.ma_period, self.period) + self.torque_lag) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             return base + norm_window
         return base

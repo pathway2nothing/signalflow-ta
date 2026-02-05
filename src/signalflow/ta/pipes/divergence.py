@@ -1,4 +1,5 @@
 """Preset pipes for divergence detectors."""
+
 from __future__ import annotations
 
 from signalflow.feature.base import Feature

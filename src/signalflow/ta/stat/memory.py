@@ -1,5 +1,6 @@
 # src/signalflow/ta/stat/memory.py
 """Time series memory measures - persistence, mean-reversion, diffusion, oscillator dynamics."""
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -39,7 +40,9 @@ class HurstStat(Feature):
 
     def __post_init__(self):
         if self.period < 20:
-            raise ValueError(f"period must be >= 20 for reliable Hurst estimate, got {self.period}")
+            raise ValueError(
+                f"period must be >= 20 for reliable Hurst estimate, got {self.period}"
+            )
 
     def _hurst_rs(self, ts: np.ndarray) -> float:
         """Compute Hurst via R/S method."""
@@ -67,7 +70,7 @@ class HurstStat(Feature):
 
         hurst = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
             hurst[i] = self._hurst_rs(window)
 
         return df.with_columns(
@@ -115,8 +118,8 @@ class AutocorrStat(Feature):
 
         acf = np.full(n, np.nan)
         for i in range(self.period + self.lag - 1, n):
-            x = values[i - self.period + 1:i + 1]
-            x_lag = values[i - self.period + 1 - self.lag:i + 1 - self.lag]
+            x = values[i - self.period + 1 : i + 1]
+            x_lag = values[i - self.period + 1 - self.lag : i + 1 - self.lag]
 
             if len(x) == len(x_lag) and len(x) > 0:
                 corr = np.corrcoef(x, x_lag)[0, 1]
@@ -170,10 +173,11 @@ class VarianceRatioStat(Feature):
 
         vr = np.full(n, np.nan)
         for i in range(self.period + self.k - 1, n):
-            window_1 = log_ret[i - self.period + 1:i + 1]
+            window_1 = log_ret[i - self.period + 1 : i + 1]
 
-            log_ret_k = np.log(values[i - self.period + 1 + self.k:i + 1]) - \
-                        np.log(values[i - self.period + 1:i + 1 - self.k])
+            log_ret_k = np.log(values[i - self.period + 1 + self.k : i + 1]) - np.log(
+                values[i - self.period + 1 : i + 1 - self.k]
+            )
 
             var_1 = np.nanvar(window_1, ddof=1)
             var_k = np.nanvar(log_ret_k, ddof=1)
@@ -238,21 +242,20 @@ class DiffusionCoeffStat(Feature):
 
         dc = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 2:
                 dc[i] = np.var(valid, ddof=1) / 2.0
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             dc = normalize_zscore(dc, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_diffcoeff_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=dc)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=dc))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -266,6 +269,7 @@ class DiffusionCoeffStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -302,7 +306,9 @@ class AnomalousDiffusionStat(Feature):
 
     def __post_init__(self):
         if self.tau_long <= self.tau_short:
-            raise ValueError(f"tau_long ({self.tau_long}) must be > tau_short ({self.tau_short})")
+            raise ValueError(
+                f"tau_long ({self.tau_long}) must be > tau_short ({self.tau_short})"
+            )
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -313,30 +319,33 @@ class AnomalousDiffusionStat(Feature):
         log_ratio = np.log(self.tau_long / self.tau_short)
 
         for i in range(self.period + self.tau_long - 1, n):
-            window = log_values[i - self.period + 1:i + 1]
+            window = log_values[i - self.period + 1 : i + 1]
             w = len(window)
 
             # MSD for tau_short
-            displacements_short = window[self.tau_short:] - window[:-self.tau_short]
-            msd_short = np.mean(displacements_short ** 2) if len(displacements_short) > 0 else 0
+            displacements_short = window[self.tau_short :] - window[: -self.tau_short]
+            msd_short = (
+                np.mean(displacements_short**2) if len(displacements_short) > 0 else 0
+            )
 
             # MSD for tau_long
-            displacements_long = window[self.tau_long:] - window[:-self.tau_long]
-            msd_long = np.mean(displacements_long ** 2) if len(displacements_long) > 0 else 0
+            displacements_long = window[self.tau_long :] - window[: -self.tau_long]
+            msd_long = (
+                np.mean(displacements_long**2) if len(displacements_long) > 0 else 0
+            )
 
             if msd_short > 1e-20 and msd_long > 1e-20:
                 adiff[i] = np.log(msd_long / msd_short) / log_ratio
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             adiff = normalize_zscore(adiff, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_adiff_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=adiff)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=adiff))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "tau_short": 1, "tau_long": 10},
@@ -350,6 +359,7 @@ class AnomalousDiffusionStat(Feature):
         base = (self.period + self.tau_long) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -391,29 +401,28 @@ class MsdRatioStat(Feature):
         msdr = np.full(n, np.nan)
 
         for i in range(self.period + tau2 - 1, n):
-            window = log_values[i - self.period + 1:i + 1]
+            window = log_values[i - self.period + 1 : i + 1]
 
             # MSD for tau
-            disp_tau = window[self.tau:] - window[:-self.tau]
-            msd_tau = np.mean(disp_tau ** 2)
+            disp_tau = window[self.tau :] - window[: -self.tau]
+            msd_tau = np.mean(disp_tau**2)
 
             # MSD for 2*tau
             disp_2tau = window[tau2:] - window[:-tau2]
-            msd_2tau = np.mean(disp_2tau ** 2)
+            msd_2tau = np.mean(disp_2tau**2)
 
             if msd_tau > 1e-20:
                 msdr[i] = msd_2tau / msd_tau
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             msdr = normalize_zscore(msdr, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_msdr_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=msdr)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=msdr))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "tau": 5},
@@ -427,6 +436,7 @@ class MsdRatioStat(Feature):
         base = (self.period + 2 * self.tau) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -471,7 +481,7 @@ class SpringConstantStat(Feature):
         # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         # Log displacement
         log_values = np.log(np.maximum(values, 1e-10))
@@ -488,8 +498,8 @@ class SpringConstantStat(Feature):
         spring_k = np.full(n, np.nan)
         start = max(self.ma_period, self.period)
         for i in range(start, n):
-            x = displacement[i - self.period + 1:i]  # displacement[t-1]
-            y = d_displacement[i - self.period + 2:i + 1]  # Δdisplacement[t]
+            x = displacement[i - self.period + 1 : i]  # displacement[t-1]
+            y = d_displacement[i - self.period + 2 : i + 1]  # Δdisplacement[t]
 
             valid = ~(np.isnan(x) | np.isnan(y))
             x_v = x[valid]
@@ -505,14 +515,13 @@ class SpringConstantStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             spring_k = normalize_zscore(spring_k, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_spring_k_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=spring_k)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=spring_k))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "ma_period": 50},
@@ -526,6 +535,7 @@ class SpringConstantStat(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -569,7 +579,7 @@ class DampingRatioStat(Feature):
         # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         # Displacement
         log_values = np.log(np.maximum(values, 1e-10))
@@ -580,7 +590,7 @@ class DampingRatioStat(Feature):
         start = max(self.ma_period, self.period)
 
         for i in range(start, n):
-            window = displacement[i - self.period + 1:i + 1]
+            window = displacement[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) < 10:
                 continue
@@ -602,18 +612,17 @@ class DampingRatioStat(Feature):
                 if len(decrements) > 0:
                     delta = np.mean(decrements)
                     # ζ = δ / sqrt(4π² + δ²)
-                    damping[i] = delta / np.sqrt(4 * np.pi ** 2 + delta ** 2)
+                    damping[i] = delta / np.sqrt(4 * np.pi**2 + delta**2)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             damping = normalize_zscore(damping, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_damping_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=damping)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=damping))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "ma_period": 50},
@@ -627,6 +636,7 @@ class DampingRatioStat(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -668,7 +678,7 @@ class NaturalFrequencyStat(Feature):
         # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         # Displacement
         displacement = values - ma
@@ -677,7 +687,7 @@ class NaturalFrequencyStat(Feature):
         start = max(self.ma_period, self.period)
 
         for i in range(start, n):
-            window = displacement[i - self.period + 1:i + 1]
+            window = displacement[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) < 4:
                 continue
@@ -691,14 +701,13 @@ class NaturalFrequencyStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             natfreq = normalize_zscore(natfreq, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_natfreq_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=natfreq)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=natfreq))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "ma_period": 50},
@@ -712,6 +721,7 @@ class NaturalFrequencyStat(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -753,7 +763,7 @@ class PlasticStrainStat(Feature):
 
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         log_values = np.log(np.maximum(values, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
@@ -767,8 +777,8 @@ class PlasticStrainStat(Feature):
         plastic = np.full(n, np.nan)
         start = max(self.ma_period, self.period)
         for i in range(start, n):
-            x = displacement[i - self.period + 1:i]
-            y = -d_displacement[i - self.period + 2:i + 1]
+            x = displacement[i - self.period + 1 : i]
+            y = -d_displacement[i - self.period + 2 : i + 1]
 
             valid = ~(np.isnan(x) | np.isnan(y))
             x_v = x[valid]
@@ -782,14 +792,13 @@ class PlasticStrainStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             plastic = normalize_zscore(plastic, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_plastic_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=plastic)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=plastic))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "ma_period": 50},
@@ -803,6 +812,7 @@ class PlasticStrainStat(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -843,7 +853,7 @@ class EscapeVelocityStat(Feature):
 
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
         log_values = np.log(np.maximum(values, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
@@ -864,13 +874,17 @@ class EscapeVelocityStat(Feature):
 
         for i in range(start, n):
             # Estimate spring constant k
-            x = displacement[i - self.period + 1:i]
-            y = d_displacement[i - self.period + 2:i + 1]
+            x = displacement[i - self.period + 1 : i]
+            y = d_displacement[i - self.period + 2 : i + 1]
             valid = ~(np.isnan(x) | np.isnan(y))
             x_v = x[valid]
             y_v = y[valid]
 
-            if len(x_v) > 5 and not np.isnan(velocity[i]) and not np.isnan(displacement[i]):
+            if (
+                len(x_v) > 5
+                and not np.isnan(velocity[i])
+                and not np.isnan(displacement[i])
+            ):
                 x_mean = np.mean(x_v)
                 y_mean = np.mean(y_v)
                 ss_xx = np.sum((x_v - x_mean) ** 2)
@@ -886,14 +900,13 @@ class EscapeVelocityStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             vesc_ratio = normalize_zscore(vesc_ratio, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_vesc_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=vesc_ratio)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=vesc_ratio))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 60, "ma_period": 50},
@@ -907,6 +920,7 @@ class EscapeVelocityStat(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -948,7 +962,7 @@ class CorrelationLengthStat(Feature):
 
         corrlen = np.full(n, np.nan)
         for i in range(self.period + self.max_lag - 1, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) < self.max_lag + 5:
                 continue
@@ -970,14 +984,13 @@ class CorrelationLengthStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             corrlen = normalize_zscore(corrlen, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_corrlen_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=corrlen)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=corrlen))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 100, "max_lag": 20},
@@ -990,6 +1003,7 @@ class CorrelationLengthStat(Feature):
         base = (self.period + self.max_lag) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
