@@ -73,6 +73,11 @@ from signalflow.ta.stat.dsp import (
     SpectralRolloffStat,
     SpectralFlatnessStat,
     PowerCepstrumStat,
+    SpectralBandwidthStat,
+    SpectralSlopeStat,
+    SpectralKurtosisStat,
+    SpectralContrastStat,
+    MFCCBandEnergyStat,
 )
 from signalflow.ta.stat.regression import (
     CorrelationStat,
@@ -181,6 +186,11 @@ __all__ = [
     "SpectralRolloffStat",
     "SpectralFlatnessStat",
     "PowerCepstrumStat",
+    "SpectralBandwidthStat",
+    "SpectralSlopeStat",
+    "SpectralKurtosisStat",
+    "SpectralContrastStat",
+    "MFCCBandEnergyStat",
     # Control Theory & Systems Engineering
     "KalmanInnovationStat",
     "ARCoefficientStat",

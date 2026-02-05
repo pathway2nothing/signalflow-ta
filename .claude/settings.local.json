@@ -16,7 +16,9 @@
       "Bash(ls:*)",
       "Bash(git commit:*)",
       "Bash(grep:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(file:*)",
+      "Bash(ruff format:*)"
     ]
   }
 }

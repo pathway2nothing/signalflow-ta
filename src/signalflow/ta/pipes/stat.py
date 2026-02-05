@@ -78,6 +78,11 @@ from signalflow.ta.stat import (
     SpectralRolloffStat,
     SpectralFlatnessStat,
     PowerCepstrumStat,
+    SpectralBandwidthStat,
+    SpectralSlopeStat,
+    SpectralKurtosisStat,
+    SpectralContrastStat,
+    MFCCBandEnergyStat,
 )
 
 
@@ -207,13 +212,18 @@ def stat_info_theory_pipe(*, source_col: str = "close") -> list[Feature]:
 
 
 def stat_dsp_pipe(*, source_col: str = "close") -> list[Feature]:
-    """DSP / Acoustics: Spectral Flux, Zero-Crossing Rate, Spectral Rolloff, Spectral Flatness, Power Cepstrum."""
+    """DSP / Acoustics: spectral dynamics, shape, and texture (10 indicators)."""
     return [
         SpectralFluxStat(source_col=source_col),
         ZeroCrossingRateStat(source_col=source_col),
         SpectralRolloffStat(source_col=source_col),
         SpectralFlatnessStat(source_col=source_col),
         PowerCepstrumStat(source_col=source_col),
+        SpectralBandwidthStat(source_col=source_col),
+        SpectralSlopeStat(source_col=source_col),
+        SpectralKurtosisStat(source_col=source_col),
+        SpectralContrastStat(source_col=source_col),
+        MFCCBandEnergyStat(source_col=source_col),
     ]
 
 

@@ -36,7 +36,22 @@
 
 **Relevance:** Audio analysis techniques for detecting "timbre" changes in time series. Spectral flux measures how quickly the frequency content changes (regime shift detector). Spectral flatness distinguishes tonal (trending) from noisy (choppy) signals. Partially covered already (spectral centroid, spectral entropy).
 
-**Status:** Candidate for future batch.
+**Status:** **SELECTED** — 10 indicators implemented in `stat/dsp.py`.
+
+## Implemented Indicators — DSP / Acoustics
+
+| Indicator | Source Field | What It Measures | Key Insight |
+|-----------|-------------|-----------------|-------------|
+| **Spectral Flux** | Scheirer & Slaney (1997) | Rate of change of power spectrum | Spikes at regime shifts |
+| **Zero-Crossing Rate** | Kedem (1986) | Sign changes in detrended signal | High = choppy; low = trending |
+| **Spectral Rolloff** | Peeters (2004) | Frequency below which X% energy concentrated | High = noisy; low = trend-dominated |
+| **Spectral Flatness** | Dubnov (2004) | Geometric/arithmetic mean of spectrum | ~1 = noise; ~0 = clear cycle |
+| **Power Cepstrum** | Bogert et al. (1963) | Dominant cepstral peak magnitude | Repeating spectral patterns |
+| **Spectral Bandwidth** | Peeters (2004) | 2nd spectral moment (spread around centroid) | Wide = multi-cycle; narrow = dominant cycle |
+| **Spectral Slope** | Peeters (2004) | Log power spectrum regression slope | Negative = trending; near-zero = choppy |
+| **Spectral Kurtosis** | Peeters (2004) | 4th spectral moment (peakedness) | High = sharp dominant cycle |
+| **Spectral Contrast** | Jiang et al. (2002) | Mean peak-valley difference across sub-bands | High = clear harmonics |
+| **MFCC Band Energy** | Davis & Mermelstein (1980) | L2 norm of cepstral coefficients | Compact spectral texture descriptor |
 
 ---
 

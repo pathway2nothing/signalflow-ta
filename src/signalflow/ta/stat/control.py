@@ -38,7 +38,9 @@ def _log_returns(values: np.ndarray) -> np.ndarray:
     return lr
 
 
-def _kalman_innovation_variance(returns: np.ndarray, process_noise_ratio: float) -> float:
+def _kalman_innovation_variance(
+    returns: np.ndarray, process_noise_ratio: float
+) -> float:
     """Normalized Innovation Statistic (NIS) from a 1-D local-level Kalman filter.
 
     Model:
@@ -401,7 +403,12 @@ class KalmanInnovationStat(Feature):
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 100, "process_noise": 0.01},
         {"source_col": "close", "period": 200, "process_noise": 0.1},
-        {"source_col": "close", "period": 100, "process_noise": 0.01, "normalized": True},
+        {
+            "source_col": "close",
+            "period": 100,
+            "process_noise": 0.01,
+            "normalized": True,
+        },
     ]
 
     @property
@@ -672,9 +679,7 @@ class PIDErrorStat(Feature):
 
     def __post_init__(self):
         if self.period < 20:
-            raise ValueError(
-                f"period must be >= 20, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 20, got {self.period}")
         if self.kp < 0 or self.ki < 0 or self.kd < 0:
             raise ValueError(
                 f"gains must be non-negative, got kp={self.kp}, ki={self.ki}, kd={self.kd}"
@@ -708,7 +713,14 @@ class PIDErrorStat(Feature):
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 100, "kp": 1.0, "ki": 0.1, "kd": 0.05},
         {"source_col": "close", "period": 200, "kp": 1.0, "ki": 0.5, "kd": 0.1},
-        {"source_col": "close", "period": 100, "kp": 1.0, "ki": 0.1, "kd": 0.05, "normalized": True},
+        {
+            "source_col": "close",
+            "period": 100,
+            "kp": 1.0,
+            "ki": 0.1,
+            "kd": 0.05,
+            "normalized": True,
+        },
     ]
 
     @property
@@ -772,9 +784,7 @@ class PredictionErrorDecompositionStat(Feature):
 
     def __post_init__(self):
         if self.period < 30:
-            raise ValueError(
-                f"period must be >= 30, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 30, got {self.period}")
         if self.forecast_horizon < 1 or self.forecast_horizon > 5:
             raise ValueError(
                 f"forecast_horizon must be in [1, 5], got {self.forecast_horizon}"
@@ -806,7 +816,12 @@ class PredictionErrorDecompositionStat(Feature):
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 100, "forecast_horizon": 1},
         {"source_col": "close", "period": 200, "forecast_horizon": 3},
-        {"source_col": "close", "period": 100, "forecast_horizon": 1, "normalized": True},
+        {
+            "source_col": "close",
+            "period": 100,
+            "forecast_horizon": 1,
+            "normalized": True,
+        },
     ]
 
     @property
