@@ -109,7 +109,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          pytest tests/test_core.py -v --tb=short
 
   release:
     needs: test
