@@ -1,9 +1,6 @@
-signalflow-trading >= 0.3.2
-torch >= 2.2.0
-lightning >= 2.5.0
-plotly 
-pyarrow
-kaleido
-pytest
-numpy
-numba
+signalflow-trading >= 0.3.3
+numpy >= 2.2
+numba >= 0.61
+polars >= 1.0
+scipy >= 1.14
+pytest >= 8

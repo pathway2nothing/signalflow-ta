@@ -19,11 +19,13 @@ from datetime import datetime, timedelta
 
 SEED = 42
 DEFAULT_PAIR = "BTCUSDT"
+DEFAULT_ROWS = 1000
 
 
 # =============================================================================
 # Single Test Data Generator
 # =============================================================================
+
 
 def generate_test_ohlcv(
     n_rows: int,
@@ -81,9 +83,15 @@ def generate_test_ohlcv(
 
     # Generate high/low with intrabar volatility
     for i in range(n_rows):
-        intrabar_range = abs(close_prices[i] - open_prices[i]) + base_price * noise_level
-        high_prices[i] = max(open_prices[i], close_prices[i]) + abs(rng.normal(0, intrabar_range * 0.5))
-        low_prices[i] = min(open_prices[i], close_prices[i]) - abs(rng.normal(0, intrabar_range * 0.5))
+        intrabar_range = (
+            abs(close_prices[i] - open_prices[i]) + base_price * noise_level
+        )
+        high_prices[i] = max(open_prices[i], close_prices[i]) + abs(
+            rng.normal(0, intrabar_range * 0.5)
+        )
+        low_prices[i] = min(open_prices[i], close_prices[i]) - abs(
+            rng.normal(0, intrabar_range * 0.5)
+        )
 
     # Ensure all prices positive
     min_price = low_prices.min()
@@ -98,22 +106,135 @@ def generate_test_ohlcv(
     base_volume = 1000.0
     price_changes = np.abs(np.diff(close_prices, prepend=close_prices[0]))
     volume_multiplier = 1 + (price_changes / close_prices) * 5
-    volumes = np.abs(rng.normal(base_volume, base_volume * 0.3, n_rows)) * volume_multiplier
+    volumes = (
+        np.abs(rng.normal(base_volume, base_volume * 0.3, n_rows)) * volume_multiplier
+    )
 
-    return pl.DataFrame({
-        "pair": [pair] * n_rows,
-        "timestamp": timestamps,
-        "open": open_prices,
-        "high": high_prices,
-        "low": low_prices,
-        "close": close_prices,
-        "volume": volumes,
-    })
+    return pl.DataFrame(
+        {
+            "pair": [pair] * n_rows,
+            "timestamp": timestamps,
+            "open": open_prices,
+            "high": high_prices,
+            "low": low_prices,
+            "close": close_prices,
+            "volume": volumes,
+        }
+    )
+
+
+# =============================================================================
+# Convenience Generators (used by test_core.py)
+# =============================================================================
+
+generate_sinusoidal_ohlcv = generate_test_ohlcv
+
+
+def generate_static_ohlcv(
+    n_rows: int,
+    base_price: float = 100.0,
+    pair: str = DEFAULT_PAIR,
+    seed: int = SEED,
+) -> pl.DataFrame:
+    """Generate constant-price OHLCV data (no noise, no trend)."""
+    return generate_test_ohlcv(
+        n_rows=n_rows,
+        base_price=base_price,
+        amplitude=0.0,
+        noise_level=0.0,
+        trend=0.0,
+        pair=pair,
+        seed=seed,
+    )
+
+
+def generate_random_walk_ohlcv(
+    n_rows: int,
+    base_price: float = 100.0,
+    volatility: float = 0.02,
+    pair: str = DEFAULT_PAIR,
+    seed: int = SEED,
+) -> pl.DataFrame:
+    """Generate random-walk OHLCV data."""
+    rng = np.random.default_rng(seed)
+    start = datetime(2024, 1, 1, 0, 0, 0)
+    timestamps = [start + timedelta(minutes=i) for i in range(n_rows)]
+
+    returns = rng.normal(0, volatility, n_rows)
+    close_prices = base_price * np.exp(np.cumsum(returns))
+
+    open_prices = np.empty(n_rows)
+    open_prices[0] = close_prices[0]
+    open_prices[1:] = close_prices[:-1]
+
+    high_prices = np.maximum(open_prices, close_prices) * (
+        1 + np.abs(rng.normal(0, volatility * 0.5, n_rows))
+    )
+    low_prices = np.minimum(open_prices, close_prices) * (
+        1 - np.abs(rng.normal(0, volatility * 0.5, n_rows))
+    )
+
+    volumes = np.abs(rng.normal(1000, 300, n_rows))
+
+    return pl.DataFrame(
+        {
+            "pair": [pair] * n_rows,
+            "timestamp": timestamps,
+            "open": open_prices,
+            "high": high_prices,
+            "low": low_prices,
+            "close": close_prices,
+            "volume": volumes,
+        }
+    )
+
+
+def generate_empty_column_df(
+    n_rows: int,
+    empty_columns: list[str],
+    pair: str = DEFAULT_PAIR,
+    seed: int = SEED,
+) -> pl.DataFrame:
+    """Generate OHLCV data with specified columns set to all-null."""
+    df = generate_test_ohlcv(n_rows=n_rows, pair=pair, seed=seed)
+    return df.with_columns(
+        [pl.lit(None).cast(pl.Float64).alias(col) for col in empty_columns]
+    )
+
+
+def generate_ohlcv_with_nulls(
+    df: pl.DataFrame,
+    null_fraction: float = 0.1,
+    seed: int = SEED,
+) -> pl.DataFrame:
+    """Inject random nulls into OHLCV price columns."""
+    rng = np.random.default_rng(seed)
+    n = len(df)
+    price_cols = ["open", "high", "low", "close"]
+    exprs = []
+    for col in price_cols:
+        mask = rng.random(n) < null_fraction
+        exprs.append(
+            pl.when(pl.Series(mask)).then(None).otherwise(pl.col(col)).alias(col)
+        )
+    return df.with_columns(exprs)
+
+
+def validate_ohlcv_constraints(df: pl.DataFrame) -> bool:
+    """Validate that OHLCV constraints hold (high >= low, etc.)."""
+    return (
+        df.filter(pl.col("high") < pl.col("low")).height == 0
+        and df.filter(pl.col("high") < pl.col("open")).height == 0
+        and df.filter(pl.col("high") < pl.col("close")).height == 0
+        and df.filter(pl.col("low") > pl.col("open")).height == 0
+        and df.filter(pl.col("low") > pl.col("close")).height == 0
+    )
 
 
 # =============================================================================
 # Pytest Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def test_data() -> pl.DataFrame:
@@ -125,6 +246,7 @@ def test_data() -> pl.DataFrame:
 # Pytest Configuration Hooks
 # =============================================================================
 
+
 def pytest_addoption(parser):
     """Add custom command-line options for test configuration."""
     parser.addoption(
@@ -132,14 +254,14 @@ def pytest_addoption(parser):
         action="store",
         type=int,
         default=None,
-        help="Maximum number of parameter combinations to test per indicator (default: all)"
+        help="Maximum number of parameter combinations to test per indicator (default: all)",
     )
     parser.addoption(
         "--feature-groups",
         action="store",
         default=None,
         help="Comma-separated list of feature groups to test (e.g., 'momentum,overlap'). "
-             "Available: momentum, overlap, trend, volatility, volume, stat, performance, other"
+        "Available: momentum, overlap, trend, volatility, volume, stat, performance, other",
     )
 
 
@@ -155,13 +277,9 @@ def pytest_generate_tests(metafunc):
         from indicator_registry import filter_configs_by_options, INDICATOR_CONFIGS
 
         filtered_configs, filtered_ids = filter_configs_by_options(
-            INDICATOR_CONFIGS,
-            pytest_config=metafunc.config
+            INDICATOR_CONFIGS, pytest_config=metafunc.config
         )
 
         metafunc.parametrize(
-            "config",
-            filtered_configs,
-            ids=filtered_ids,
-            indirect=False
+            "config", filtered_configs, ids=filtered_ids, indirect=False
         )

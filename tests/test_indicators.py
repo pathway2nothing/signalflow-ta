@@ -24,12 +24,13 @@ from indicator_registry import IndicatorConfig
 # Test periods - simple and clear
 LONG_PERIOD = 50000  # Long time series
 SHORT_PERIOD = 40000  # Short time series (LONG_PERIOD - TEST_LENGTH)
-TEST_LENGTH = 1000    # Comparison window
+TEST_LENGTH = 1000  # Comparison window
 
 
 # =============================================================================
 # Helper Functions
 # =============================================================================
+
 
 def run_indicator(config: IndicatorConfig, df: pl.DataFrame) -> pl.DataFrame:
     """Run indicator on data and return result."""
@@ -39,7 +40,16 @@ def run_indicator(config: IndicatorConfig, df: pl.DataFrame) -> pl.DataFrame:
 
 def get_output_columns(result: pl.DataFrame) -> list[str]:
     """Get output columns (all except standard OHLCV columns)."""
-    standard = {'pair', 'timestamp', 'open', 'high', 'low', 'close', 'volume', 'resample_offset'}
+    standard = {
+        "pair",
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "resample_offset",
+    }
     return [col for col in result.columns if col not in standard]
 
 
@@ -52,6 +62,7 @@ def skip_if_no_config(config):
 # =============================================================================
 # Reproducibility Test
 # =============================================================================
+
 
 class TestReproducibility:
     """
@@ -114,7 +125,7 @@ class TestReproducibility:
             vals_short_valid = vals_short[valid]
 
             # Relative difference
-            with np.errstate(divide='ignore', invalid='ignore'):
+            with np.errstate(divide="ignore", invalid="ignore"):
                 scale = np.maximum(np.abs(vals_long_valid), np.abs(vals_short_valid))
                 scale = np.where(scale < 1e-10, 1.0, scale)
                 rel_diff = np.abs(vals_long_valid - vals_short_valid) / scale
@@ -123,12 +134,14 @@ class TestReproducibility:
 
             if max_diff > self.TOLERANCE:
                 worst_idx = np.nanargmax(rel_diff)
-                failures.append({
-                    'column': col,
-                    'max_diff_pct': max_diff * 100,
-                    'long_value': vals_long_valid[worst_idx],
-                    'short_value': vals_short_valid[worst_idx],
-                })
+                failures.append(
+                    {
+                        "column": col,
+                        "max_diff_pct": max_diff * 100,
+                        "long_value": vals_long_valid[worst_idx],
+                        "short_value": vals_short_valid[worst_idx],
+                    }
+                )
 
         if failures:
             msg = [
@@ -144,13 +157,15 @@ class TestReproducibility:
             ]
 
             for f in failures:
-                msg.extend([
-                    f"Column: {f['column']}",
-                    f"  Max diff: {f['max_diff_pct']:.6f}%",
-                    f"  Long value: {f['long_value']:.8f}",
-                    f"  Short value: {f['short_value']:.8f}",
-                    f"",
-                ])
+                msg.extend(
+                    [
+                        f"Column: {f['column']}",
+                        f"  Max diff: {f['max_diff_pct']:.6f}%",
+                        f"  Long value: {f['long_value']:.8f}",
+                        f"  Short value: {f['short_value']:.8f}",
+                        f"",
+                    ]
+                )
 
             pytest.fail("\n".join(msg))
 
@@ -158,6 +173,7 @@ class TestReproducibility:
 # =============================================================================
 # Look-Ahead Bias Test
 # =============================================================================
+
 
 class TestLookAhead:
     """
@@ -260,6 +276,7 @@ class TestLookAhead:
 # Basic Output Validation
 # =============================================================================
 
+
 class TestBasicValidation:
     """Basic sanity checks for indicator outputs."""
 
@@ -270,8 +287,9 @@ class TestBasicValidation:
         df = generate_test_ohlcv(n_rows=500, seed=SEED)
         result = run_indicator(config, df)
 
-        assert len(result) == len(df), \
+        assert len(result) == len(df), (
             f"{config.name}: output length {len(result)} != input length {len(df)}"
+        )
 
     def test_produces_output_columns(self, config: IndicatorConfig):
         """Indicator should produce output columns."""
@@ -282,8 +300,7 @@ class TestBasicValidation:
 
         out_cols = get_output_columns(result)
 
-        assert len(out_cols) > 0, \
-            f"{config.name}: no output columns produced"
+        assert len(out_cols) > 0, f"{config.name}: no output columns produced"
 
     def test_no_inf_values(self, config: IndicatorConfig):
         """Output should not contain infinite values."""
@@ -299,8 +316,9 @@ class TestBasicValidation:
             valid = ~np.isnan(values)
 
             if valid.any():
-                assert not np.any(np.isinf(values[valid])), \
+                assert not np.any(np.isinf(values[valid])), (
                     f"{config.name}.{col}: contains infinite values"
+                )
 
 
 # =============================================================================

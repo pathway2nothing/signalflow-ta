@@ -29,6 +29,7 @@ from signalflow.ta.overlap import (
     TrimaSmooth,
     SwmaSmooth,
     SsfSmooth,
+    FftSmooth,
     KamaSmooth,
     AlmaSmooth,
     JmaSmooth,
@@ -45,10 +46,7 @@ from signalflow.ta.overlap import (
     MidpricePrice,
     TypicalPrice,
 )
-from signalflow.ta.performance import (
-    LogReturn,
-    PctReturn
-)
+from signalflow.ta.performance import LogReturn, PctReturn
 from signalflow.ta.stat import (
     VarianceStat,
     StdStat,
@@ -118,6 +116,11 @@ from signalflow.ta.stat import (
     SpectralFlatnessStat,
     PowerCepstrumStat,
     CrossSectionalStat,
+    KalmanInnovationStat,
+    ARCoefficientStat,
+    LyapunovExponentStat,
+    PIDErrorStat,
+    PredictionErrorDecompositionStat,
 )
 
 
@@ -225,6 +228,7 @@ __all__ = [
     "TrimaSmooth",
     "SwmaSmooth",
     "SsfSmooth",
+    "FftSmooth",
     "KamaSmooth",
     "AlmaSmooth",
     "JmaSmooth",
@@ -324,6 +328,12 @@ __all__ = [
     "SpectralRolloffStat",
     "SpectralFlatnessStat",
     "PowerCepstrumStat",
+    # Stat - Control Theory & Systems Engineering
+    "KalmanInnovationStat",
+    "ARCoefficientStat",
+    "LyapunovExponentStat",
+    "PIDErrorStat",
+    "PredictionErrorDecompositionStat",
     # Trend
     "AdxTrend",
     "AroonTrend",

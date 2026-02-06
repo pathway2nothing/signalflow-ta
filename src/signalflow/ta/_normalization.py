@@ -4,13 +4,14 @@ This module provides functions for normalizing technical indicators:
 - Bounded indicators: linear scaling to standard ranges
 - Unbounded indicators: rolling z-score normalization
 """
+
 import numpy as np
 
 
 def normalize_bounded(
     values: np.ndarray,
     original_range: tuple[float, float],
-    target_range: tuple[float, float] = (-1, 1)
+    target_range: tuple[float, float] = (-1, 1),
 ) -> np.ndarray:
     """
     Linearly scale bounded values to target range.
@@ -39,9 +40,7 @@ def normalize_bounded(
 
 
 def normalize_zscore(
-    values: np.ndarray,
-    window: int,
-    robust: bool = False
+    values: np.ndarray, window: int, robust: bool = False
 ) -> np.ndarray:
     """
     Apply rolling z-score normalization to unbounded values.
@@ -71,7 +70,7 @@ def normalize_zscore(
         # 1.4826 is the scaling factor to make MAD comparable to std dev
         scale = 1.4826
         for i in range(window - 1, n):
-            window_vals = values[i - window + 1:i + 1]
+            window_vals = values[i - window + 1 : i + 1]
             valid = window_vals[~np.isnan(window_vals)]
             if len(valid) > 1:
                 median = np.median(valid)
@@ -81,7 +80,7 @@ def normalize_zscore(
     else:
         # Standard z-score: (x - mean) / std
         for i in range(window - 1, n):
-            window_vals = values[i - window + 1:i + 1]
+            window_vals = values[i - window + 1 : i + 1]
             valid = window_vals[~np.isnan(window_vals)]
             if len(valid) > 1:
                 mean = np.mean(valid)

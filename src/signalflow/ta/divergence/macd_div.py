@@ -148,11 +148,7 @@ class MacdDivergence(DivergenceBase):
             Dataframe with MACD and divergence columns added
         """
         # 1. Calculate MACD using existing momentum indicator
-        macd_indicator = MacdMom(
-            fast=self.fast,
-            slow=self.slow,
-            signal=self.signal
-        )
+        macd_indicator = MacdMom(fast=self.fast, slow=self.slow, signal=self.signal)
         df = macd_indicator.compute_pair(df)
 
         # 2. Get column names
@@ -194,22 +190,26 @@ class MacdDivergence(DivergenceBase):
 
         # Use dynamic range calculation (causal - no look-ahead)
         strength = self.calculate_divergence_strength(
-            close, macd_hist, all_divs,
+            close,
+            macd_hist,
+            all_divs,
             indicator_range=None,  # Calculate dynamically per bar
-            lookback_for_range=self.lookback
+            lookback_for_range=self.lookback,
         )
 
         # 10. Boost strength for crossovers (additional confirmation)
         strength = self._apply_crossover_boost(df, strength, bullish_div, bearish_div)
 
         # 11. Add divergence columns to dataframe
-        df = df.with_columns([
-            pl.Series("macd_div_bullish", bullish_div),
-            pl.Series("macd_div_bearish", bearish_div),
-            pl.Series("macd_div_hidden_bullish", hidden_bullish_div),
-            pl.Series("macd_div_hidden_bearish", hidden_bearish_div),
-            pl.Series("macd_div_strength", strength),
-        ])
+        df = df.with_columns(
+            [
+                pl.Series("macd_div_bullish", bullish_div),
+                pl.Series("macd_div_bearish", bearish_div),
+                pl.Series("macd_div_hidden_bullish", hidden_bullish_div),
+                pl.Series("macd_div_hidden_bearish", hidden_bearish_div),
+                pl.Series("macd_div_strength", strength),
+            ]
+        )
 
         return df
 
@@ -218,7 +218,7 @@ class MacdDivergence(DivergenceBase):
         df: pl.DataFrame,
         strength: np.ndarray,
         bullish_div: np.ndarray,
-        bearish_div: np.ndarray
+        bearish_div: np.ndarray,
     ) -> np.ndarray:
         """
         Boost divergence strength when MACD line crosses signal line.
@@ -253,8 +253,12 @@ class MacdDivergence(DivergenceBase):
         signal_line = df[signal_col].to_numpy()
 
         # Detect crossovers (look at previous bar for cross)
-        bullish_cross = (macd_line[1:] > signal_line[1:]) & (macd_line[:-1] <= signal_line[:-1])
-        bearish_cross = (macd_line[1:] < signal_line[1:]) & (macd_line[:-1] >= signal_line[:-1])
+        bullish_cross = (macd_line[1:] > signal_line[1:]) & (
+            macd_line[:-1] <= signal_line[:-1]
+        )
+        bearish_cross = (macd_line[1:] < signal_line[1:]) & (
+            macd_line[:-1] >= signal_line[:-1]
+        )
 
         # Pad with False at start to match length
         bullish_cross = np.concatenate([[False], bullish_cross])
@@ -281,7 +285,6 @@ class MacdDivergence(DivergenceBase):
                 boosted[idx] += 10  # +10 points for crossover confirmation
 
         return np.clip(boosted, 0, 100)
-
 
     @property
     def warmup(self) -> int:

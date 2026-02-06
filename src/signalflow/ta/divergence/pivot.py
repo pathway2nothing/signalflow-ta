@@ -10,9 +10,7 @@ from scipy.signal import argrelextrema
 
 
 def find_pivots_scipy(
-    series: np.ndarray,
-    order: int = 5,
-    min_distance: int = 1
+    series: np.ndarray, order: int = 5, min_distance: int = 1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Find local maxima and minima using scipy.signal.argrelextrema.
@@ -74,9 +72,7 @@ def find_pivots_scipy(
 
 
 def find_pivots_window(
-    series: np.ndarray,
-    window: int = 5,
-    min_distance: int = 10
+    series: np.ndarray, window: int = 5, min_distance: int = 10
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Find local maxima and minima using rolling window comparison.
@@ -115,8 +111,8 @@ def find_pivots_window(
         pivot_idx = i - window
 
         # Get window around pivot candidate (all data is now historical from bar i)
-        left_window = series[pivot_idx - window:pivot_idx]
-        right_window = series[pivot_idx + 1:pivot_idx + window + 1]
+        left_window = series[pivot_idx - window : pivot_idx]
+        right_window = series[pivot_idx + 1 : pivot_idx + window + 1]
         current = series[pivot_idx]
 
         # Check if local maximum
@@ -168,10 +164,7 @@ def filter_by_distance(indices: np.ndarray, min_distance: int) -> np.ndarray:
     return np.array(filtered, dtype=np.int64)
 
 
-def calculate_slope(
-    values: np.ndarray,
-    indices: np.ndarray
-) -> np.ndarray:
+def calculate_slope(values: np.ndarray, indices: np.ndarray) -> np.ndarray:
     """
     Calculate slopes between consecutive pivot points.
 
@@ -203,7 +196,7 @@ def find_divergence_pairs(
     indicator_pivots: np.ndarray,
     indicator_indices: np.ndarray,
     lookback: int = 100,
-    tolerance: int = 5
+    tolerance: int = 5,
 ) -> list:
     """
     Find pairs of pivots that might form divergences.
@@ -245,11 +238,13 @@ def find_divergence_pairs(
     for i, p_idx in enumerate(price_indices_recent):
         for j, i_idx in enumerate(indicator_indices_recent):
             if abs(p_idx - i_idx) <= tolerance:
-                pairs.append((
-                    recent_cutoff + i,  # Price pivot index in full array
-                    indicator_cutoff + j,  # Indicator pivot index in full array
-                    p_idx  # Actual bar index
-                ))
+                pairs.append(
+                    (
+                        recent_cutoff + i,  # Price pivot index in full array
+                        indicator_cutoff + j,  # Indicator pivot index in full array
+                        p_idx,  # Actual bar index
+                    )
+                )
                 break
 
     return pairs

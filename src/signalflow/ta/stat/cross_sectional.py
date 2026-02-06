@@ -9,6 +9,7 @@ Example:
     >>> df = cs.compute(df)
     # Adds: rsi_14_cs_rank, rsi_14_cs_zscore, rsi_14_cs_mean
 """
+
 from dataclasses import dataclass, field
 from typing import ClassVar, Any
 
@@ -57,15 +58,21 @@ class CrossSectionalStat(GlobalFeature):
     outputs: ClassVar[list[str]] = []
 
     _SUPPORTED_STATS: ClassVar[set[str]] = {
-        "rank", "zscore", "mean", "std", "median", "min", "max", "diff",
+        "rank",
+        "zscore",
+        "mean",
+        "std",
+        "median",
+        "min",
+        "max",
+        "diff",
     }
 
     def __post_init__(self):
         unknown = set(self.stats) - self._SUPPORTED_STATS
         if unknown:
             raise ValueError(
-                f"Unknown stats: {unknown}. "
-                f"Supported: {sorted(self._SUPPORTED_STATS)}"
+                f"Unknown stats: {unknown}. Supported: {sorted(self._SUPPORTED_STATS)}"
             )
         if not self.stats:
             raise ValueError("stats must contain at least one entry")
@@ -87,12 +94,13 @@ class CrossSectionalStat(GlobalFeature):
     # Core computation
     # ------------------------------------------------------------------
 
-    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
+    def compute(
+        self, df: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> pl.DataFrame:
         """Compute cross-sectional statistics across all pairs."""
         if self.col not in df.columns:
             raise ValueError(
-                f"Column '{self.col}' not found in DataFrame. "
-                f"Available: {df.columns}"
+                f"Column '{self.col}' not found in DataFrame. Available: {df.columns}"
             )
 
         src = pl.col(self.col)
@@ -103,15 +111,11 @@ class CrossSectionalStat(GlobalFeature):
             name = self._out_name(stat)
 
             if stat == "rank":
-                exprs.append(
-                    (src.rank().over(ts) / src.count().over(ts))
-                    .alias(name)
-                )
+                exprs.append((src.rank().over(ts) / src.count().over(ts)).alias(name))
 
             elif stat == "zscore":
                 exprs.append(
-                    ((src - src.mean().over(ts)) / src.std().over(ts))
-                    .alias(name)
+                    ((src - src.mean().over(ts)) / src.std().over(ts)).alias(name)
                 )
 
             elif stat == "mean":
@@ -130,9 +134,7 @@ class CrossSectionalStat(GlobalFeature):
                 exprs.append(src.max().over(ts).alias(name))
 
             elif stat == "diff":
-                exprs.append(
-                    (src - src.mean().over(ts)).alias(name)
-                )
+                exprs.append((src - src.mean().over(ts)).alias(name))
 
         return df.with_columns(exprs)
 

@@ -1,4 +1,5 @@
 """Cumulative volume-price indicators."""
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -78,13 +79,12 @@ class ObvVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             obv = normalize_zscore(obv, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=obv)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=obv))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -97,6 +97,7 @@ class ObvVolume(Feature):
         base_warmup = self.period
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -150,11 +151,7 @@ class AdVolume(Feature):
 
         # Close Location Value
         hl_range = high - low
-        clv = np.where(
-            hl_range > 0,
-            ((close - low) - (high - close)) / hl_range,
-            0
-        )
+        clv = np.where(hl_range > 0, ((close - low) - (high - close)) / hl_range, 0)
 
         # Money Flow Volume
         mfv = clv * volume
@@ -165,13 +162,12 @@ class AdVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             ad = normalize_zscore(ad, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=ad)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=ad))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -184,6 +180,7 @@ class AdVolume(Feature):
         base_warmup = self.period
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -240,13 +237,12 @@ class PvtVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             pvt = normalize_zscore(pvt, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=pvt)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=pvt))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -259,6 +255,7 @@ class PvtVolume(Feature):
         base_warmup = self.period
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -318,13 +315,12 @@ class NviVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             nvi = normalize_zscore(nvi, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=nvi)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=nvi))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -337,6 +333,7 @@ class NviVolume(Feature):
         base_warmup = self.period
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
@@ -397,13 +394,12 @@ class PviVolume(Feature):
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             pvi = normalize_zscore(pvi, window=norm_window)
 
         col_name = self._get_output_name()
-        return df.with_columns(
-            pl.Series(name=col_name, values=pvi)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=pvi))
 
     def _get_output_name(self) -> str:
         """Generate output column name with normalization suffix."""
@@ -416,6 +412,7 @@ class PviVolume(Feature):
         base_warmup = self.period
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup

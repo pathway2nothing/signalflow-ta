@@ -1,5 +1,6 @@
 # src/signalflow/ta/volatility/energy.py
 """Energy-based volatility indicators - mechanical energy model for regime detection."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -46,26 +47,25 @@ class KineticEnergyVol(Feature):
                 velocity[i] = np.log(close[i] / close[i - 1])
 
         # Kinetic energy = 0.5 * v^2
-        ke_raw = 0.5 * velocity ** 2
+        ke_raw = 0.5 * velocity**2
 
         # Smooth with rolling mean
         ke = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = ke_raw[i - self.period + 1:i + 1]
+            window = ke_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 ke[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             ke = normalize_zscore(ke, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"ke_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=ke)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=ke))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
@@ -79,6 +79,7 @@ class KineticEnergyVol(Feature):
         base = (self.period + 1) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -118,7 +119,7 @@ class PotentialEnergyVol(Feature):
         # Moving average as equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
 
         # Log displacement from equilibrium
         log_close = np.log(np.maximum(close, 1e-10))
@@ -126,27 +127,26 @@ class PotentialEnergyVol(Feature):
         displacement = log_close - log_ma
 
         # Potential energy = displacement^2
-        pe_raw = displacement ** 2
+        pe_raw = displacement**2
 
         # Smooth with rolling mean
         pe = np.full(n, np.nan)
         for i in range(max(self.ma_period, self.period) - 1, n):
             start = max(0, i - self.period + 1)
-            window = pe_raw[start:i + 1]
+            window = pe_raw[start : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 pe[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             pe = normalize_zscore(pe, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"pe_{self.period}_{self.ma_period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=pe)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=pe))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "ma_period": 50},
@@ -160,6 +160,7 @@ class PotentialEnergyVol(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             return base + norm_window
         return base
@@ -204,12 +205,12 @@ class TotalEnergyVol(Feature):
                 velocity[i] = np.log(close[i] / close[i - 1])
 
         # KE = 0.5 * v^2
-        ke = 0.5 * velocity ** 2
+        ke = 0.5 * velocity**2
 
         # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
 
         # PE = displacement^2
         log_close = np.log(np.maximum(close, 1e-10))
@@ -223,21 +224,20 @@ class TotalEnergyVol(Feature):
         te = np.full(n, np.nan)
         for i in range(max(self.ma_period, self.period) - 1, n):
             start = max(0, i - self.period + 1)
-            window = te_raw[start:i + 1]
+            window = te_raw[start : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 te[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             te = normalize_zscore(te, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"te_{self.period}_{self.ma_period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=te)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=te))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "ma_period": 50},
@@ -251,6 +251,7 @@ class TotalEnergyVol(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             return base + norm_window
         return base
@@ -292,12 +293,12 @@ class EnergyFlowVol(Feature):
                 velocity[i] = np.log(close[i] / close[i - 1])
 
         # KE
-        ke = 0.5 * velocity ** 2
+        ke = 0.5 * velocity**2
 
         # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
 
         # PE
         log_close = np.log(np.maximum(close, 1e-10))
@@ -309,7 +310,7 @@ class EnergyFlowVol(Feature):
         te = np.full(n, np.nan)
         for i in range(max(self.ma_period, self.period) - 1, n):
             start = max(0, i - self.period + 1)
-            window = te_raw[start:i + 1]
+            window = te_raw[start : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 te[i] = np.mean(valid)
@@ -322,14 +323,13 @@ class EnergyFlowVol(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             eflow = normalize_zscore(eflow, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"eflow_{self.period}_{self.ma_period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=eflow)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=eflow))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "ma_period": 50},
@@ -343,6 +343,7 @@ class EnergyFlowVol(Feature):
         base = (max(self.ma_period, self.period) + self.flow_lag) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             return base + norm_window
         return base
@@ -380,28 +381,27 @@ class ElasticStrainVol(Feature):
 
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1:i + 1])
+            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
 
         strain_raw = (close - ma) / np.maximum(ma, 1e-10)
 
         # Smooth
         strain = np.full(n, np.nan)
         for i in range(max(self.ma_period, self.period) - 1, n):
-            window = strain_raw[i - self.period + 1:i + 1]
+            window = strain_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 strain[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             strain = normalize_zscore(strain, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"strain_{self.period}_{self.ma_period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=strain)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=strain))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20, "ma_period": 50},
@@ -415,6 +415,7 @@ class ElasticStrainVol(Feature):
         base = max(self.ma_period, self.period) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             return base + norm_window
         return base
@@ -457,21 +458,20 @@ class TemperatureVol(Feature):
 
         temp = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 2:
                 temp[i] = np.var(valid, ddof=1) * self.period
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             temp = normalize_zscore(temp, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"mtemp_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=temp)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=temp))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
@@ -485,6 +485,7 @@ class TemperatureVol(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -528,16 +529,16 @@ class HeatCapacityVol(Feature):
         # Temperature (rolling variance × period)
         temp = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 2:
                 temp[i] = np.var(valid, ddof=1) * self.period
 
         # Total energy (KE smoothed)
-        ke_raw = 0.5 * log_ret ** 2
+        ke_raw = 0.5 * log_ret**2
         energy = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = ke_raw[i - self.period + 1:i + 1]
+            window = ke_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 energy[i] = np.mean(valid)
@@ -545,8 +546,12 @@ class HeatCapacityVol(Feature):
         # Heat capacity = ΔT / ΔE
         hcap = np.full(n, np.nan)
         for i in range(self.period + self.lag, n):
-            if (not np.isnan(temp[i]) and not np.isnan(temp[i - self.lag])
-                    and not np.isnan(energy[i]) and not np.isnan(energy[i - self.lag])):
+            if (
+                not np.isnan(temp[i])
+                and not np.isnan(temp[i - self.lag])
+                and not np.isnan(energy[i])
+                and not np.isnan(energy[i - self.lag])
+            ):
                 d_energy = energy[i] - energy[i - self.lag]
                 d_temp = temp[i] - temp[i - self.lag]
                 if np.abs(d_energy) > 1e-20:
@@ -554,14 +559,13 @@ class HeatCapacityVol(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             hcap = normalize_zscore(hcap, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"heatcap_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=hcap)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=hcap))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
@@ -575,6 +579,7 @@ class HeatCapacityVol(Feature):
         base = (self.period + self.lag) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -616,13 +621,13 @@ class FreeEnergyVol(Feature):
 
         fenergy = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = log_ret[i - self.period + 1:i + 1]
+            window = log_ret[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) < 5:
                 continue
 
             # Energy = mean KE
-            energy = np.mean(0.5 * valid ** 2)
+            energy = np.mean(0.5 * valid**2)
 
             # Temperature = variance × period
             temperature = np.var(valid, ddof=1) * self.period
@@ -638,14 +643,13 @@ class FreeEnergyVol(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             fenergy = normalize_zscore(fenergy, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"fenergy_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=fenergy)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=fenergy))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
@@ -659,6 +663,7 @@ class FreeEnergyVol(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base

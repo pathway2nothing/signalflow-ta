@@ -1,5 +1,6 @@
 # src/signalflow/ta/volume/dynamics.py
 """Volume-weighted dynamics - force, impulse, momentum, power from Newtonian mechanics."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -60,21 +61,20 @@ class MarketForceVolume(Feature):
         # Smooth with SMA
         force = np.full(n, np.nan)
         for i in range(self.period + 1, n):
-            window = force_raw[i - self.period + 1:i + 1]
+            window = force_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 force[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             force = normalize_zscore(force, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"mforce_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=force)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=force))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 14},
@@ -88,6 +88,7 @@ class MarketForceVolume(Feature):
         base = (self.period + 2) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -142,21 +143,20 @@ class ImpulseVolume(Feature):
         # Impulse = rolling sum of force
         impulse = np.full(n, np.nan)
         for i in range(self.period + 1, n):
-            window = force[i - self.period + 1:i + 1]
+            window = force[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 impulse[i] = np.sum(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             impulse = normalize_zscore(impulse, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"impulse_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=impulse)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=impulse))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 14},
@@ -170,6 +170,7 @@ class ImpulseVolume(Feature):
         base = (self.period + 2) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -221,21 +222,20 @@ class MarketMomentumVolume(Feature):
         # Smooth with SMA
         mmom = np.full(n, np.nan)
         for i in range(self.period, n):
-            window = mom_raw[i - self.period + 1:i + 1]
+            window = mom_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 mmom[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             mmom = normalize_zscore(mmom, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"mmom_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=mmom)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=mmom))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 14},
@@ -249,6 +249,7 @@ class MarketMomentumVolume(Feature):
         base = (self.period + 1) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -307,21 +308,20 @@ class MarketPowerVolume(Feature):
         # Smooth with SMA
         mpower = np.full(n, np.nan)
         for i in range(self.period + 1, n):
-            window = power_raw[i - self.period + 1:i + 1]
+            window = power_raw[i - self.period + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 mpower[i] = np.mean(valid)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             mpower = normalize_zscore(mpower, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"mpower_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=mpower)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=mpower))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 14},
@@ -335,6 +335,7 @@ class MarketPowerVolume(Feature):
         base = (self.period + 2) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -372,21 +373,20 @@ class MarketCapacitanceVolume(Feature):
 
         mcap = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            vol_sum = np.sum(volume[i - self.period + 1:i + 1])
+            vol_sum = np.sum(volume[i - self.period + 1 : i + 1])
             price_change = np.abs(close[i] - close[i - self.period + 1])
             if price_change > 1e-10:
                 mcap[i] = vol_sum / price_change
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             mcap = normalize_zscore(mcap, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"mcap_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=mcap)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=mcap))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
@@ -400,6 +400,7 @@ class MarketCapacitanceVolume(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -443,19 +444,18 @@ class GravitationalPullVolume(Feature):
                 if close[j] > 0 and current_price > 0:
                     distance = np.abs(np.log(current_price / close[j]))
                     if distance > 1e-10:
-                        total_pull += volume[j] / (distance ** 2)
+                        total_pull += volume[j] / (distance**2)
             gpull[i] = total_pull
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             gpull = normalize_zscore(gpull, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"gpull_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=gpull)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=gpull))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 20},
@@ -469,6 +469,7 @@ class GravitationalPullVolume(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base

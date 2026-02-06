@@ -1,5 +1,6 @@
 # src/signalflow/ta/stat/cycle.py
 """Cycle analysis via Hilbert Transform - instantaneous amplitude, phase, frequency."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -11,9 +12,11 @@ from signalflow import sf_component
 from signalflow.feature.base import Feature
 
 
-def _detrend_and_hilbert(values: np.ndarray, period: int, idx: int) -> tuple[float, float]:
+def _detrend_and_hilbert(
+    values: np.ndarray, period: int, idx: int
+) -> tuple[float, float]:
     """Apply Hilbert transform to a detrended window, return amplitude and phase."""
-    window = values[idx - period + 1:idx + 1]
+    window = values[idx - period + 1 : idx + 1]
 
     # Detrend: remove linear trend to isolate oscillatory component
     x = np.arange(period, dtype=np.float64)
@@ -69,14 +72,13 @@ class InstAmplitudeStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             amplitude = normalize_zscore(amplitude, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_hamp_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=amplitude)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=amplitude))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 40},
@@ -90,6 +92,7 @@ class InstAmplitudeStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -136,9 +139,7 @@ class InstPhaseStat(Feature):
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_hphase_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=phase)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=phase))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 40},
@@ -204,14 +205,13 @@ class InstFrequencyStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             freq = normalize_zscore(freq, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_hfreq_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=freq)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=freq))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 40},
@@ -225,6 +225,7 @@ class InstFrequencyStat(Feature):
         base = (self.period + 1) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -283,14 +284,13 @@ class PhaseAccelerationStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             phaseaccel = normalize_zscore(phaseaccel, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_phaseaccel_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=phaseaccel)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=phaseaccel))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 40},
@@ -304,6 +304,7 @@ class PhaseAccelerationStat(Feature):
         base = (self.period + 2) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -364,8 +365,12 @@ class ConstructiveInterferenceStat(Feature):
         interf_raw = np.full(n, np.nan)
         start = self.slow_period - 1
         for i in range(start, n):
-            if (not np.isnan(amp_fast[i]) and not np.isnan(amp_slow[i])
-                    and not np.isnan(phase_fast[i]) and not np.isnan(phase_slow[i])):
+            if (
+                not np.isnan(amp_fast[i])
+                and not np.isnan(amp_slow[i])
+                and not np.isnan(phase_fast[i])
+                and not np.isnan(phase_slow[i])
+            ):
                 phase_diff = phase_fast[i] - phase_slow[i]
                 interf_raw[i] = amp_fast[i] * amp_slow[i] * np.cos(phase_diff)
 
@@ -373,7 +378,7 @@ class ConstructiveInterferenceStat(Feature):
         if self.smooth > 1:
             interf = np.full(n, np.nan)
             for i in range(start + self.smooth - 1, n):
-                window = interf_raw[i - self.smooth + 1:i + 1]
+                window = interf_raw[i - self.smooth + 1 : i + 1]
                 valid = window[~np.isnan(window)]
                 if len(valid) > 0:
                     interf[i] = np.mean(valid)
@@ -382,20 +387,26 @@ class ConstructiveInterferenceStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow_period)
             interf = normalize_zscore(interf, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
-        col_name = f"{self.source_col}_cinterf_{self.fast_period}_{self.slow_period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=interf)
+        col_name = (
+            f"{self.source_col}_cinterf_{self.fast_period}_{self.slow_period}{suffix}"
         )
+        return df.with_columns(pl.Series(name=col_name, values=interf))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "fast_period": 20, "slow_period": 50},
         {"source_col": "close", "fast_period": 10, "slow_period": 30},
         {"source_col": "close", "fast_period": 30, "slow_period": 80},
-        {"source_col": "close", "fast_period": 20, "slow_period": 50, "normalized": True},
+        {
+            "source_col": "close",
+            "fast_period": 20,
+            "slow_period": 50,
+            "normalized": True,
+        },
     ]
 
     @property
@@ -403,6 +414,7 @@ class ConstructiveInterferenceStat(Feature):
         base = (self.slow_period + self.smooth) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow_period)
             return base + norm_window
         return base
@@ -478,20 +490,26 @@ class BeatFrequencyStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow_period)
             beat = normalize_zscore(beat, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
-        col_name = f"{self.source_col}_beatfreq_{self.fast_period}_{self.slow_period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=beat)
+        col_name = (
+            f"{self.source_col}_beatfreq_{self.fast_period}_{self.slow_period}{suffix}"
         )
+        return df.with_columns(pl.Series(name=col_name, values=beat))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "fast_period": 20, "slow_period": 50},
         {"source_col": "close", "fast_period": 10, "slow_period": 30},
         {"source_col": "close", "fast_period": 30, "slow_period": 80},
-        {"source_col": "close", "fast_period": 20, "slow_period": 50, "normalized": True},
+        {
+            "source_col": "close",
+            "fast_period": 20,
+            "slow_period": 50,
+            "normalized": True,
+        },
     ]
 
     @property
@@ -499,6 +517,7 @@ class BeatFrequencyStat(Feature):
         base = (self.slow_period + 1) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow_period)
             return base + norm_window
         return base
@@ -547,7 +566,7 @@ class StandingWaveRatioStat(Feature):
         swr = np.full(n, np.nan)
         start = self.period - 1 + self.swr_window - 1
         for i in range(start, n):
-            window = amplitude[i - self.swr_window + 1:i + 1]
+            window = amplitude[i - self.swr_window + 1 : i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) >= 2:
                 min_amp = np.min(valid)
@@ -557,14 +576,13 @@ class StandingWaveRatioStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             swr = normalize_zscore(swr, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_swr_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=swr)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=swr))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 40, "swr_window": 20},
@@ -578,6 +596,7 @@ class StandingWaveRatioStat(Feature):
         base = (self.period + self.swr_window) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -618,7 +637,7 @@ class SpectralCentroidStat(Feature):
 
         centroid = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             # Detrend
             x = np.arange(self.period, dtype=np.float64)
@@ -643,14 +662,13 @@ class SpectralCentroidStat(Feature):
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             centroid = normalize_zscore(centroid, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_scentroid_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=centroid)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=centroid))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 64},
@@ -664,6 +682,7 @@ class SpectralCentroidStat(Feature):
         base = self.period * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
@@ -702,7 +721,7 @@ class SpectralEntropyStat(Feature):
 
         sentropy = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            window = values[i - self.period + 1:i + 1]
+            window = values[i - self.period + 1 : i + 1]
 
             # Detrend
             x = np.arange(self.period, dtype=np.float64)
@@ -734,9 +753,7 @@ class SpectralEntropyStat(Feature):
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_sentropy_{self.period}{suffix}"
-        return df.with_columns(
-            pl.Series(name=col_name, values=sentropy)
-        )
+        return df.with_columns(pl.Series(name=col_name, values=sentropy))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 64},

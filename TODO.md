@@ -36,7 +36,22 @@
 
 **Relevance:** Audio analysis techniques for detecting "timbre" changes in time series. Spectral flux measures how quickly the frequency content changes (regime shift detector). Spectral flatness distinguishes tonal (trending) from noisy (choppy) signals. Partially covered already (spectral centroid, spectral entropy).
 
-**Status:** Candidate for future batch.
+**Status:** **SELECTED** — 10 indicators implemented in `stat/dsp.py`.
+
+## Implemented Indicators — DSP / Acoustics
+
+| Indicator | Source Field | What It Measures | Key Insight |
+|-----------|-------------|-----------------|-------------|
+| **Spectral Flux** | Scheirer & Slaney (1997) | Rate of change of power spectrum | Spikes at regime shifts |
+| **Zero-Crossing Rate** | Kedem (1986) | Sign changes in detrended signal | High = choppy; low = trending |
+| **Spectral Rolloff** | Peeters (2004) | Frequency below which X% energy concentrated | High = noisy; low = trend-dominated |
+| **Spectral Flatness** | Dubnov (2004) | Geometric/arithmetic mean of spectrum | ~1 = noise; ~0 = clear cycle |
+| **Power Cepstrum** | Bogert et al. (1963) | Dominant cepstral peak magnitude | Repeating spectral patterns |
+| **Spectral Bandwidth** | Peeters (2004) | 2nd spectral moment (spread around centroid) | Wide = multi-cycle; narrow = dominant cycle |
+| **Spectral Slope** | Peeters (2004) | Log power spectrum regression slope | Negative = trending; near-zero = choppy |
+| **Spectral Kurtosis** | Peeters (2004) | 4th spectral moment (peakedness) | High = sharp dominant cycle |
+| **Spectral Contrast** | Jiang et al. (2002) | Mean peak-valley difference across sub-bands | High = clear harmonics |
+| **MFCC Band Energy** | Davis & Mermelstein (1980) | L2 norm of cepstral coefficients | Compact spectral texture descriptor |
 
 ---
 
@@ -63,7 +78,17 @@
 
 **Relevance:** Treats price as output of a dynamical system. Kalman innovations measure how "surprised" an optimal filter is — spikes indicate model breakdown. System identification parameters track changing market dynamics.
 
-**Status:** Candidate for future batch.
+**Status:** **SELECTED** — 5 indicators implemented in `stat/control.py`.
+
+## Implemented Indicators — Control Theory
+
+| Indicator | Source Field | What It Measures | Key Insight |
+|-----------|-------------|-----------------|-------------|
+| **Kalman Innovation** | Harvey (1989) | Normalized innovation statistic from 1-D Kalman filter | NIS >> 1 signals regime shift / model breakdown |
+| **AR Coefficient** | Ljung (1999) | First autoregressive coefficient via rolling OLS | Positive = momentum; negative = mean-reversion; tracking = system identification |
+| **Lyapunov Exponent** | Rosenstein et al. (1993) | Maximum Lyapunov exponent via phase-space embedding | MLE > 0 = chaos; MLE < 0 = convergent dynamics |
+| **PID Error** | Astrom & Murray (2008) | RMS of PID composite tracking error | High = breakout/regime shift; low = stable equilibrium |
+| **Prediction Error Decomposition** | Geman et al. (1992) | Bias ratio of linear prediction errors | High = systematic model failure; low = noise-dominated |
 
 ---
 

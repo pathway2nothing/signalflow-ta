@@ -1,4 +1,5 @@
 """MACD family indicators with reproducible EMA initialization."""
+
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -12,31 +13,31 @@ from signalflow.feature.base import Feature
 def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     """
     Calculate EMA with SMA initialization for reproducibility.
-    
+
     Instead of ema[0] = values[0], we initialize with SMA of first `period` values.
     This makes EMA independent of the starting point after warmup.
-    
+
     Args:
         values: Input array
         period: EMA period (also used for SMA initialization)
-        
+
     Returns:
         EMA array with first (period-1) values as NaN
     """
     n = len(values)
     alpha = 2 / (period + 1)
     ema = np.full(n, np.nan)
-    
+
     if n < period:
         return ema
-    
+
     # Initialize with SMA of first `period` values
     ema[period - 1] = np.mean(values[:period])
-    
+
     # Continue with standard EMA
     for i in range(period, n):
         ema[i] = alpha * values[i] + (1 - alpha) * ema[i - 1]
-    
+
     return ema
 
 
@@ -91,10 +92,12 @@ class MacdMom(Feature):
 
         if signal_start < n:
             # Initialize signal with SMA of first `signal` valid MACD values
-            signal_line[signal_start] = np.mean(macd[start_idx:signal_start + 1])
+            signal_line[signal_start] = np.mean(macd[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
-                signal_line[i] = alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
+                signal_line[i] = (
+                    alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
+                )
 
         histogram = macd - signal_line
 
@@ -104,17 +107,20 @@ class MacdMom(Feature):
         # Normalization: z-score for all 3 outputs independently
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             macd = normalize_zscore(macd, window=norm_window)
             signal_line = normalize_zscore(signal_line, window=norm_window)
             histogram = normalize_zscore(histogram, window=norm_window)
 
         col_macd, col_signal, col_hist = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_macd, values=macd),
-            pl.Series(name=col_signal, values=signal_line),
-            pl.Series(name=col_hist, values=histogram),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_macd, values=macd),
+                pl.Series(name=col_signal, values=signal_line),
+                pl.Series(name=col_hist, values=histogram),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str, str]:
         """Generate output column names with normalization suffix."""
@@ -122,7 +128,7 @@ class MacdMom(Feature):
         return (
             f"macd_{self.fast}_{self.slow}{suffix}",
             f"macd_signal_{self.signal}{suffix}",
-            f"macd_hist_{self.fast}_{self.slow}{suffix}"
+            f"macd_hist_{self.fast}_{self.slow}{suffix}",
         )
 
     test_params: ClassVar[list[dict]] = [
@@ -138,9 +144,11 @@ class MacdMom(Feature):
         base_warmup = self.slow * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             return base_warmup + norm_window
         return base_warmup
+
 
 @dataclass
 @sf_component(name="momentum/ppo")
@@ -186,10 +194,12 @@ class PpoMom(Feature):
         signal_start = start_idx + self.signal - 1
 
         if signal_start < n:
-            signal_line[signal_start] = np.mean(ppo[start_idx:signal_start + 1])
+            signal_line[signal_start] = np.mean(ppo[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
-                signal_line[i] = alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
+                signal_line[i] = (
+                    alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
+                )
 
         histogram = ppo - signal_line
         ppo[:start_idx] = np.nan
@@ -197,17 +207,20 @@ class PpoMom(Feature):
         # Normalization: z-score for all 3 outputs independently
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             ppo = normalize_zscore(ppo, window=norm_window)
             signal_line = normalize_zscore(signal_line, window=norm_window)
             histogram = normalize_zscore(histogram, window=norm_window)
 
         col_ppo, col_signal, col_hist = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_ppo, values=ppo),
-            pl.Series(name=col_signal, values=signal_line),
-            pl.Series(name=col_hist, values=histogram),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_ppo, values=ppo),
+                pl.Series(name=col_signal, values=signal_line),
+                pl.Series(name=col_hist, values=histogram),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str, str]:
         """Generate output column names with normalization suffix."""
@@ -215,7 +228,7 @@ class PpoMom(Feature):
         return (
             f"ppo_{self.fast}_{self.slow}{suffix}",
             f"ppo_signal_{self.signal}{suffix}",
-            f"ppo_hist_{self.fast}_{self.slow}{suffix}"
+            f"ppo_hist_{self.fast}_{self.slow}{suffix}",
         )
 
     test_params: ClassVar[list[dict]] = [
@@ -231,6 +244,7 @@ class PpoMom(Feature):
         base_warmup = self.slow * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             return base_warmup + norm_window
         return base_warmup
@@ -291,34 +305,39 @@ class TsiMom(Feature):
 
         if signal_start < n:
             # Find valid values for initialization
-            valid_tsi = tsi[start_idx:signal_start + 1]
+            valid_tsi = tsi[start_idx : signal_start + 1]
             valid_tsi = valid_tsi[~np.isnan(valid_tsi)]
             if len(valid_tsi) > 0:
                 tsi_signal[signal_start] = np.mean(valid_tsi)
 
                 for i in range(signal_start + 1, n):
                     if not np.isnan(tsi[i]) and not np.isnan(tsi_signal[i - 1]):
-                        tsi_signal[i] = alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
+                        tsi_signal[i] = (
+                            alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
+                        )
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             tsi = normalize_zscore(tsi, window=norm_window)
             tsi_signal = normalize_zscore(tsi_signal, window=norm_window)
 
         col_tsi, col_signal = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_tsi, values=tsi),
-            pl.Series(name=col_signal, values=tsi_signal),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_tsi, values=tsi),
+                pl.Series(name=col_signal, values=tsi_signal),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str]:
         """Generate output column names with normalization suffix."""
         suffix = "_norm" if self.normalized else ""
         return (
             f"tsi_{self.fast}_{self.slow}{suffix}",
-            f"tsi_signal_{self.signal}{suffix}"
+            f"tsi_signal_{self.signal}{suffix}",
         )
 
     test_params: ClassVar[list[dict]] = [
@@ -334,6 +353,7 @@ class TsiMom(Feature):
         base_warmup = (self.slow + self.fast) * 5
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.slow)
             return base_warmup + norm_window
         return base_warmup
@@ -389,35 +409,37 @@ class TrixMom(Feature):
         signal_start = start_idx + self.signal - 1
 
         if signal_start < n:
-            valid_trix = trix[start_idx:signal_start + 1]
+            valid_trix = trix[start_idx : signal_start + 1]
             valid_trix = valid_trix[~np.isnan(valid_trix)]
             if len(valid_trix) > 0:
                 trix_signal[signal_start] = np.mean(valid_trix)
 
                 for i in range(signal_start + 1, n):
                     if not np.isnan(trix[i]) and not np.isnan(trix_signal[i - 1]):
-                        trix_signal[i] = alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
+                        trix_signal[i] = (
+                            alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
+                        )
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
             from signalflow.ta._normalization import normalize_zscore, get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             trix = normalize_zscore(trix, window=norm_window)
             trix_signal = normalize_zscore(trix_signal, window=norm_window)
 
         col_trix, col_signal = self._get_output_names()
-        return df.with_columns([
-            pl.Series(name=col_trix, values=trix),
-            pl.Series(name=col_signal, values=trix_signal),
-        ])
+        return df.with_columns(
+            [
+                pl.Series(name=col_trix, values=trix),
+                pl.Series(name=col_signal, values=trix_signal),
+            ]
+        )
 
     def _get_output_names(self) -> tuple[str, str]:
         """Generate output column names with normalization suffix."""
         suffix = "_norm" if self.normalized else ""
-        return (
-            f"trix_{self.period}{suffix}",
-            f"trix_signal_{self.signal}{suffix}"
-        )
+        return (f"trix_{self.period}{suffix}", f"trix_signal_{self.signal}{suffix}")
 
     test_params: ClassVar[list[dict]] = [
         {"period": 18, "signal": 9},
@@ -432,6 +454,7 @@ class TrixMom(Feature):
         base_warmup = self.period * 12
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
+
             norm_window = self.norm_period or get_norm_window(self.period)
             return base_warmup + norm_window
         return base_warmup
