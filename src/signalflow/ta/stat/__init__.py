@@ -101,6 +101,16 @@ from signalflow.ta.stat.control import (
     PIDErrorStat,
     PredictionErrorDecompositionStat,
 )
+from signalflow.ta.stat.structure import (
+    ReversePointsStat,
+    TimeSinceSpikeStat,
+    VolatilitySpikeStat,
+    VolatilitySpikeDiffStat,
+    VolumeSpikeStat,
+    VolumeSpikeDiffStat,
+    RollingMinStat,
+    RollingMaxStat,
+)
 
 __all__ = [
     # Dispersion
@@ -197,4 +207,13 @@ __all__ = [
     "LyapunovExponentStat",
     "PIDErrorStat",
     "PredictionErrorDecompositionStat",
+    # Structure & Spikes
+    "ReversePointsStat",
+    "TimeSinceSpikeStat",
+    "VolatilitySpikeStat",
+    "VolatilitySpikeDiffStat",
+    "VolumeSpikeStat",
+    "VolumeSpikeDiffStat",
+    "RollingMinStat",
+    "RollingMaxStat",
 ]

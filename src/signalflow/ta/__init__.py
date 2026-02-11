@@ -38,6 +38,7 @@ from signalflow.ta.overlap import (
     ZlmaSmooth,
     McGinleySmooth,
     FramaSmooth,
+    KalmanSmooth,
     Hl2Price,
     Hlc3Price,
     Ohlc4Price,
@@ -115,12 +116,25 @@ from signalflow.ta.stat import (
     SpectralRolloffStat,
     SpectralFlatnessStat,
     PowerCepstrumStat,
+    SpectralBandwidthStat,
+    SpectralSlopeStat,
+    SpectralKurtosisStat,
+    SpectralContrastStat,
+    MFCCBandEnergyStat,
     CrossSectionalStat,
     KalmanInnovationStat,
     ARCoefficientStat,
     LyapunovExponentStat,
     PIDErrorStat,
     PredictionErrorDecompositionStat,
+    ReversePointsStat,
+    TimeSinceSpikeStat,
+    VolatilitySpikeStat,
+    VolatilitySpikeDiffStat,
+    VolumeSpikeStat,
+    VolumeSpikeDiffStat,
+    RollingMinStat,
+    RollingMaxStat,
 )
 
 
@@ -147,6 +161,13 @@ from signalflow.ta.trend import (
     DpoTrend,
     QstickTrend,
     TtmTrend,
+    WilliamsAlligatorRegime,
+    TwoMaRegime,
+    SmaDirection,
+    SmaDiffDirection,
+    LinRegDirection,
+    LinRegDiffDirection,
+    LinRegPriceDiff,
 )
 from signalflow.ta.volatility import (
     TrueRangeVol,
@@ -193,6 +214,8 @@ from signalflow.ta.divergence import (
     RsiDivergence,
     MacdDivergence,
 )
+from signalflow.ta import signals
+from signalflow.ta import global_features
 
 __all__ = [
     # Momentum indicators
@@ -217,6 +240,10 @@ __all__ = [
     # Divergence detectors
     "RsiDivergence",
     "MacdDivergence",
+    # Signals module
+    "signals",
+    # Global features module
+    "global_features",
     # Overlap indicators
     "SmaSmooth",
     "EmaSmooth",
@@ -237,6 +264,7 @@ __all__ = [
     "ZlmaSmooth",
     "McGinleySmooth",
     "FramaSmooth",
+    "KalmanSmooth",
     "Hl2Price",
     "Hlc3Price",
     "Ohlc4Price",
@@ -328,12 +356,26 @@ __all__ = [
     "SpectralRolloffStat",
     "SpectralFlatnessStat",
     "PowerCepstrumStat",
+    "SpectralBandwidthStat",
+    "SpectralSlopeStat",
+    "SpectralKurtosisStat",
+    "SpectralContrastStat",
+    "MFCCBandEnergyStat",
     # Stat - Control Theory & Systems Engineering
     "KalmanInnovationStat",
     "ARCoefficientStat",
     "LyapunovExponentStat",
     "PIDErrorStat",
     "PredictionErrorDecompositionStat",
+    # Stat - Structure & Spikes
+    "ReversePointsStat",
+    "TimeSinceSpikeStat",
+    "VolatilitySpikeStat",
+    "VolatilitySpikeDiffStat",
+    "VolumeSpikeStat",
+    "VolumeSpikeDiffStat",
+    "RollingMinStat",
+    "RollingMaxStat",
     # Trend
     "AdxTrend",
     "AroonTrend",
@@ -357,6 +399,14 @@ __all__ = [
     "DpoTrend",
     "QstickTrend",
     "TtmTrend",
+    # Trend - Regime
+    "WilliamsAlligatorRegime",
+    "TwoMaRegime",
+    "SmaDirection",
+    "SmaDiffDirection",
+    "LinRegDirection",
+    "LinRegDiffDirection",
+    "LinRegPriceDiff",
     # Volatility
     "TrueRangeVol",
     "AtrVol",

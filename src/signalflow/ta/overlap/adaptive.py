@@ -1,14 +1,14 @@
 """Adaptive smoothing algorithms that adjust to market conditions."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, ClassVar
 
 import numpy as np
 import polars as pl
+from numba import njit
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
@@ -692,3 +692,147 @@ class FramaSmooth(Feature):
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
         return self.period * 5
+
+
+@njit
+def _kalman_filter_single_window(
+    data: np.ndarray, process_noise: float, measurement_noise: float
+) -> tuple[float, float]:
+    """Apply Kalman filter to a single window segment.
+
+    Args:
+        data: Input price segment.
+        process_noise: Initial process noise (adapts during filtering).
+        measurement_noise: Measurement noise variance.
+
+    Returns:
+        Tuple of (filtered_value, updated_process_noise).
+    """
+    n = len(data)
+    estimate = data[0]
+    estimate_covariance = 1.0
+
+    for i in range(1, n):
+        predicted_estimate = estimate
+        predicted_covariance = estimate_covariance + process_noise
+        innovation = data[i] - predicted_estimate
+        innovation_covariance = predicted_covariance + measurement_noise
+        kalman_gain = predicted_covariance / innovation_covariance
+
+        estimate = predicted_estimate + kalman_gain * innovation
+        estimate_covariance = (1 - kalman_gain) * predicted_covariance
+
+        process_noise = max(1e-2, np.abs(innovation) / 10)
+
+    return estimate, process_noise
+
+
+@njit
+def _kalman_filter_series(
+    data: np.ndarray, window: int, process_noise_init: float, measurement_noise: float
+) -> np.ndarray:
+    """Apply Kalman filter across a rolling window.
+
+    Args:
+        data: Full input array.
+        window: Rolling window size.
+        process_noise_init: Initial process noise.
+        measurement_noise: Measurement noise variance.
+
+    Returns:
+        Filtered array with NaN for warmup period.
+    """
+    n = len(data)
+    result = np.full(n, np.nan)
+    process_noise = process_noise_init
+
+    for i in range(window, n):
+        segment = data[i - window : i]
+        filtered_value, process_noise = _kalman_filter_single_window(
+            segment, process_noise, measurement_noise
+        )
+        result[i] = filtered_value
+
+    return result
+
+
+@dataclass
+@sf_component(name="smooth/kalman")
+class KalmanSmooth(Feature):
+    """Adaptive Kalman Filter smoothing.
+
+    Uses Kalman filter with adaptive process noise that adjusts
+    based on innovation (prediction error). Higher innovation
+    increases process noise, making the filter more responsive.
+
+    Particularly effective for noisy price data as it optimally
+    balances between following the signal and filtering noise.
+
+    In normalized mode, returns percentage difference from source:
+    normalized = (source - kalman) / source
+
+    Reference: Kalman, R.E. "A New Approach to Linear Filtering
+    and Prediction Problems"
+    """
+
+    source_col: str = "close"
+    window: int = 120
+    process_noise: float = 0.1
+    measurement_noise: float = 0.1
+    normalized: bool = False
+
+    requires = ["{source_col}"]
+    outputs = ["{source_col}_kalman_{window}"]
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        source = df[self.source_col].to_numpy().astype(np.float64)
+
+        kalman = _kalman_filter_series(
+            source, self.window, self.process_noise, self.measurement_noise
+        )
+
+        if self.normalized:
+            from signalflow.ta._normalization import normalize_ma_pct
+
+            kalman = normalize_ma_pct(source, kalman)
+
+        col_name = self._get_output_name()
+        return df.with_columns(pl.Series(name=col_name, values=kalman))
+
+    def _get_output_name(self) -> str:
+        """Generate output column name with normalization suffix."""
+        suffix = "_norm" if self.normalized else ""
+        return f"{self.source_col}_kalman_{self.window}{suffix}"
+
+    test_params: ClassVar[list[dict]] = [
+        {
+            "source_col": "close",
+            "window": 120,
+            "process_noise": 0.1,
+            "measurement_noise": 0.1,
+        },
+        {
+            "source_col": "close",
+            "window": 120,
+            "process_noise": 0.1,
+            "measurement_noise": 0.1,
+            "normalized": True,
+        },
+        {
+            "source_col": "close",
+            "window": 60,
+            "process_noise": 0.1,
+            "measurement_noise": 0.1,
+        },
+        {
+            "source_col": "close",
+            "window": 240,
+            "process_noise": 0.05,
+            "measurement_noise": 0.1,
+        },
+    ]
+
+    @property
+    def warmup(self) -> int:
+        """Minimum bars needed for stable, reproducible output."""
+        return self.window * 2

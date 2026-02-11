@@ -2,8 +2,9 @@
 
 Modules:
     strength - Trend strength measures (ADX, Aroon, Vortex, VHF, CHOP)
-    stops - Trailing stops and trend-following (PSAR, Supertrend, Chandelier, HiLo, CKSP)
+    stops - Trailing stops and trend-following (PSAR, Supertrend, Chandelier, HiLo)
     detection - Trend detection systems (Ichimoku, DPO, QStick)
+    regime - Trend regime detectors (Alligator, TwoMA, SMA/LinReg direction)
 """
 
 from signalflow.ta.trend.strength import (
@@ -34,6 +35,15 @@ from signalflow.ta.trend.detection import (
     QstickTrend,
     TtmTrend,
 )
+from signalflow.ta.trend.regime import (
+    WilliamsAlligatorRegime,
+    TwoMaRegime,
+    SmaDirection,
+    SmaDiffDirection,
+    LinRegDirection,
+    LinRegDiffDirection,
+    LinRegPriceDiff,
+)
 
 __all__ = [
     # Strength
@@ -61,4 +71,12 @@ __all__ = [
     "DpoTrend",
     "QstickTrend",
     "TtmTrend",
+    # Regime
+    "WilliamsAlligatorRegime",
+    "TwoMaRegime",
+    "SmaDirection",
+    "SmaDiffDirection",
+    "LinRegDirection",
+    "LinRegDiffDirection",
+    "LinRegPriceDiff",
 ]

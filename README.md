@@ -2,7 +2,7 @@
 
 Technical analysis extension for [signalflow-trading](https://pypi.org/project/signalflow-trading/).
 
-The library provides 166 technical analysis indicators organized into 8 modules: momentum, overlap, volatility, volume, trend, stat, performance, divergence. Each indicator is implemented as a standalone signalflow component class with warmup property support and (where applicable) output value normalization. Additionally, `AutoFeatureNormalizer` is provided for automatic normalization of Polars DataFrames.
+The library provides 189 technical analysis indicators organized into 8 modules: momentum, overlap, volatility, volume, trend, stat, performance, divergence. Each indicator is implemented as a standalone signalflow component class with warmup property support and (where applicable) output value normalization. Additionally, the library includes **24 signal detectors** for generating trading signals with configurable filters, and `AutoFeatureNormalizer` for automatic normalization of Polars DataFrames.
 
 ## Installation
 
@@ -47,7 +47,7 @@ import signalflow.ta as ta
 | `AngularMomentumMom` | `momentum/angular_momentum` | Angular Momentum (L = displacement x velocity) | [kinematics.py](src/signalflow/ta/momentum/kinematics.py) | `["source_col", "period", "ma_period", "normalized", "norm_period"]` |
 | `TorqueMom` | `momentum/torque` | Torque (rate of change of angular momentum) | [kinematics.py](src/signalflow/ta/momentum/kinematics.py) | `["source_col", "period", "ma_period", "torque_lag", "normalized", "norm_period"]` |
 
-### Overlap / Smoothing (25 indicators)
+### Overlap / Smoothing (27 indicators)
 
 | Class | SF Name | Description | Source | Parameters |
 |-------|---------|-------------|--------|------------|
@@ -69,6 +69,8 @@ import signalflow.ta as ta
 | `ZlmaSmooth` | `smooth/zlma` | Zero Lag Moving Average | [adaptive.py](src/signalflow/ta/overlap/adaptive.py) | `["source_col", "period", "ma_type", "normalized"]` |
 | `McGinleySmooth` | `smooth/mcginley` | McGinley Dynamic | [adaptive.py](src/signalflow/ta/overlap/adaptive.py) | `["source_col", "period", "k", "normalized"]` |
 | `FramaSmooth` | `smooth/frama` | Fractal Adaptive Moving Average | [adaptive.py](src/signalflow/ta/overlap/adaptive.py) | `["source_col", "period", "normalized"]` |
+| `KalmanSmooth` | `smooth/kalman` | Adaptive Kalman Filter | [adaptive.py](src/signalflow/ta/overlap/adaptive.py) | `["source_col", "window", "process_noise", "measurement_noise", "normalized"]` |
+| `LinRegPriceDiff` | `trend/linreg_price_diff` | Price difference from regression line | [regime.py](src/signalflow/ta/trend/regime.py) | `["source_col", "period"]` |
 | `Hl2Price` | `price/hl2` | High-Low Midpoint | [price.py](src/signalflow/ta/overlap/price.py) | `[]` |
 | `Hlc3Price` | `price/hlc3` | Typical Price (HLC/3) | [price.py](src/signalflow/ta/overlap/price.py) | `[]` |
 | `Ohlc4Price` | `price/ohlc4` | OHLC Average | [price.py](src/signalflow/ta/overlap/price.py) | `[]` |
@@ -122,7 +124,7 @@ import signalflow.ta as ta
 | `MarketCapacitanceVolume` | `volume/market_capacitance` | Market Capacitance (volume absorbed per unit price change) | [dynamics.py](src/signalflow/ta/volume/dynamics.py) | `["period", "normalized", "norm_period"]` |
 | `GravitationalPullVolume` | `volume/gravitational_pull` | Gravitational Pull (volume-weighted attraction) | [dynamics.py](src/signalflow/ta/volume/dynamics.py) | `["period", "normalized", "norm_period"]` |
 
-### Trend (22 indicators)
+### Trend (28 indicators)
 
 | Class | SF Name | Description | Source | Parameters |
 |-------|---------|-------------|--------|------------|
@@ -148,8 +150,14 @@ import signalflow.ta as ta
 | `DpoTrend` | `trend/dpo` | Detrended Price Oscillator | [detection.py](src/signalflow/ta/trend/detection.py) | `["period", "normalized", "norm_period"]` |
 | `QstickTrend` | `trend/qstick` | Qstick | [detection.py](src/signalflow/ta/trend/detection.py) | `["period", "normalized", "norm_period"]` |
 | `TtmTrend` | `trend/ttm` | TTM Trend | [detection.py](src/signalflow/ta/trend/detection.py) | `["length", "normalized", "norm_period"]` |
+| `WilliamsAlligatorRegime` | `trend/alligator_regime` | Williams Alligator trend regime | [regime.py](src/signalflow/ta/trend/regime.py) | `["lips_length", "teeth_length", "jaws_length", "confirmation_length"]` |
+| `TwoMaRegime` | `trend/two_ma_regime` | Two MA crossover regime | [regime.py](src/signalflow/ta/trend/regime.py) | `["source_col", "fast_length", "slow_length"]` |
+| `SmaDirection` | `trend/sma_direction` | SMA direction indicator | [regime.py](src/signalflow/ta/trend/regime.py) | `["source_col", "period"]` |
+| `SmaDiffDirection` | `trend/sma_diff_direction` | SMA difference direction | [regime.py](src/signalflow/ta/trend/regime.py) | `["source_col", "first_period", "second_period"]` |
+| `LinRegDirection` | `trend/linreg_direction` | Linear regression slope direction | [regime.py](src/signalflow/ta/trend/regime.py) | `["source_col", "period"]` |
+| `LinRegDiffDirection` | `trend/linreg_diff_direction` | Linear regression difference direction | [regime.py](src/signalflow/ta/trend/regime.py) | `["source_col", "first_period", "second_period"]` |
 
-### Statistics (62 indicators)
+### Statistics (75 indicators)
 
 | Class | SF Name | Description | Source | Parameters |
 |-------|---------|-------------|--------|------------|
@@ -215,6 +223,19 @@ import signalflow.ta as ta
 | `RenyiEntropyStat` | `stat/renyi_entropy` | Rényi Entropy (generalized tail-sensitive entropy) | [information.py](src/signalflow/ta/stat/information.py) | `["source_col", "period", "alpha", "bins", "normalized", "norm_period"]` |
 | `AutoMutualInfoStat` | `stat/auto_mutual_info` | Auto Mutual Information (nonlinear temporal dependency) | [information.py](src/signalflow/ta/stat/information.py) | `["source_col", "period", "lag", "bins", "normalized", "norm_period"]` |
 | `RelativeInfoGainStat` | `stat/info_gain` | Relative Information Gain (distributional change rate) | [information.py](src/signalflow/ta/stat/information.py) | `["source_col", "period", "bins", "normalized", "norm_period"]` |
+| `SpectralBandwidthStat` | `stat/spectral_bandwidth` | Spectral Bandwidth (frequency spread) | [dsp.py](src/signalflow/ta/stat/dsp.py) | `["source_col", "period", "normalized", "norm_period"]` |
+| `SpectralSlopeStat` | `stat/spectral_slope` | Spectral Slope (frequency trend) | [dsp.py](src/signalflow/ta/stat/dsp.py) | `["source_col", "period", "normalized", "norm_period"]` |
+| `SpectralKurtosisStat` | `stat/spectral_kurtosis` | Spectral Kurtosis (frequency distribution shape) | [dsp.py](src/signalflow/ta/stat/dsp.py) | `["source_col", "period", "normalized", "norm_period"]` |
+| `SpectralContrastStat` | `stat/spectral_contrast` | Spectral Contrast (peak vs valley energy) | [dsp.py](src/signalflow/ta/stat/dsp.py) | `["source_col", "period", "normalized", "norm_period"]` |
+| `MFCCBandEnergyStat` | `stat/mfcc_band_energy` | MFCC Band Energy (mel-frequency cepstral) | [dsp.py](src/signalflow/ta/stat/dsp.py) | `["source_col", "period", "normalized", "norm_period"]` |
+| `ReversePointsStat` | `stat/reverse_points` | Rolling direction reversal count | [structure.py](src/signalflow/ta/stat/structure.py) | `["source_col", "window"]` |
+| `TimeSinceSpikeStat` | `stat/time_since_spike` | Bars since last spike event | [structure.py](src/signalflow/ta/stat/structure.py) | `["source_col"]` |
+| `VolatilitySpikeStat` | `stat/volatility_spike` | Volatility spike detection (z-score) | [structure.py](src/signalflow/ta/stat/structure.py) | `["source_col", "period", "threshold"]` |
+| `VolatilitySpikeDiffStat` | `stat/volatility_spike_diff` | Volatility spike difference detection | [structure.py](src/signalflow/ta/stat/structure.py) | `["source_col", "first_period", "second_period", "threshold"]` |
+| `VolumeSpikeStat` | `stat/volume_spike` | Volume spike detection (z-score) | [structure.py](src/signalflow/ta/stat/structure.py) | `["period", "threshold"]` |
+| `VolumeSpikeDiffStat` | `stat/volume_spike_diff` | Volume spike difference detection | [structure.py](src/signalflow/ta/stat/structure.py) | `["first_period", "second_period", "threshold"]` |
+| `RollingMinStat` | `stat/rolling_min` | Rolling minimum value | [structure.py](src/signalflow/ta/stat/structure.py) | `["source_col", "period"]` |
+| `RollingMaxStat` | `stat/rolling_max` | Rolling maximum value | [structure.py](src/signalflow/ta/stat/structure.py) | `["source_col", "period"]` |
 
 ### Performance (2 indicators)
 
@@ -229,6 +250,109 @@ import signalflow.ta as ta
 |-------|---------|-------------|--------|------------|
 | `RsiDivergence` | `divergence/rsi` | RSI Divergence Detector (regular & hidden) | [rsi_div.py](src/signalflow/ta/divergence/rsi_div.py) | `["rsi_period", "rsi_overbought", "rsi_oversold", "pivot_window", "min_pivot_distance", "lookback", "min_divergence_magnitude"]` |
 | `MacdDivergence` | `divergence/macd` | MACD Divergence Detector (regular & hidden) | [macd_div.py](src/signalflow/ta/divergence/macd_div.py) | `["fast", "slow", "signal", "pivot_window", "min_pivot_distance", "lookback", "min_divergence_magnitude"]` |
+
+## Signal Detectors (24 detectors)
+
+Signal detectors combine technical indicators with trading logic to generate actionable LONG/SHORT signals. All detectors support configurable `direction` ("long", "short", "both") and optional `filters` for conditional signal generation.
+
+```python
+from signalflow.ta.signals import StochasticDetector1, RsiZscoreFilter
+
+detector = StochasticDetector1(
+    stoch_period=14,
+    direction="long",
+    filters=[RsiZscoreFilter(threshold=-1.5)]
+)
+signals = detector.run(raw_data_view)
+```
+
+### Momentum-based Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `RsiAnomalyDetector1` | `ta/rsi_anomaly_1` | RSI z-score extreme detection | RSI |
+| `CciAnomalyDetector1` | `ta/cci_anomaly_1` | CCI z-score extreme detection | CCI |
+| `StochasticDetector1` | `ta/stochastic_1` | %K/%D crossover in extreme zones | Stochastic |
+| `StochasticDetector2` | `ta/stochastic_2` | Stochastic z-score extremes | Stochastic |
+
+### Volume-based Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `MfiDetector1` | `ta/mfi_1` | MFI oversold/overbought zones | MFI |
+| `MfiDetector2` | `ta/mfi_2` | MFI z-score with reversal detection | MFI |
+
+### Trend-based Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `AroonCrossDetector1` | `ta/aroon_cross_1` | Aroon up/down crossover | Aroon |
+| `AdxRegimeDetector1` | `ta/adx_regime_1` | DI crossover with ADX > threshold | ADX, +DI, -DI |
+| `AdxRegimeDetector2` | `ta/adx_regime_2` | Trend/range regime + RSI | ADX, RSI |
+
+### Volatility-based Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `BollingerBandDetector1` | `ta/bollinger_1` | BB breakout/touch detection | Bollinger Bands |
+| `KeltnerChannelDetector1` | `ta/keltner_1` | KC + RSI z-score | Keltner Channels, RSI |
+| `KeltnerChannelDetector2` | `ta/keltner_2` | KC + MACD + RSI | Keltner Channels, MACD, RSI |
+
+### Divergence Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `DivergenceDetector1` | `ta/divergence_1` | Price/RSI bullish/bearish divergence | RSI |
+| `DivergenceDetector2` | `ta/divergence_2` | Price/MACD histogram divergence | MACD |
+
+### Filter-based Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `HampelFilterDetector1` | `ta/hampel_1` | Hampel filter outlier detection | Hampel Filter |
+| `HampelFilterDetector2` | `ta/hampel_2` | Adaptive Hampel with volatility | Hampel Filter |
+| `KalmanFilterDetector1` | `ta/kalman_1` | Adaptive Kalman filter z-score | Kalman Filter |
+
+### Market Condition Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `MarketConditionDetector1` | `ta/market_condition_1` | Market-wide volatility regime | Global Features |
+| `MarketConditionDetector2` | `ta/market_condition_2` | Cross-sectional momentum | Global Features |
+| `MarketConditionDetector3` | `ta/market_condition_3` | Market breadth indicators | Global Features |
+
+### ML-based Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `IsolationForestDetector1` | `ta/isolation_forest_1` | Log returns anomaly | Isolation Forest |
+| `IsolationForestDetector2` | `ta/isolation_forest_2` | RSI-based anomaly | Isolation Forest, RSI |
+| `IsolationForestDetector3` | `ta/isolation_forest_3` | Cross-sectional anomaly | Isolation Forest, Global Features |
+
+### Cross-pair Detectors
+
+| Class | SF Name | Description | Indicators Used |
+|-------|---------|-------------|-----------------|
+| `CrossPairDetector1` | `ta/cross_pair_1` | Cross-pair correlation + BB | Bollinger Bands, Correlation |
+
+### Signal Filters (12 filters)
+
+Filters can be combined with any detector to add conditional logic:
+
+| Filter | Description |
+|--------|-------------|
+| `PriceUptrendFilter` | Price above SMA |
+| `PriceDowntrendFilter` | Price below SMA |
+| `LowVolatilityFilter` | ATR below threshold |
+| `HighVolatilityFilter` | ATR above threshold |
+| `MeanReversionFilter` | Price near Bollinger mid |
+| `MeanExtensionFilter` | Price far from Bollinger mid |
+| `RsiZscoreFilter` | RSI z-score condition |
+| `BelowBBLowerFilter` | Price below lower BB |
+| `AboveBBUpperFilter` | Price above upper BB |
+| `CciZscoreFilter` | CCI z-score condition |
+| `MacdBelowSignalFilter` | MACD below signal line |
+| `MacdAboveSignalFilter` | MACD above signal line |
 
 ## Normalization
 

@@ -2,7 +2,7 @@
 
 Modules:
     smoothers - Basic moving averages (SMA, EMA, WMA, RMA, HMA, DEMA, TEMA)
-    adaptive - Adaptive smoothers (KAMA, ALMA, JMA, VIDYA, T3, ZLMA, McGinley)
+    adaptive - Adaptive smoothers (KAMA, ALMA, JMA, VIDYA, T3, ZLMA, McGinley, Kalman)
     price - Price transforms and midpoints (HL2, HLC3, OHLC4, WCP, Midpoint)
     trend - Trend-following overlays (Supertrend, HiLo, Ichimoku)
 """
@@ -29,6 +29,7 @@ from signalflow.ta.overlap.adaptive import (
     ZlmaSmooth,
     McGinleySmooth,
     FramaSmooth,
+    KalmanSmooth,
 )
 from signalflow.ta.overlap.price import (
     Hl2Price,
@@ -68,6 +69,7 @@ __all__ = [
     "ZlmaSmooth",
     "McGinleySmooth",
     "FramaSmooth",
+    "KalmanSmooth",
     # Price Transforms
     "Hl2Price",
     "Hlc3Price",
