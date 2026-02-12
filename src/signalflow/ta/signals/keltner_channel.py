@@ -14,21 +14,7 @@ from signalflow.ta.momentum import RsiMom, MacdMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
-def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
-    """RMA with SMA initialization."""
-    n = len(values)
-    alpha = 1 / period
-    rma = np.full(n, np.nan)
-
-    if n < period:
-        return rma
-
-    rma[period - 1] = np.mean(values[:period])
-
-    for i in range(period, n):
-        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-
-    return rma
+from signalflow.ta.signals._utils import _rma_sma_init  # noqa: F401
 
 
 @dataclass
@@ -105,6 +91,31 @@ class KeltnerChannelDetector1(SignalDetector):
         Returns:
             Signals container with detected signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         close = features["close"].to_numpy()
         kc_lower = features[self.kc_lower_col].to_numpy()
         kc_upper = features[self.kc_upper_col].to_numpy()
@@ -278,6 +289,31 @@ class KeltnerChannelDetector2(SignalDetector):
         Returns:
             Signals container with detected signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         close = features["close"].to_numpy()
         kc_lower = features[self.kc_lower_col].to_numpy()
         kc_upper = features[self.kc_upper_col].to_numpy()

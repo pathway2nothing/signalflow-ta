@@ -83,6 +83,31 @@ class StochasticDetector1(SignalDetector):
         Returns:
             Signals container with detected crossover signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         stoch_k = features[self.stoch_k_col].to_numpy()
         stoch_d = features[self.stoch_d_col].to_numpy()
         n = len(stoch_k)
@@ -112,12 +137,14 @@ class StochasticDetector1(SignalDetector):
             short_signal = k_crosses_below_d & in_overbought
             signal_type = np.where(short_signal, SignalType.FALL.value, signal_type)
 
-        out = features.select([
-            self.pair_col,
-            self.ts_col,
-            pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=stoch_k),
-        ])
+        out = features.select(
+            [
+                self.pair_col,
+                self.ts_col,
+                pl.Series(name="signal_type", values=signal_type),
+                pl.Series(name="signal", values=stoch_k),
+            ]
+        )
 
         # Apply filters
         if self.filters:
@@ -201,6 +228,31 @@ class StochasticDetector2(SignalDetector):
         self, features: pl.DataFrame, context: dict[str, Any] | None = None
     ) -> Signals:
         """Generate signals based on Stochastic z-score extremes."""
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         stoch_k = features[self.stoch_k_col].to_numpy()
         n = len(stoch_k)
 
@@ -234,12 +286,14 @@ class StochasticDetector2(SignalDetector):
                 overbought_extreme, SignalType.FALL.value, signal_type
             )
 
-        out = features.select([
-            self.pair_col,
-            self.ts_col,
-            pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=zscore),
-        ])
+        out = features.select(
+            [
+                self.pair_col,
+                self.ts_col,
+                pl.Series(name="signal_type", values=signal_type),
+                pl.Series(name="signal", values=zscore),
+            ]
+        )
 
         # Apply filters
         if self.filters:

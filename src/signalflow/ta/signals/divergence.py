@@ -13,15 +13,22 @@ from signalflow.ta.momentum import RsiMom, MacdMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
-def _find_local_extrema(values: np.ndarray, window: int = 5) -> tuple[np.ndarray, np.ndarray]:
-    """Find local minima and maxima indices.
+def _find_local_extrema(
+    values: np.ndarray, window: int = 5
+) -> tuple[np.ndarray, np.ndarray]:
+    """Find local minima and maxima indices (causal, no look-ahead).
+
+    An extremum at bar ``i`` requires ``window`` bars on each side to confirm.
+    The signal is placed at bar ``i + window`` (the confirmation bar) to avoid
+    look-ahead bias.
 
     Args:
         values: Input array.
-        window: Lookback window for extrema detection.
+        window: Number of bars on each side to confirm an extremum.
 
     Returns:
-        Tuple of (minima_mask, maxima_mask) boolean arrays.
+        Tuple of (minima_mask, maxima_mask) boolean arrays, shifted to
+        confirmation time (no look-ahead).
     """
     n = len(values)
     minima = np.zeros(n, dtype=bool)
@@ -40,13 +47,14 @@ def _find_local_extrema(values: np.ndarray, window: int = 5) -> tuple[np.ndarray
         if len(valid_left) == 0 or len(valid_right) == 0:
             continue
 
-        # Local minimum
-        if values[i] <= np.min(valid_left) and values[i] <= np.min(valid_right):
-            minima[i] = True
+        # Extremum confirmed at bar i+window (when right_window is fully known)
+        confirm_idx = i + window
 
-        # Local maximum
+        if values[i] <= np.min(valid_left) and values[i] <= np.min(valid_right):
+            minima[confirm_idx] = True
+
         if values[i] >= np.max(valid_left) and values[i] >= np.max(valid_right):
-            maxima[i] = True
+            maxima[confirm_idx] = True
 
     return minima, maxima
 
@@ -56,8 +64,9 @@ def _detect_divergence(
     indicator: np.ndarray,
     lookback: int = 50,
     min_distance: int = 5,
+    extrema_window: int = 5,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Detect bullish and bearish divergences.
+    """Detect bullish and bearish divergences (causal, no look-ahead).
 
     Bullish divergence: price makes lower low, indicator makes higher low
     Bearish divergence: price makes higher high, indicator makes lower high
@@ -67,6 +76,7 @@ def _detect_divergence(
         indicator: Indicator array (RSI, MACD, etc.).
         lookback: Maximum bars to look back for previous extrema.
         min_distance: Minimum bars between extrema.
+        extrema_window: Window for local extrema detection.
 
     Returns:
         Tuple of (bullish_divergence, bearish_divergence) boolean arrays.
@@ -75,8 +85,8 @@ def _detect_divergence(
     bullish = np.zeros(n, dtype=bool)
     bearish = np.zeros(n, dtype=bool)
 
-    price_minima, price_maxima = _find_local_extrema(price)
-    ind_minima, ind_maxima = _find_local_extrema(indicator)
+    price_minima, price_maxima = _find_local_extrema(price, window=extrema_window)
+    ind_minima, ind_maxima = _find_local_extrema(indicator, window=extrema_window)
 
     # Find bullish divergence (at price lows)
     for i in range(lookback, n):
@@ -109,6 +119,70 @@ def _detect_divergence(
                 break
 
     return bullish, bearish
+
+
+def _build_signals_df(
+    features: pl.DataFrame,
+    signal_type: np.ndarray,
+    signal_values: np.ndarray,
+    filters: list[SignalFilter],
+    pair_col: str,
+    ts_col: str,
+) -> Signals:
+    """Build Signals from arrays, apply filters, remove NONE rows."""
+    out = features.select(
+        [
+            pair_col,
+            ts_col,
+            pl.Series(name="signal_type", values=signal_type),
+            pl.Series(name="signal", values=signal_values),
+        ]
+    )
+
+    if filters:
+        combined_mask = np.ones(len(out), dtype=bool)
+        for flt in filters:
+            filter_mask = flt.apply(features).to_numpy()
+            combined_mask = combined_mask & filter_mask
+
+        out = out.with_columns(
+            pl.when(pl.Series(values=combined_mask))
+            .then(pl.col("signal_type"))
+            .otherwise(pl.lit(SignalType.NONE.value))
+            .alias("signal_type")
+        )
+
+    out = out.filter(pl.col("signal_type") != SignalType.NONE.value)
+    return Signals(out)
+
+
+def _detect_multi_pair(
+    detector: "SignalDetector",
+    features: pl.DataFrame,
+    context: dict[str, Any] | None,
+) -> Signals:
+    """Dispatch _detect_single per pair and concat results."""
+    pairs = features[detector.pair_col].unique().sort().to_list()
+    if len(pairs) > 1:
+        results = []
+        for pair in pairs:
+            pair_df = features.filter(pl.col(detector.pair_col) == pair)
+            sig = detector._detect_single(pair_df, context)
+            if len(sig.value) > 0:
+                results.append(sig.value)
+        if results:
+            return Signals(pl.concat(results))
+        return Signals(
+            features.head(0).select(
+                [
+                    detector.pair_col,
+                    detector.ts_col,
+                    pl.lit(0).alias("signal_type"),
+                    pl.lit(0.0).alias("signal"),
+                ]
+            )
+        )
+    return detector._detect_single(features, context)
 
 
 @dataclass
@@ -162,62 +236,35 @@ class DivergenceDetector1(SignalDetector):
     def detect(
         self, features: pl.DataFrame, context: dict[str, Any] | None = None
     ) -> Signals:
-        """Generate signals based on RSI divergence.
+        return _detect_multi_pair(self, features, context)
 
-        Args:
-            features: DataFrame with computed RSI values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected divergence signals.
-        """
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         close = features["close"].to_numpy()
         rsi = features[self.rsi_col].to_numpy()
         n = len(close)
 
-        # Detect divergences
         bullish, bearish = _detect_divergence(
-            close, rsi, lookback=self.lookback, min_distance=self.min_distance
+            close, rsi,
+            lookback=self.lookback,
+            min_distance=self.min_distance,
+            extrema_window=self.extrema_window,
         )
 
-        # Build signal type array
         signal_type = np.full(n, SignalType.NONE.value)
-
         if self.direction in ("long", "both"):
             signal_type = np.where(bullish, SignalType.RISE.value, signal_type)
-
         if self.direction in ("short", "both"):
             signal_type = np.where(bearish, SignalType.FALL.value, signal_type)
 
-        out = features.select([
-            self.pair_col,
-            self.ts_col,
-            pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=rsi),
-        ])
-
-        # Apply filters
-        if self.filters:
-            combined_mask = np.ones(len(out), dtype=bool)
-            for flt in self.filters:
-                filter_mask = flt.apply(features).to_numpy()
-                combined_mask = combined_mask & filter_mask
-
-            out = out.with_columns(
-                pl.when(pl.Series(values=combined_mask))
-                .then(pl.col("signal_type"))
-                .otherwise(pl.lit(SignalType.NONE.value))
-                .alias("signal_type")
-            )
-
-        out = out.filter(pl.col("signal_type") != SignalType.NONE.value)
-
-        return Signals(out)
+        return _build_signals_df(
+            features, signal_type, rsi, self.filters, self.pair_col, self.ts_col
+        )
 
     @property
     def warmup(self) -> int:
-        """Minimum bars needed for stable output."""
-        base_warmup = self.rsi_period * 10 + self.lookback
+        base_warmup = self.rsi_period * 10 + self.lookback + self.extrema_window
         filter_warmup = max((f.warmup for f in self.filters), default=0)
         return max(base_warmup, filter_warmup)
 
@@ -230,6 +277,114 @@ class DivergenceDetector1(SignalDetector):
 @dataclass
 @sf_component(name="ta/divergence_2")
 class DivergenceDetector2(SignalDetector):
+    """RSI divergence detector with offset subsampling.
+
+    Subsamples every ``offset``-th bar before running extrema / divergence
+    detection, then maps signals back to the original timestamps.  This lets
+    you keep *1 h-quality* divergence detection while working on 1 m data
+    (``offset=60``).
+
+    Signal logic:
+        - LONG: Bullish divergence (price lower low, RSI higher low)
+        - SHORT: Bearish divergence (price higher high, RSI lower high)
+
+    Attributes:
+        rsi_period: RSI calculation period (applied on full data, subsampled for detection).
+        lookback: Maximum subsampled bars to look back for divergence.
+        min_distance: Minimum subsampled bars between extrema.
+        extrema_window: Window for local extrema detection (subsampled).
+        offset: Take every N-th bar for analysis. Must be >= 2.
+        direction: Signal direction.
+        filters: List of SignalFilter instances.
+
+    Example:
+        ```python
+        from signalflow.ta.signals import DivergenceDetector2
+
+        # 1h-quality divergences on 1m data
+        detector = DivergenceDetector2(
+            rsi_period=14,
+            lookback=50,
+            offset=60,
+            direction="both",
+        )
+        signals = detector.run(raw_data_view)
+        ```
+    """
+
+    rsi_period: int = 14
+    lookback: int = 50
+    min_distance: int = 5
+    extrema_window: int = 5
+    offset: int = 60
+    direction: str = "long"
+    filters: list[SignalFilter] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.direction not in ("long", "short", "both"):
+            raise ValueError(
+                f"direction must be 'long', 'short', or 'both', got {self.direction}"
+            )
+        if self.offset < 2:
+            raise ValueError(f"offset must be >= 2, got {self.offset}")
+
+        self.rsi_col = f"rsi_{self.rsi_period}"
+        self.features = [RsiMom(period=self.rsi_period)]
+
+    def detect(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
+        return _detect_multi_pair(self, features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
+        close = features["close"].to_numpy()
+        rsi = features[self.rsi_col].to_numpy()
+        n = len(close)
+
+        # Subsample every N-th bar
+        sub_idx = np.arange(0, n, self.offset)
+        close_sub = close[sub_idx]
+        rsi_sub = rsi[sub_idx]
+
+        bull_sub, bear_sub = _detect_divergence(
+            close_sub, rsi_sub,
+            lookback=self.lookback,
+            min_distance=self.min_distance,
+            extrema_window=self.extrema_window,
+        )
+
+        # Map back to original indices
+        bullish = np.zeros(n, dtype=bool)
+        bearish = np.zeros(n, dtype=bool)
+        bullish[sub_idx[bull_sub]] = True
+        bearish[sub_idx[bear_sub]] = True
+
+        signal_type = np.full(n, SignalType.NONE.value)
+        if self.direction in ("long", "both"):
+            signal_type = np.where(bullish, SignalType.RISE.value, signal_type)
+        if self.direction in ("short", "both"):
+            signal_type = np.where(bearish, SignalType.FALL.value, signal_type)
+
+        return _build_signals_df(
+            features, signal_type, rsi, self.filters, self.pair_col, self.ts_col
+        )
+
+    @property
+    def warmup(self) -> int:
+        base_warmup = (self.rsi_period * 10 + self.lookback + self.extrema_window) * self.offset
+        filter_warmup = max((f.warmup for f in self.filters), default=0)
+        return max(base_warmup, filter_warmup)
+
+    test_params: ClassVar[list[dict]] = [
+        {"rsi_period": 14, "lookback": 50, "offset": 60, "direction": "both"},
+    ]
+
+
+@dataclass
+@sf_component(name="ta/divergence_3")
+class DivergenceDetector3(SignalDetector):
     """MACD divergence detector.
 
     Detects bullish and bearish divergences between price and MACD histogram.
@@ -253,6 +408,7 @@ class DivergenceDetector2(SignalDetector):
     macd_signal: int = 9
     lookback: int = 50
     min_distance: int = 5
+    extrema_window: int = 5
     direction: str = "long"
     filters: list[SignalFilter] = field(default_factory=list)
 
@@ -270,53 +426,34 @@ class DivergenceDetector2(SignalDetector):
     def detect(
         self, features: pl.DataFrame, context: dict[str, Any] | None = None
     ) -> Signals:
-        """Generate signals based on MACD divergence."""
+        return _detect_multi_pair(self, features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         close = features["close"].to_numpy()
         macd_hist = features[self.macd_hist_col].to_numpy()
         n = len(close)
 
-        # Detect divergences
         bullish, bearish = _detect_divergence(
-            close, macd_hist, lookback=self.lookback, min_distance=self.min_distance
+            close, macd_hist,
+            lookback=self.lookback,
+            min_distance=self.min_distance,
+            extrema_window=self.extrema_window,
         )
 
-        # Build signal type array
         signal_type = np.full(n, SignalType.NONE.value)
-
         if self.direction in ("long", "both"):
             signal_type = np.where(bullish, SignalType.RISE.value, signal_type)
-
         if self.direction in ("short", "both"):
             signal_type = np.where(bearish, SignalType.FALL.value, signal_type)
 
-        out = features.select([
-            self.pair_col,
-            self.ts_col,
-            pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=macd_hist),
-        ])
-
-        # Apply filters
-        if self.filters:
-            combined_mask = np.ones(len(out), dtype=bool)
-            for flt in self.filters:
-                filter_mask = flt.apply(features).to_numpy()
-                combined_mask = combined_mask & filter_mask
-
-            out = out.with_columns(
-                pl.when(pl.Series(values=combined_mask))
-                .then(pl.col("signal_type"))
-                .otherwise(pl.lit(SignalType.NONE.value))
-                .alias("signal_type")
-            )
-
-        out = out.filter(pl.col("signal_type") != SignalType.NONE.value)
-
-        return Signals(out)
+        return _build_signals_df(
+            features, signal_type, macd_hist, self.filters, self.pair_col, self.ts_col
+        )
 
     @property
     def warmup(self) -> int:
-        """Minimum bars needed for stable output."""
         base_warmup = self.macd_slow * 5 + self.lookback
         filter_warmup = max((f.warmup for f in self.filters), default=0)
         return max(base_warmup, filter_warmup)

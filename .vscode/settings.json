@@ -1,6 +1,10 @@
 {
+    "python.defaultInterpreterPath": "/home/alastor/miniconda3/envs/sf-ta/bin/python",
+
     "python.testing.pytestArgs": [
-        "tests"
+        "tests",
+        "-n",
+        "auto"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

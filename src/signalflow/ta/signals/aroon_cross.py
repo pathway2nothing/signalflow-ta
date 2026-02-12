@@ -71,6 +71,31 @@ class AroonCrossDetector1(SignalDetector):
         Returns:
             Signals container with detected crossover signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         aroon_up = features[self.aroon_up_col].to_numpy()
         aroon_dn = features[self.aroon_dn_col].to_numpy()
 

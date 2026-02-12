@@ -39,6 +39,7 @@ from signalflow.ta.signals.adx_regime import (
 from signalflow.ta.signals.divergence import (
     DivergenceDetector1,
     DivergenceDetector2,
+    DivergenceDetector3,
 )
 from signalflow.ta.signals.filters import (
     SignalFilter,
@@ -82,6 +83,7 @@ __all__ = [
     "AdxRegimeDetector2",
     "DivergenceDetector1",
     "DivergenceDetector2",
+    "DivergenceDetector3",
     # Filters
     "SignalFilter",
     "PriceUptrendFilter",

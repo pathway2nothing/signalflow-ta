@@ -56,8 +56,8 @@ class AdxRegimeDetector1(SignalDetector):
             )
 
         self.adx_col = f"adx_{self.adx_period}"
-        self.plus_di_col = f"plus_di_{self.adx_period}"
-        self.minus_di_col = f"minus_di_{self.adx_period}"
+        self.plus_di_col = f"dmp_{self.adx_period}"
+        self.minus_di_col = f"dmn_{self.adx_period}"
         self.features = [AdxTrend(period=self.adx_period)]
 
     def detect(
@@ -72,6 +72,31 @@ class AdxRegimeDetector1(SignalDetector):
         Returns:
             Signals container with detected trend signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         adx = features[self.adx_col].to_numpy()
         plus_di = features[self.plus_di_col].to_numpy()
         minus_di = features[self.minus_di_col].to_numpy()
@@ -101,12 +126,14 @@ class AdxRegimeDetector1(SignalDetector):
             short_signal = minus_crosses_above & strong_trend
             signal_type = np.where(short_signal, SignalType.FALL.value, signal_type)
 
-        out = features.select([
-            self.pair_col,
-            self.ts_col,
-            pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=adx),
-        ])
+        out = features.select(
+            [
+                self.pair_col,
+                self.ts_col,
+                pl.Series(name="signal_type", values=signal_type),
+                pl.Series(name="signal", values=adx),
+            ]
+        )
 
         # Apply filters
         if self.filters:
@@ -181,8 +208,8 @@ class AdxRegimeDetector2(SignalDetector):
             )
 
         self.adx_col = f"adx_{self.adx_period}"
-        self.plus_di_col = f"plus_di_{self.adx_period}"
-        self.minus_di_col = f"minus_di_{self.adx_period}"
+        self.plus_di_col = f"dmp_{self.adx_period}"
+        self.minus_di_col = f"dmn_{self.adx_period}"
         self.rsi_col = f"rsi_{self.rsi_period}"
 
         self.features = [
@@ -194,6 +221,31 @@ class AdxRegimeDetector2(SignalDetector):
         self, features: pl.DataFrame, context: dict[str, Any] | None = None
     ) -> Signals:
         """Generate signals based on ADX regime with RSI."""
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         adx = features[self.adx_col].to_numpy()
         plus_di = features[self.plus_di_col].to_numpy()
         minus_di = features[self.minus_di_col].to_numpy()
@@ -225,12 +277,14 @@ class AdxRegimeDetector2(SignalDetector):
             short_signal = (trend_regime & downtrend) | (range_regime & rsi_overbought)
             signal_type = np.where(short_signal, SignalType.FALL.value, signal_type)
 
-        out = features.select([
-            self.pair_col,
-            self.ts_col,
-            pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=adx),
-        ])
+        out = features.select(
+            [
+                self.pair_col,
+                self.ts_col,
+                pl.Series(name="signal_type", values=signal_type),
+                pl.Series(name="signal", values=adx),
+            ]
+        )
 
         # Apply filters
         if self.filters:

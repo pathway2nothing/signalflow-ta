@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 
 from signalflow import sf_component
-from signalflow.core import Signals, SignalType
+from signalflow.core import Signals, SignalType, SignalCategory
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta._normalization import normalize_zscore
@@ -52,6 +52,8 @@ class MarketConditionDetector1(SignalDetector):
         ```
     """
 
+    signal_category = SignalCategory.MARKET_WIDE
+
     rsi_period: int = 6
     rsi_threshold: float = 20.0
     vol_threshold: float = 0.01
@@ -81,6 +83,31 @@ class MarketConditionDetector1(SignalDetector):
         Returns:
             Signals container with detected signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         # Get global features from context
         if context is None or "global_features" not in context:
             raise ValueError(
@@ -186,6 +213,8 @@ class MarketConditionDetector2(SignalDetector):
         filters: List of SignalFilter instances.
     """
 
+    signal_category = SignalCategory.MARKET_WIDE
+
     rsi_period: int = 65
     rsi_smoothing: int = 5
     rsi_threshold: float = 40.0
@@ -209,6 +238,31 @@ class MarketConditionDetector2(SignalDetector):
         self, features: pl.DataFrame, context: dict[str, Any] | None = None
     ) -> Signals:
         """Generate signals based on RSI relative to market."""
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         if context is None or "global_features" not in context:
             raise ValueError(
                 "MarketConditionDetector2 requires 'global_features' in context"
@@ -308,6 +362,8 @@ class MarketConditionDetector3(SignalDetector):
     - market_rsi, market_volatility, market_volatility_std, market_zscore
     """
 
+    signal_category = SignalCategory.MARKET_WIDE
+
     rsi_period: int = 50
     rsi_smoothing: int = 5
     rsi_threshold: float = 20.0
@@ -337,6 +393,31 @@ class MarketConditionDetector3(SignalDetector):
         self, features: pl.DataFrame, context: dict[str, Any] | None = None
     ) -> Signals:
         """Generate signals with multiple condition pathways."""
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         if context is None or "global_features" not in context:
             raise ValueError(
                 "MarketConditionDetector3 requires 'global_features' in context"

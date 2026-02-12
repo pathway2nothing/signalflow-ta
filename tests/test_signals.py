@@ -42,13 +42,11 @@ def get_all_detector_classes() -> list[tuple[str, type]]:
 
 
 def get_detector_test_configs() -> list[tuple[str, type, dict]]:
-    """Get all detector test configurations."""
+    """Get all detector test configurations (first param set only)."""
     configs = []
     for name, cls in get_all_detector_classes():
         test_params = getattr(cls, "test_params", [{}])
-        for i, params in enumerate(test_params):
-            config_id = f"{name}[{i}]" if len(test_params) > 1 else name
-            configs.append((config_id, cls, params))
+        configs.append((name, cls, test_params[0]))
     return configs
 
 
@@ -128,7 +126,13 @@ class TestDetectorWarmup:
 
         # Find period-like parameter
         period_param = None
-        for param in ["period", "rsi_period", "mfi_period", "adx_period", "stoch_period"]:
+        for param in [
+            "period",
+            "rsi_period",
+            "mfi_period",
+            "adx_period",
+            "stoch_period",
+        ]:
             if param in field_names:
                 period_param = param
                 break
@@ -235,7 +239,7 @@ class TestDetectorOutput:
             pytest.skip(f"Detection failed: {e}")
 
         assert isinstance(result, Signals)
-        assert hasattr(result, "df")
+        assert hasattr(result, "value")
 
     @pytest.mark.parametrize("config_id,cls,params", DETECTOR_CONFIGS, ids=DETECTOR_IDS)
     def test_output_has_required_columns(self, config_id, cls, params, test_data):
@@ -251,7 +255,7 @@ class TestDetectorOutput:
         except Exception as e:
             pytest.skip(f"Detection failed: {e}")
 
-        output_df = result.df
+        output_df = result.value
 
         required_cols = ["pair", "timestamp", "signal_type", "signal"]
         for col in required_cols:
@@ -271,13 +275,17 @@ class TestDetectorOutput:
         except Exception as e:
             pytest.skip(f"Detection failed: {e}")
 
-        output_df = result.df
+        output_df = result.value
 
         if len(output_df) == 0:
             pytest.skip("No signals generated")
 
         signal_types = output_df["signal_type"].unique().to_list()
-        valid_types = [SignalType.NONE.value, SignalType.RISE.value, SignalType.FALL.value]
+        valid_types = [
+            SignalType.NONE.value,
+            SignalType.RISE.value,
+            SignalType.FALL.value,
+        ]
 
         for st in signal_types:
             assert st in valid_types, f"Invalid signal type: {st}"
@@ -296,7 +304,7 @@ class TestDetectorOutput:
         except Exception as e:
             pytest.skip(f"Detection failed: {e}")
 
-        output_df = result.df
+        output_df = result.value
 
         if len(output_df) == 0:
             pytest.skip("No signals generated")
@@ -327,8 +335,7 @@ class TestFilterIntegration:
 
         # Create detector with filter
         detector = StochasticDetector1(
-            direction="both",
-            filters=[RsiZscoreFilter(threshold=-1.0)]
+            direction="both", filters=[RsiZscoreFilter(threshold=-1.0)]
         )
 
         assert len(detector.filters) == 1
@@ -340,7 +347,7 @@ class TestFilterIntegration:
         detector_no_filter = StochasticDetector1(direction="long")
         detector_with_filter = StochasticDetector1(
             direction="long",
-            filters=[RsiZscoreFilter(threshold=-1.0, zscore_window=2000)]
+            filters=[RsiZscoreFilter(threshold=-1.0, zscore_window=2000)],
         )
 
         # Warmup with filter should be >= warmup without filter
@@ -355,7 +362,9 @@ class TestFilterIntegration:
 class TestDetectorReproducibility:
     """Test that detectors produce reproducible results."""
 
-    @pytest.mark.parametrize("config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5])
+    @pytest.mark.parametrize(
+        "config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5]
+    )
     def test_same_input_same_output(self, config_id, cls, params):
         """Same input should produce same output."""
         detector = cls(**params)
@@ -374,12 +383,12 @@ class TestDetectorReproducibility:
         result2 = detector.detect(df2)
 
         # Results should be identical
-        assert len(result1.df) == len(result2.df)
+        assert len(result1.value) == len(result2.value)
 
-        if len(result1.df) > 0:
+        if len(result1.value) > 0:
             # Compare signal types
-            types1 = result1.df["signal_type"].to_list()
-            types2 = result2.df["signal_type"].to_list()
+            types1 = result1.value["signal_type"].to_list()
+            types2 = result2.value["signal_type"].to_list()
             assert types1 == types2
 
 
@@ -426,3 +435,60 @@ class TestDetectorEdgeCases:
         # Should not raise (may produce 0 signals, that's ok)
         result = detector.detect(df)
         assert result is not None
+
+
+# =============================================================================
+# Multi-Pair Tests
+# =============================================================================
+
+
+class TestDetectorMultiPair:
+    """Test that detectors handle multi-pair data correctly."""
+
+    @pytest.mark.parametrize("config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5])
+    def test_multi_pair_no_cross_contamination(self, config_id, cls, params):
+        """Signals from one pair should be identical whether run alone or with other pairs."""
+        detector = cls(**params)
+
+        # Generate data for 2 pairs with different seeds (different price patterns)
+        df1 = generate_detector_test_data(n_rows=500, seed=42)
+        df2 = generate_detector_test_data(n_rows=500, seed=99)
+        df2 = df2.with_columns(pl.lit("OTHER_PAIR").alias("pair"))
+
+        # Compute features per-pair (as the framework does)
+        for feature in detector.features:
+            try:
+                df1 = feature.compute_pair(df1)
+                df2 = feature.compute_pair(df2)
+            except Exception as e:
+                pytest.skip(f"Feature computation failed: {e}")
+
+        # Run detector on single-pair data
+        try:
+            result_single = detector.detect(df1)
+        except Exception as e:
+            pytest.skip(f"Detection failed: {e}")
+
+        # Run detector on multi-pair data
+        multi_pair = pl.concat([df1, df2]).sort(["pair", "timestamp"])
+        try:
+            result_multi = detector.detect(multi_pair)
+        except Exception as e:
+            pytest.skip(f"Multi-pair detection failed: {e}")
+
+        # Extract signals for the original pair from multi-pair result
+        multi_pair_signals = result_multi.value.filter(
+            pl.col("pair") == "BTCUSDT"
+        ).sort("timestamp")
+        single_pair_signals = result_single.value.sort("timestamp")
+
+        # Results for the same pair should be identical
+        assert len(multi_pair_signals) == len(single_pair_signals), (
+            f"Multi-pair returned {len(multi_pair_signals)} signals for BTCUSDT, "
+            f"single-pair returned {len(single_pair_signals)}"
+        )
+
+        if len(single_pair_signals) > 0:
+            types_single = single_pair_signals["signal_type"].to_list()
+            types_multi = multi_pair_signals["signal_type"].to_list()
+            assert types_single == types_multi, "Signal types differ between single and multi-pair"

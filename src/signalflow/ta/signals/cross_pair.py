@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 
 from signalflow import sf_component
-from signalflow.core import Signals, SignalType
+from signalflow.core import Signals, SignalType, SignalCategory
 from signalflow.detector import SignalDetector
 from signalflow.ta.volatility import BollingerVol
 from signalflow.ta.signals.filters import SignalFilter
@@ -59,6 +59,8 @@ class CrossPairDetector1(SignalDetector):
         ```
     """
 
+    signal_category = SignalCategory.MARKET_WIDE
+
     bb_period: int = 2880
     bb_std: float = 1.0
     zscore_window: int = 2880
@@ -103,6 +105,31 @@ class CrossPairDetector1(SignalDetector):
         Returns:
             Signals container with detected signals.
         """
+        pairs = features[self.pair_col].unique().sort().to_list()
+        if len(pairs) > 1:
+            results = []
+            for pair in pairs:
+                pair_df = features.filter(pl.col(self.pair_col) == pair)
+                sig = self._detect_single(pair_df, context)
+                if len(sig.value) > 0:
+                    results.append(sig.value)
+            if results:
+                return Signals(pl.concat(results))
+            return Signals(
+                features.head(0).select(
+                    [
+                        self.pair_col,
+                        self.ts_col,
+                        pl.lit(0).alias("signal_type"),
+                        pl.lit(0.0).alias("signal"),
+                    ]
+                )
+            )
+        return self._detect_single(features, context)
+
+    def _detect_single(
+        self, features: pl.DataFrame, context: dict[str, Any] | None = None
+    ) -> Signals:
         close = features["close"].to_numpy()
         bb_lower = features[self.bb_lower_col].to_numpy()
         n = len(close)
