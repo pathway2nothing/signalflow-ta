@@ -1,14 +1,12 @@
 """Return calculations - log returns and related transforms."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import ClassVar
 
-import numpy as np
 import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature import Feature
-from typing import ClassVar
 
 
 @dataclass

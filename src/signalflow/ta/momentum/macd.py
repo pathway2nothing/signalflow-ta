@@ -106,7 +106,7 @@ class MacdMom(Feature):
 
         # Normalization: z-score for all 3 outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             macd = normalize_zscore(macd, window=norm_window)
@@ -206,7 +206,7 @@ class PpoMom(Feature):
 
         # Normalization: z-score for all 3 outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             ppo = normalize_zscore(ppo, window=norm_window)
@@ -318,7 +318,7 @@ class TsiMom(Feature):
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             tsi = normalize_zscore(tsi, window=norm_window)
@@ -422,7 +422,7 @@ class TrixMom(Feature):
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             trix = normalize_zscore(trix, window=norm_window)

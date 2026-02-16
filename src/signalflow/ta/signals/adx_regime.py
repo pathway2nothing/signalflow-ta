@@ -9,9 +9,9 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
-from signalflow.ta.trend import AdxTrend
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
+from signalflow.ta.trend import AdxTrend
 
 
 @dataclass

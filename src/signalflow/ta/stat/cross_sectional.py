@@ -11,7 +11,7 @@ Example:
 """
 
 from dataclasses import dataclass, field
-from typing import ClassVar, Any
+from typing import Any, ClassVar
 
 import polars as pl
 

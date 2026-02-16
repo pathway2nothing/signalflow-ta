@@ -14,8 +14,6 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-from typing import Type, Any
-from dataclasses import dataclass
 
 from conftest import (
     generate_static_ohlcv,
@@ -23,16 +21,12 @@ from conftest import (
     generate_random_walk_ohlcv,
     generate_empty_column_df,
     generate_ohlcv_with_nulls,
-    generate_multi_pair_ohlcv,
-    validate_ohlcv_constraints,
     SEED,
 )
 
 from indicator_registry import (
     IndicatorConfig,
-    INDICATOR_CONFIGS,
     get_configs_by_category,
-    get_indicator_ids,
     _CONFIGS_FOR_PARAM,
     _IDS_FOR_PARAM,
 )
@@ -408,9 +402,9 @@ class TestIndicatorReproducibility:
                     f"\n{'=' * 70}",
                     f"REPRODUCIBILITY FAILURE: {config.name}",
                     f"{'=' * 70}",
-                    f"Indicator values depend on entry point!",
+                    "Indicator values depend on entry point!",
                     f"Tolerance: 0.0001% ({self.TOLERANCE:.0e})",
-                    f"",
+                    "",
                 ]
 
                 for f in failures:
@@ -421,17 +415,17 @@ class TestIndicatorReproducibility:
                             f"  Mean diff: {f['mean_diff_pct']:.6f}%",
                             f"  Violations: {f['violations']} / {f['total']} samples",
                             f"  Example: full={f['full_value']:.8f}, partial={f['late_value']:.8f}",
-                            f"",
+                            "",
                         ]
                     )
 
                 msg_lines.extend(
                     [
-                        f"This indicator uses EMA/recursive smoothing.",
-                        f"Fix options:",
-                        f"  1. Use SMA for initialization instead of first value",
-                        f"  2. Provide pre-computed warmup data",
-                        f"  3. Increase warmup period in indicator",
+                        "This indicator uses EMA/recursive smoothing.",
+                        "Fix options:",
+                        "  1. Use SMA for initialization instead of first value",
+                        "  2. Provide pre-computed warmup data",
+                        "  3. Increase warmup period in indicator",
                         f"{'=' * 70}",
                     ]
                 )

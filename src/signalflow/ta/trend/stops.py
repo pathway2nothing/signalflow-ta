@@ -1,14 +1,13 @@
 """Trailing stop indicators - trend-following with defined exits."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -100,7 +99,7 @@ class PsarTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             # Use a reasonable default period (20) since PSAR doesn't have an explicit period
             norm_window = self.norm_period or get_norm_window(20)
@@ -221,7 +220,7 @@ class SupertrendTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             supertrend = normalize_zscore(supertrend, window=norm_window)
@@ -316,7 +315,7 @@ class ChandelierTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             chandelier_long = normalize_zscore(chandelier_long, window=norm_window)
@@ -430,7 +429,7 @@ class HiloTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             max_period = max(self.high_period, self.low_period)
             norm_window = self.norm_period or get_norm_window(max_period)
@@ -537,7 +536,7 @@ class CkspTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.p + self.q)
             cksp_long = normalize_zscore(cksp_long, window=norm_window)

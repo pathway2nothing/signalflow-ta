@@ -8,30 +8,30 @@ Modules:
 """
 
 from signalflow.ta.momentum.core import (
-    RsiMom,
-    RocMom,
-    MomMom,
     CmoMom,
+    MomMom,
+    RocMom,
+    RsiMom,
 )
-from signalflow.ta.momentum.oscillators import (
-    StochMom,
-    StochRsiMom,
-    WillrMom,
-    CciMom,
-    UoMom,
-    AoMom,
+from signalflow.ta.momentum.kinematics import (
+    AccelerationMom,
+    AngularMomentumMom,
+    JerkMom,
+    TorqueMom,
 )
 from signalflow.ta.momentum.macd import (
     MacdMom,
     PpoMom,
-    TsiMom,
     TrixMom,
+    TsiMom,
 )
-from signalflow.ta.momentum.kinematics import (
-    AccelerationMom,
-    JerkMom,
-    AngularMomentumMom,
-    TorqueMom,
+from signalflow.ta.momentum.oscillators import (
+    AoMom,
+    CciMom,
+    StochMom,
+    StochRsiMom,
+    UoMom,
+    WillrMom,
 )
 
 __all__ = [

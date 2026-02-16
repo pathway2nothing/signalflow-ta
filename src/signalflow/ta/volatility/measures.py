@@ -1,14 +1,13 @@
 """Other volatility metrics."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -65,7 +64,7 @@ class MassIndexVol(Feature):
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             massi = normalize_zscore(massi, window=norm_window)
@@ -137,7 +136,7 @@ class UlcerIndexVol(Feature):
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ui = normalize_zscore(ui, window=norm_window)
@@ -297,7 +296,7 @@ class HistoricalVol(Feature):
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             hv = normalize_zscore(hv, window=norm_window)
@@ -375,7 +374,7 @@ class AtrPercentVol(Feature):
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             atr_pct = normalize_zscore(atr_pct, window=norm_window)

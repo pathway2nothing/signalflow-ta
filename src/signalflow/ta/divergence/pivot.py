@@ -4,14 +4,14 @@ Pivot Detection Utilities
 Functions for finding local extrema (highs and lows) in time series data.
 """
 
+
 import numpy as np
-from typing import Tuple
 from scipy.signal import argrelextrema
 
 
 def find_pivots_scipy(
     series: np.ndarray, order: int = 5, min_distance: int = 1
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Find local maxima and minima using scipy.signal.argrelextrema.
 
@@ -73,7 +73,7 @@ def find_pivots_scipy(
 
 def find_pivots_window(
     series: np.ndarray, window: int = 5, min_distance: int = 10
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Find local maxima and minima using rolling window comparison.
 

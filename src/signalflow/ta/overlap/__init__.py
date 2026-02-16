@@ -7,39 +7,40 @@ Modules:
     trend - Trend-following overlays (Supertrend, HiLo, Ichimoku)
 """
 
-from signalflow.ta.overlap.smoothers import (
-    SmaSmooth,
-    EmaSmooth,
-    WmaSmooth,
-    RmaSmooth,
-    DemaSmooth,
-    TemaSmooth,
-    HmaSmooth,
-    TrimaSmooth,
-    SwmaSmooth,
-    SsfSmooth,
-    FftSmooth,
-)
 from signalflow.ta.overlap.adaptive import (
-    KamaSmooth,
     AlmaSmooth,
-    JmaSmooth,
-    VidyaSmooth,
-    T3Smooth,
-    ZlmaSmooth,
-    McGinleySmooth,
     FramaSmooth,
+    JmaSmooth,
     KalmanSmooth,
+    KamaSmooth,
+    McGinleySmooth,
+    T3Smooth,
+    VidyaSmooth,
+    ZlmaSmooth,
 )
 from signalflow.ta.overlap.price import (
     Hl2Price,
     Hlc3Price,
-    Ohlc4Price,
-    WcpPrice,
     MidpointPrice,
     MidpricePrice,
+    Ohlc4Price,
     TypicalPrice,
+    WcpPrice,
 )
+from signalflow.ta.overlap.smoothers import (
+    DemaSmooth,
+    EmaSmooth,
+    FftSmooth,
+    HmaSmooth,
+    RmaSmooth,
+    SmaSmooth,
+    SsfSmooth,
+    SwmaSmooth,
+    TemaSmooth,
+    TrimaSmooth,
+    WmaSmooth,
+)
+
 # from signalflow.ta.overlap.trend import (
 #     SupertrendOverlay,
 #     HiloOverlay,

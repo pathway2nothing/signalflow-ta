@@ -146,14 +146,14 @@ class TestReproducibility:
         if failures:
             msg = [
                 f"\nREPRODUCIBILITY FAILURE: {config.name}",
-                f"Indicator values differ based on entry point!",
-                f"",
-                f"Test setup:",
+                "Indicator values differ based on entry point!",
+                "",
+                "Test setup:",
                 f"  Long period: {LONG_PERIOD} bars",
                 f"  Short period: {SHORT_PERIOD} bars",
                 f"  Comparison: last {TEST_LENGTH} bars",
-                f"  Tolerance: 0.01%",
-                f"",
+                "  Tolerance: 0.01%",
+                "",
             ]
 
             for f in failures:
@@ -163,7 +163,7 @@ class TestReproducibility:
                         f"  Max diff: {f['max_diff_pct']:.6f}%",
                         f"  Long value: {f['long_value']:.8f}",
                         f"  Short value: {f['short_value']:.8f}",
-                        f"",
+                        "",
                     ]
                 )
 
@@ -255,15 +255,15 @@ class TestLookAhead:
         if failures:
             msg = [
                 f"\nLOOK-AHEAD BIAS DETECTED: {config.name}",
-                f"Indicator uses future data!",
-                f"",
-                f"Test setup:",
+                "Indicator uses future data!",
+                "",
+                "Test setup:",
                 f"  Long period: {LONG_PERIOD} bars",
                 f"  Short period: {SHORT_PERIOD} bars (truncated)",
                 f"  Comparison: {TEST_LENGTH} bars before truncation point",
-                f"  Tolerance: 0 (must be exact)",
-                f"",
-                f"Failures:",
+                "  Tolerance: 0 (must be exact)",
+                "",
+                "Failures:",
             ]
 
             for failure in failures:

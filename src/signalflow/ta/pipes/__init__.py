@@ -20,66 +20,66 @@ from __future__ import annotations
 
 from signalflow.feature.base import Feature
 
-# Overlap
-from signalflow.ta.pipes.overlap import (
-    smoothers_pipe,
-    price_transforms_pipe,
-    overlap_pipe,
-)
+# Divergence
+from signalflow.ta.pipes.divergence import divergence_pipe
 
 # Momentum
 from signalflow.ta.pipes.momentum import (
     momentum_core_pipe,
-    momentum_oscillators_pipe,
-    momentum_macd_pipe,
     momentum_kinematics_pipe,
+    momentum_macd_pipe,
+    momentum_oscillators_pipe,
     momentum_pipe,
 )
 
-# Volatility
-from signalflow.ta.pipes.volatility import (
-    volatility_range_pipe,
-    volatility_bands_pipe,
-    volatility_measures_pipe,
-    volatility_energy_pipe,
-    volatility_pipe,
-)
-
-# Volume
-from signalflow.ta.pipes.volume import (
-    volume_cumulative_pipe,
-    volume_oscillators_pipe,
-    volume_dynamics_pipe,
-    volume_pipe,
-)
-
-# Trend
-from signalflow.ta.pipes.trend import (
-    trend_strength_pipe,
-    trend_stops_pipe,
-    trend_detection_pipe,
-    trend_pipe,
-)
-
-# Stat
-from signalflow.ta.pipes.stat import (
-    stat_dispersion_pipe,
-    stat_distribution_pipe,
-    stat_memory_pipe,
-    stat_cycle_pipe,
-    stat_regression_pipe,
-    stat_realized_vol_pipe,
-    stat_complexity_pipe,
-    stat_info_theory_pipe,
-    stat_dsp_pipe,
-    stat_pipe,
+# Overlap
+from signalflow.ta.pipes.overlap import (
+    overlap_pipe,
+    price_transforms_pipe,
+    smoothers_pipe,
 )
 
 # Performance
 from signalflow.ta.pipes.performance import performance_pipe
 
-# Divergence
-from signalflow.ta.pipes.divergence import divergence_pipe
+# Stat
+from signalflow.ta.pipes.stat import (
+    stat_complexity_pipe,
+    stat_cycle_pipe,
+    stat_dispersion_pipe,
+    stat_distribution_pipe,
+    stat_dsp_pipe,
+    stat_info_theory_pipe,
+    stat_memory_pipe,
+    stat_pipe,
+    stat_realized_vol_pipe,
+    stat_regression_pipe,
+)
+
+# Trend
+from signalflow.ta.pipes.trend import (
+    trend_detection_pipe,
+    trend_pipe,
+    trend_stops_pipe,
+    trend_strength_pipe,
+)
+
+# Volatility
+from signalflow.ta.pipes.volatility import (
+    volatility_bands_pipe,
+    volatility_energy_pipe,
+    volatility_measures_pipe,
+    volatility_pipe,
+    volatility_range_pipe,
+)
+
+# Volume
+from signalflow.ta.pipes.volume import (
+    volume_cumulative_pipe,
+    volume_dynamics_pipe,
+    volume_oscillators_pipe,
+    volume_pipe,
+)
 
 
 def all_ta_pipe(

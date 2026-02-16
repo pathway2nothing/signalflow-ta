@@ -1,14 +1,13 @@
 """Trend strength indicators - measure how strong a trend is."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -283,7 +282,7 @@ class VortexTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             vi_plus = normalize_zscore(vi_plus, window=norm_window)
@@ -366,7 +365,7 @@ class VhfTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             vhf = normalize_zscore(vhf, window=norm_window)
@@ -539,7 +538,7 @@ class ViscosityTrend(Feature):
                     visc[i] = mean_abs_a / mean_abs_v
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             visc = normalize_zscore(visc, window=norm_window)
@@ -615,7 +614,7 @@ class ReynoldsTrend(Feature):
                     reynolds[i] = np.abs(mean_v) * self.period / std_v
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             reynolds = normalize_zscore(reynolds, window=norm_window)
@@ -683,7 +682,7 @@ class RotationalInertiaTrend(Feature):
                 inertia[i] = np.sum(v_window * log_disp**2)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             inertia = normalize_zscore(inertia, window=norm_window)
@@ -755,7 +754,7 @@ class MarketImpedanceTrend(Feature):
                 impedance[i] = price_range / vol_sum
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             impedance = normalize_zscore(impedance, window=norm_window)
@@ -831,7 +830,7 @@ class RCTimeConstantTrend(Feature):
                 tau[i] = range_sum / price_change
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             tau = normalize_zscore(tau, window=norm_window)
@@ -906,7 +905,7 @@ class SNRTrend(Feature):
                     snr[i] = mean_v**2 / var_v
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             snr = normalize_zscore(snr, window=norm_window)
@@ -1052,7 +1051,7 @@ class SusceptibilityTrend(Feature):
                 chi[i] = np.var(valid, ddof=1) * self.period
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.chi_window)
             chi = normalize_zscore(chi, window=norm_window)

@@ -12,10 +12,8 @@ from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.performance import LogReturn
-from signalflow.ta.signals.filters import SignalFilter
-
-
 from signalflow.ta.signals._utils import _rma_sma_init  # noqa: F401
+from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass

@@ -23,7 +23,6 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.feature.base import Feature
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -391,7 +390,7 @@ class KalmanInnovationStat(Feature):
                 result[i] = _kalman_innovation_variance(valid, self.process_noise)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -489,7 +488,7 @@ class ARCoefficientStat(Feature):
                 result[i] = _ar_coefficient(valid, self.ar_order)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -599,7 +598,7 @@ class LyapunovExponentStat(Feature):
                 result[i] = _max_lyapunov(valid, self.embed_dim, self.tau)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -701,7 +700,7 @@ class PIDErrorStat(Feature):
                 result[i] = _pid_error_signal(valid, self.kp, self.ki, self.kd)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -804,7 +803,7 @@ class PredictionErrorDecompositionStat(Feature):
                 result[i] = _prediction_error_decomp(valid, self.forecast_horizon)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)

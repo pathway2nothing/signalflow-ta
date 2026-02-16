@@ -15,14 +15,13 @@ References:
 
 from dataclasses import dataclass
 from math import factorial, log2
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -360,7 +359,7 @@ class PermutationEntropyStat(Feature):
                 pe[i] = _permutation_entropy(valid, self.m)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             pe = normalize_zscore(pe, window=norm_window)
@@ -460,7 +459,7 @@ class SampleEntropyStat(Feature):
             se[i] = _sample_entropy(valid, self.m, r)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             se = normalize_zscore(se, window=norm_window)
@@ -549,7 +548,7 @@ class LempelZivStat(Feature):
             lzc[i] = _lempel_ziv_complexity(binary)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             lzc = normalize_zscore(lzc, window=norm_window)
@@ -642,7 +641,7 @@ class FisherInformationStat(Feature):
                 fi[i] = _fisher_information(valid, self.bins)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             fi = normalize_zscore(fi, window=norm_window)
@@ -739,7 +738,7 @@ class DfaExponentStat(Feature):
                 dfa[i] = _dfa_exponent(valid, min_box=self.min_box)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             dfa = normalize_zscore(dfa, window=norm_window)

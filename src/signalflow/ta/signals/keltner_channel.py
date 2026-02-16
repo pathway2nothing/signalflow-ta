@@ -9,12 +9,10 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
-from signalflow.ta.volatility import KeltnerVol
-from signalflow.ta.momentum import RsiMom, MacdMom
-from signalflow.ta.signals.filters import SignalFilter
-
-
+from signalflow.ta.momentum import MacdMom, RsiMom
 from signalflow.ta.signals._utils import _rma_sma_init  # noqa: F401
+from signalflow.ta.signals.filters import SignalFilter
+from signalflow.ta.volatility import KeltnerVol
 
 
 @dataclass

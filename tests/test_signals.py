@@ -419,7 +419,6 @@ class TestDetectorEdgeCases:
     @pytest.mark.parametrize("name,cls", get_all_detector_classes()[:5])
     def test_constant_price(self, name, cls):
         """Detector should handle constant price data."""
-        from conftest import generate_static_ohlcv
 
         detector = cls()
         df = generate_static_ohlcv(n_rows=500)

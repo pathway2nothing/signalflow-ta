@@ -1,7 +1,7 @@
 """Adaptive smoothing algorithms that adjust to market conditions."""
 
 from dataclasses import dataclass
-from typing import Literal, ClassVar
+from typing import ClassVar, Literal
 
 import numpy as np
 import polars as pl

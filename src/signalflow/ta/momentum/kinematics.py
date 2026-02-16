@@ -65,7 +65,7 @@ class AccelerationMom(Feature):
                     accel[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(max(self.lag * 2, 10))
             accel = normalize_zscore(accel, window=norm_window)
@@ -154,7 +154,7 @@ class JerkMom(Feature):
                     jerk[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(max(self.lag * 3, 10))
             jerk = normalize_zscore(jerk, window=norm_window)
@@ -246,7 +246,7 @@ class AngularMomentumMom(Feature):
                 L[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             L = normalize_zscore(L, window=norm_window)
@@ -335,7 +335,7 @@ class TorqueMom(Feature):
                 torque[i] = (L[i] - L[i - self.torque_lag]) / self.torque_lag
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             torque = normalize_zscore(torque, window=norm_window)

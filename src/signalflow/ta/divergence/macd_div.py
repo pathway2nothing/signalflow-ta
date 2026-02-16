@@ -4,10 +4,12 @@ MACD Divergence Detector
 Identifies regular and hidden divergences between price and MACD histogram.
 """
 
-import numpy as np
-import polars as pl
 from dataclasses import dataclass
 from typing import ClassVar
+
+import numpy as np
+import polars as pl
+
 from signalflow.core import sf_component
 from signalflow.ta.divergence.base import DivergenceBase
 from signalflow.ta.momentum import MacdMom

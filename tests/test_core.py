@@ -16,9 +16,7 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-from datetime import datetime, timedelta
-from typing import Type, Any
-from dataclasses import dataclass
+from typing import Type
 
 # Import fixtures
 from conftest import (
@@ -27,9 +25,6 @@ from conftest import (
     generate_random_walk_ohlcv,
     generate_empty_column_df,
     generate_ohlcv_with_nulls,
-    validate_ohlcv_constraints,
-    SEED,
-    DEFAULT_ROWS,
 )
 
 

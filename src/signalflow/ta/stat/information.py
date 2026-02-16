@@ -22,7 +22,6 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.feature.base import Feature
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -314,7 +313,7 @@ class KLDivergenceStat(Feature):
             kl[i] = _kl_divergence(p_recent, q_base)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             kl = normalize_zscore(kl, window=norm_window)
@@ -440,7 +439,7 @@ class JSDivergenceStat(Feature):
             jsd[i] = _jensen_shannon_divergence(p_recent, q_base)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             jsd = normalize_zscore(jsd, window=norm_window)
@@ -546,7 +545,7 @@ class RenyiEntropyStat(Feature):
                 renyi[i] = _renyi_entropy(valid, self.bins, self.alpha)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             renyi = normalize_zscore(renyi, window=norm_window)
@@ -645,7 +644,7 @@ class AutoMutualInfoStat(Feature):
                 ami[i] = _auto_mutual_information(valid, self.lag, self.bins)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ami = normalize_zscore(ami, window=norm_window)
@@ -737,7 +736,7 @@ class RelativeInfoGainStat(Feature):
                 ig[i] = _relative_information_gain(valid, sub_window, self.bins)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ig = normalize_zscore(ig, window=norm_window)

@@ -1,14 +1,13 @@
 """Volume-based oscillators."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -134,7 +133,7 @@ class CmfVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             cmf = normalize_zscore(cmf, window=norm_window)
@@ -213,7 +212,7 @@ class EfiVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             efi = normalize_zscore(efi, window=norm_window)
@@ -298,7 +297,7 @@ class EomVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             eom = normalize_zscore(eom, window=norm_window)
@@ -418,7 +417,7 @@ class KvoVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             kvo = normalize_zscore(kvo, window=norm_window)
@@ -500,7 +499,7 @@ class VwapVolume(Feature):
 
         # Normalization: z-score for unbounded price-like indicator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(20)
             vwap = normalize_zscore(vwap, window=norm_window)
@@ -580,7 +579,7 @@ class VwapBandsVolume(Feature):
 
         # Normalization: z-score for unbounded price-like indicators
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             vwap = normalize_zscore(vwap, window=norm_window)

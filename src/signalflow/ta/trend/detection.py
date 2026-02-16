@@ -1,14 +1,13 @@
 """Trend detection systems - identify trend presence and direction."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -75,7 +74,7 @@ class IchimokuTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.senkou)
             tenkan_sen = normalize_zscore(tenkan_sen, window=norm_window)
@@ -165,7 +164,7 @@ class DpoTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             dpo = normalize_zscore(dpo, window=norm_window)
@@ -244,7 +243,7 @@ class QstickTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             qstick = normalize_zscore(qstick, window=norm_window)
@@ -316,7 +315,7 @@ class TtmTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             trend = normalize_zscore(trend, window=norm_window)
@@ -418,7 +417,7 @@ class AtrTrailingTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             trail_long = normalize_zscore(trail_long, window=norm_window)

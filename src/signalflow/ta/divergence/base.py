@@ -5,15 +5,14 @@ Foundation for all divergence detectors with common pivot detection
 and divergence pattern recognition logic.
 """
 
-import numpy as np
-import polars as pl
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+
+import numpy as np
+
 from signalflow.feature.base import Feature
 from signalflow.ta.divergence.pivot import (
-    find_pivots_window,
     find_pivots_scipy,
-    calculate_slope,
+    find_pivots_window,
 )
 
 
@@ -65,7 +64,7 @@ class DivergenceBase(Feature):
 
     requires = ["high", "low", "close"]
 
-    def find_pivots(self, series: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def find_pivots(self, series: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Find local highs and lows in a series.
 
@@ -470,7 +469,7 @@ class DivergenceBase(Feature):
         price: np.ndarray,
         indicator: np.ndarray,
         divergence_idx: np.ndarray,
-        indicator_range: Tuple[float, float] = None,
+        indicator_range: tuple[float, float] = None,
         lookback_for_range: int = None,
     ) -> np.ndarray:
         """

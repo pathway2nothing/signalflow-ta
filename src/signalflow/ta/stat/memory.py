@@ -2,13 +2,13 @@
 """Time series memory measures - persistence, mean-reversion, diffusion, oscillator dynamics."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -248,7 +248,7 @@ class DiffusionCoeffStat(Feature):
                 dc[i] = np.var(valid, ddof=1) / 2.0
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             dc = normalize_zscore(dc, window=norm_window)
@@ -338,7 +338,7 @@ class AnomalousDiffusionStat(Feature):
                 adiff[i] = np.log(msd_long / msd_short) / log_ratio
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             adiff = normalize_zscore(adiff, window=norm_window)
@@ -415,7 +415,7 @@ class MsdRatioStat(Feature):
                 msdr[i] = msd_2tau / msd_tau
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             msdr = normalize_zscore(msdr, window=norm_window)
@@ -514,7 +514,7 @@ class SpringConstantStat(Feature):
                     spring_k[i] = -slope  # k = -slope (restoring force convention)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             spring_k = normalize_zscore(spring_k, window=norm_window)
@@ -615,7 +615,7 @@ class DampingRatioStat(Feature):
                     damping[i] = delta / np.sqrt(4 * np.pi**2 + delta**2)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             damping = normalize_zscore(damping, window=norm_window)
@@ -700,7 +700,7 @@ class NaturalFrequencyStat(Feature):
             natfreq[i] = np.pi * crossings / len(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             natfreq = normalize_zscore(natfreq, window=norm_window)
@@ -791,7 +791,7 @@ class PlasticStrainStat(Feature):
                     plastic[i] = 1.0 - max(corr, 0)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             plastic = normalize_zscore(plastic, window=norm_window)
@@ -899,7 +899,7 @@ class EscapeVelocityStat(Feature):
                             vesc_ratio[i] = abs_v / v_escape
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             vesc_ratio = normalize_zscore(vesc_ratio, window=norm_window)
@@ -983,7 +983,7 @@ class CorrelationLengthStat(Feature):
                 corrlen[i] = self.max_lag
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             corrlen = normalize_zscore(corrlen, window=norm_window)

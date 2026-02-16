@@ -24,7 +24,6 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.feature.base import Feature
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -200,7 +199,7 @@ class SpectralFluxStat(Feature):
             prev_power_norm = curr_power_norm
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             flux = normalize_zscore(flux, window=norm_window)
@@ -282,7 +281,7 @@ class ZeroCrossingRateStat(Feature):
             zcr[i] = float(crossings) / (self.period - 1)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             zcr = normalize_zscore(zcr, window=norm_window)
@@ -378,7 +377,7 @@ class SpectralRolloffStat(Feature):
                 rolloff[i] = float(freqs[-1])
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             rolloff = normalize_zscore(rolloff, window=norm_window)
@@ -473,7 +472,7 @@ class SpectralFlatnessStat(Feature):
             flatness[i] = float(geom_mean / arith_mean)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             flatness = normalize_zscore(flatness, window=norm_window)
@@ -588,7 +587,7 @@ class PowerCepstrumStat(Feature):
                     cepstrum_peak[i] = float(np.max(search_range))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             cepstrum_peak = normalize_zscore(cepstrum_peak, window=norm_window)
@@ -680,7 +679,7 @@ class SpectralBandwidthStat(Feature):
             result[i] = float(np.sqrt(variance))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -765,7 +764,7 @@ class SpectralSlopeStat(Feature):
             result[i] = float(slope)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -856,7 +855,7 @@ class SpectralKurtosisStat(Feature):
             result[i] = float(kurtosis)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -969,7 +968,7 @@ class SpectralContrastStat(Feature):
                 result[i] = float(np.mean(contrasts))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -1092,7 +1091,7 @@ class MFCCBandEnergyStat(Feature):
             result[i] = float(np.sqrt(np.sum(selected**2)))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)

@@ -7,42 +7,42 @@ Modules:
     regime - Trend regime detectors (Alligator, TwoMA, SMA/LinReg direction)
 """
 
-from signalflow.ta.trend.strength import (
-    AdxTrend,
-    AroonTrend,
-    VortexTrend,
-    VhfTrend,
-    ChopTrend,
-    ViscosityTrend,
-    ReynoldsTrend,
-    RotationalInertiaTrend,
-    MarketImpedanceTrend,
-    RCTimeConstantTrend,
-    SNRTrend,
-    OrderParameterTrend,
-    SusceptibilityTrend,
-)
-from signalflow.ta.trend.stops import (
-    PsarTrend,
-    SupertrendTrend,
-    ChandelierTrend,
-    HiloTrend,
-    CkspTrend,
-)
 from signalflow.ta.trend.detection import (
-    IchimokuTrend,
     DpoTrend,
+    IchimokuTrend,
     QstickTrend,
     TtmTrend,
 )
 from signalflow.ta.trend.regime import (
-    WilliamsAlligatorRegime,
-    TwoMaRegime,
-    SmaDirection,
-    SmaDiffDirection,
-    LinRegDirection,
     LinRegDiffDirection,
+    LinRegDirection,
     LinRegPriceDiff,
+    SmaDiffDirection,
+    SmaDirection,
+    TwoMaRegime,
+    WilliamsAlligatorRegime,
+)
+from signalflow.ta.trend.stops import (
+    ChandelierTrend,
+    CkspTrend,
+    HiloTrend,
+    PsarTrend,
+    SupertrendTrend,
+)
+from signalflow.ta.trend.strength import (
+    AdxTrend,
+    AroonTrend,
+    ChopTrend,
+    MarketImpedanceTrend,
+    OrderParameterTrend,
+    RCTimeConstantTrend,
+    ReynoldsTrend,
+    RotationalInertiaTrend,
+    SNRTrend,
+    SusceptibilityTrend,
+    VhfTrend,
+    ViscosityTrend,
+    VortexTrend,
 )
 
 __all__ = [

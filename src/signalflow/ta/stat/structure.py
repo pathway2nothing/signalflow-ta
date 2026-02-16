@@ -29,9 +29,7 @@ def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray
 
     # First window
     for i in range(2, min(window_size, n)):
-        if close[i] > close[i - 1] and close[i - 1] < close[i - 2]:
-            reverse_count += 1
-        elif close[i] < close[i - 1] and close[i - 1] > close[i - 2]:
+        if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (close[i] < close[i - 1] and close[i - 1] > close[i - 2]):
             reverse_count += 1
         reverse_counts[i] = reverse_count
 
@@ -39,17 +37,13 @@ def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray
 
     # Rolling window
     for i in range(window_size, n):
-        if close[i] > close[i - 1] and close[i - 1] < close[i - 2]:
-            reverse_count += 1
-        elif close[i] < close[i - 1] and close[i - 1] > close[i - 2]:
+        if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (close[i] < close[i - 1] and close[i - 1] > close[i - 2]):
             reverse_count += 1
 
         if (
             close[tail_idx] > close[tail_idx - 1]
             and close[tail_idx] > close[tail_idx + 1]
-        ):
-            reverse_count -= 1
-        elif (
+        ) or (
             close[tail_idx] < close[tail_idx - 1]
             and close[tail_idx] < close[tail_idx + 1]
         ):

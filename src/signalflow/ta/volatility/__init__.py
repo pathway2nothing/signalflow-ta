@@ -7,32 +7,32 @@ Modules:
     measures - Other volatility metrics (Mass Index, Ulcer Index, RVI)
 """
 
-from signalflow.ta.volatility.range import (
-    TrueRangeVol,
-    AtrVol,
-    NatrVol,
-)
 from signalflow.ta.volatility.bands import (
-    BollingerVol,
-    KeltnerVol,
-    DonchianVol,
     AccBandsVol,
+    BollingerVol,
+    DonchianVol,
+    KeltnerVol,
 )
-from signalflow.ta.volatility.measures import (
-    MassIndexVol,
-    UlcerIndexVol,
-    RviVol,
-)
-from signalflow.ta.volatility.gaps import GapVol
 from signalflow.ta.volatility.energy import (
+    ElasticStrainVol,
+    EnergyFlowVol,
+    FreeEnergyVol,
+    HeatCapacityVol,
     KineticEnergyVol,
     PotentialEnergyVol,
-    TotalEnergyVol,
-    EnergyFlowVol,
-    ElasticStrainVol,
     TemperatureVol,
-    HeatCapacityVol,
-    FreeEnergyVol,
+    TotalEnergyVol,
+)
+from signalflow.ta.volatility.gaps import GapVol
+from signalflow.ta.volatility.measures import (
+    MassIndexVol,
+    RviVol,
+    UlcerIndexVol,
+)
+from signalflow.ta.volatility.range import (
+    AtrVol,
+    NatrVol,
+    TrueRangeVol,
 )
 
 __all__ = [

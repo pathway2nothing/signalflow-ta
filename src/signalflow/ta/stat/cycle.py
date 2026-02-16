@@ -71,7 +71,7 @@ class InstAmplitudeStat(Feature):
             amplitude[i] = amp
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             amplitude = normalize_zscore(amplitude, window=norm_window)
@@ -204,7 +204,7 @@ class InstFrequencyStat(Feature):
                 freq[i] = dp
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             freq = normalize_zscore(freq, window=norm_window)
@@ -283,7 +283,7 @@ class PhaseAccelerationStat(Feature):
                 phaseaccel[i] = freq[i] - freq[i - 1]
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             phaseaccel = normalize_zscore(phaseaccel, window=norm_window)
@@ -386,7 +386,7 @@ class ConstructiveInterferenceStat(Feature):
             interf = interf_raw
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow_period)
             interf = normalize_zscore(interf, window=norm_window)
@@ -489,7 +489,7 @@ class BeatFrequencyStat(Feature):
                 beat[i] = np.abs(freq_fast[i] - freq_slow[i])
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow_period)
             beat = normalize_zscore(beat, window=norm_window)
@@ -575,7 +575,7 @@ class StandingWaveRatioStat(Feature):
                     swr[i] = max_amp / min_amp
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             swr = normalize_zscore(swr, window=norm_window)
@@ -661,7 +661,7 @@ class SpectralCentroidStat(Feature):
                 centroid[i] = np.sum(freqs * power) / total_power
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             centroid = normalize_zscore(centroid, window=norm_window)

@@ -67,7 +67,7 @@ class MarketForceVolume(Feature):
                 force[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             force = normalize_zscore(force, window=norm_window)
@@ -149,7 +149,7 @@ class ImpulseVolume(Feature):
                 impulse[i] = np.sum(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             impulse = normalize_zscore(impulse, window=norm_window)
@@ -228,7 +228,7 @@ class MarketMomentumVolume(Feature):
                 mmom[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mmom = normalize_zscore(mmom, window=norm_window)
@@ -314,7 +314,7 @@ class MarketPowerVolume(Feature):
                 mpower[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mpower = normalize_zscore(mpower, window=norm_window)
@@ -379,7 +379,7 @@ class MarketCapacitanceVolume(Feature):
                 mcap[i] = vol_sum / price_change
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mcap = normalize_zscore(mcap, window=norm_window)
@@ -448,7 +448,7 @@ class GravitationalPullVolume(Feature):
             gpull[i] = total_pull
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             gpull = normalize_zscore(gpull, window=norm_window)

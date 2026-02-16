@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
 import json
+from dataclasses import dataclass
+from typing import Any
 
 import polars as pl
 
@@ -38,26 +38,26 @@ class AutoFeatureNormalizer:
     winsor_high_q: float = 0.99
 
     keep_original: bool = False  # if False -> only normalized features
-    always_include: Tuple[str, ...] = (
+    always_include: tuple[str, ...] = (
         "robust",
     )  # base channels for each feature: "robust"|"z"|"rank"|"none"
     allow_multi: bool = True  # allow multiple channels per feature
 
-    artifact: Optional[Dict[str, Any]] = None
+    artifact: dict[str, Any] | None = None
 
-    _CHANNEL_TO_METHOD: Dict[str, str] = {
+    _CHANNEL_TO_METHOD: dict[str, str] = {
         "robust": "rolling_robust",
         "z": "rolling_z",
         "rank": "rolling_rank",
     }
 
-    def fit(self, df: pl.DataFrame) -> Dict[str, Any]:
+    def fit(self, df: pl.DataFrame) -> dict[str, Any]:
         df = self._ensure_sorted(df)
         feature_cols = self._feature_cols(df)
 
         stats = self._compute_feature_stats(df, feature_cols)
 
-        plan: Dict[str, Dict[str, Any]] = {}
+        plan: dict[str, dict[str, Any]] = {}
         for col in feature_cols:
             col_stats = stats.get(col, {})
             plan[col] = self._decide_plan_for_col(col_stats)
@@ -76,7 +76,7 @@ class AutoFeatureNormalizer:
         return self.transform(df, art)
 
     def transform(
-        self, df: pl.DataFrame, artifact: Optional[Dict[str, Any]] = None
+        self, df: pl.DataFrame, artifact: dict[str, Any] | None = None
     ) -> pl.DataFrame:
         art = artifact or self.artifact
         if art is None:
@@ -86,17 +86,17 @@ class AutoFeatureNormalizer:
             raise ValueError(f"Unsupported artifact version: {art.get('version')}")
 
         df = self._ensure_sorted(df)
-        feature_cols: List[str] = art["feature_cols"]
-        plan: Dict[str, Dict[str, Any]] = art["plan"]
+        feature_cols: list[str] = art["feature_cols"]
+        plan: dict[str, dict[str, Any]] = art["plan"]
 
         missing = set(feature_cols) - set(df.columns)
         if missing:
             raise ValueError(f"Missing feature columns in DataFrame: {sorted(missing)}")
 
-        exprs: List[pl.Expr] = []
+        exprs: list[pl.Expr] = []
         for col in feature_cols:
             p = plan.get(col, {"methods": []})
-            methods: List[str] = p.get("methods", [])
+            methods: list[str] = p.get("methods", [])
             if not methods:
                 methods = ["rolling_robust"]
 
@@ -108,7 +108,7 @@ class AutoFeatureNormalizer:
             return df.with_columns(exprs)
         return df.select(base_cols + exprs)
 
-    def save(self, path: str, artifact: Optional[Dict[str, Any]] = None) -> None:
+    def save(self, path: str, artifact: dict[str, Any] | None = None) -> None:
         art = artifact or self.artifact
         if art is None:
             raise ValueError("No artifact to save. Call fit() first.")
@@ -116,11 +116,11 @@ class AutoFeatureNormalizer:
             json.dump(art, f, ensure_ascii=False, indent=2)
 
     @staticmethod
-    def load(path: str) -> Dict[str, Any]:
-        with open(path, "r", encoding="utf-8") as f:
+    def load(path: str) -> dict[str, Any]:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
 
-    def _decide_plan_for_col(self, s: Dict[str, Any]) -> Dict[str, Any]:
+    def _decide_plan_for_col(self, s: dict[str, Any]) -> dict[str, Any]:
         """
         Decide which normalization methods to add for a feature.
 
@@ -131,7 +131,7 @@ class AutoFeatureNormalizer:
           - rolling_z: (x - rolling_mean)/rolling_std
           - rolling_rank: rolling percentile rank in window
         """
-        methods: List[str] = []
+        methods: list[str] = []
 
         if s.get("n_unique_min", 0) < self.min_unique:
             return {"methods": ["rolling_robust"]}
@@ -225,8 +225,8 @@ class AutoFeatureNormalizer:
         raise ValueError(f"Unknown method: {method}")
 
     def _compute_feature_stats(
-        self, df: pl.DataFrame, feature_cols: List[str]
-    ) -> Dict[str, Dict[str, Any]]:
+        self, df: pl.DataFrame, feature_cols: list[str]
+    ) -> dict[str, dict[str, Any]]:
         """
         Compute robust-enough per-feature stats to drive decisions.
 
@@ -253,7 +253,7 @@ class AutoFeatureNormalizer:
 
         per_pair = df.group_by(self.pair_col).agg(aggs)
 
-        out: Dict[str, Dict[str, Any]] = {}
+        out: dict[str, dict[str, Any]] = {}
 
         for c in feature_cols:
             mean_col = pl.col(f"{c}__mean")
@@ -298,7 +298,7 @@ class AutoFeatureNormalizer:
 
         return out
 
-    def _config_dict(self) -> Dict[str, Any]:
+    def _config_dict(self) -> dict[str, Any]:
         return {
             "ts_col": self.ts_col,
             "pair_col": self.pair_col,
@@ -317,7 +317,7 @@ class AutoFeatureNormalizer:
             "allow_multi": self.allow_multi,
         }
 
-    def _feature_cols(self, df: pl.DataFrame) -> List[str]:
+    def _feature_cols(self, df: pl.DataFrame) -> list[str]:
         meta = {self.ts_col, self.pair_col}
         return [c for c in df.columns if c not in meta]
 

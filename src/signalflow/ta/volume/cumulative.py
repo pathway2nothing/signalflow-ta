@@ -1,14 +1,14 @@
 """Cumulative volume-price indicators."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
+from numba import njit
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
-from numba import njit
 
 
 @njit
@@ -78,7 +78,7 @@ class ObvVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             obv = normalize_zscore(obv, window=norm_window)
@@ -161,7 +161,7 @@ class AdVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ad = normalize_zscore(ad, window=norm_window)
@@ -236,7 +236,7 @@ class PvtVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             pvt = normalize_zscore(pvt, window=norm_window)
@@ -314,7 +314,7 @@ class NviVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             nvi = normalize_zscore(nvi, window=norm_window)
@@ -393,7 +393,7 @@ class PviVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             pvi = normalize_zscore(pvi, window=norm_window)

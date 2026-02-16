@@ -2,14 +2,15 @@
 """Distribution shape measures - position, moments, information."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
-from scipy.stats import kurtosis as sp_kurtosis, skew as sp_skew
+from scipy.stats import kurtosis as sp_kurtosis
+from scipy.stats import skew as sp_skew
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
@@ -541,7 +542,7 @@ class EntropyRateStat(Feature):
                 erate[i] = (entropy[i] - entropy[i - self.lag]) / self.lag
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             erate = normalize_zscore(erate, window=norm_window)

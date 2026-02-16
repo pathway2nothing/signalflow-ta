@@ -94,7 +94,7 @@ class GapVol(Feature):
 
         # Normalization for unbounded outputs
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(20)
             gap_val = normalize_zscore(gap_val, window=norm_window)

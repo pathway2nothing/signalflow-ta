@@ -9,7 +9,7 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
-from signalflow.ta.momentum import RsiMom, MacdMom
+from signalflow.ta.momentum import MacdMom, RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 
 

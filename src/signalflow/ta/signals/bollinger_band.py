@@ -9,8 +9,8 @@ import polars as pl
 from signalflow import sf_component
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
-from signalflow.ta.volatility import BollingerVol
 from signalflow.ta.signals.filters import SignalFilter
+from signalflow.ta.volatility import BollingerVol
 
 
 @dataclass

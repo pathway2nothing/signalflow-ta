@@ -12,7 +12,6 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-from typing import Type
 
 from conftest import generate_sinusoidal_ohlcv, generate_random_walk_ohlcv
 
@@ -24,17 +23,13 @@ from signalflow.ta import (
     WilliamsAlligatorRegime,
     TwoMaRegime,
     SmaDirection,
-    SmaDiffDirection,
     LinRegDirection,
-    LinRegDiffDirection,
     LinRegPriceDiff,
     # Structure Statistics
     ReversePointsStat,
     TimeSinceSpikeStat,
     VolatilitySpikeStat,
-    VolatilitySpikeDiffStat,
     VolumeSpikeStat,
-    VolumeSpikeDiffStat,
     RollingMinStat,
     RollingMaxStat,
 )

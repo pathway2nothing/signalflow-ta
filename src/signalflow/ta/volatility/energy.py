@@ -58,7 +58,7 @@ class KineticEnergyVol(Feature):
                 ke[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ke = normalize_zscore(ke, window=norm_window)
@@ -139,7 +139,7 @@ class PotentialEnergyVol(Feature):
                 pe[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             pe = normalize_zscore(pe, window=norm_window)
@@ -230,7 +230,7 @@ class TotalEnergyVol(Feature):
                 te[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             te = normalize_zscore(te, window=norm_window)
@@ -322,7 +322,7 @@ class EnergyFlowVol(Feature):
                 eflow[i] = te[i] - te[i - self.flow_lag]
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             eflow = normalize_zscore(eflow, window=norm_window)
@@ -394,7 +394,7 @@ class ElasticStrainVol(Feature):
                 strain[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             strain = normalize_zscore(strain, window=norm_window)
@@ -464,7 +464,7 @@ class TemperatureVol(Feature):
                 temp[i] = np.var(valid, ddof=1) * self.period
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             temp = normalize_zscore(temp, window=norm_window)
@@ -558,7 +558,7 @@ class HeatCapacityVol(Feature):
                     hcap[i] = d_temp / d_energy
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             hcap = normalize_zscore(hcap, window=norm_window)
@@ -642,7 +642,7 @@ class FreeEnergyVol(Feature):
             fenergy[i] = energy - temperature * entropy
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             fenergy = normalize_zscore(fenergy, window=norm_window)

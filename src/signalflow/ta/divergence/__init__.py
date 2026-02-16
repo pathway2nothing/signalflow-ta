@@ -18,11 +18,11 @@ Divergence Types:
 """
 
 from signalflow.ta.divergence.base import DivergenceBase
-from signalflow.ta.divergence.rsi_div import RsiDivergence
 from signalflow.ta.divergence.macd_div import MacdDivergence
+from signalflow.ta.divergence.rsi_div import RsiDivergence
 
 __all__ = [
     "DivergenceBase",
-    "RsiDivergence",
     "MacdDivergence",
+    "RsiDivergence",
 ]
