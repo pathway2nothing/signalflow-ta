@@ -246,7 +246,8 @@ class DivergenceDetector1(SignalDetector):
         n = len(close)
 
         bullish, bearish = _detect_divergence(
-            close, rsi,
+            close,
+            rsi,
             lookback=self.lookback,
             min_distance=self.min_distance,
             extrema_window=self.extrema_window,
@@ -349,7 +350,8 @@ class DivergenceDetector2(SignalDetector):
         rsi_sub = rsi[sub_idx]
 
         bull_sub, bear_sub = _detect_divergence(
-            close_sub, rsi_sub,
+            close_sub,
+            rsi_sub,
             lookback=self.lookback,
             min_distance=self.min_distance,
             extrema_window=self.extrema_window,
@@ -373,7 +375,9 @@ class DivergenceDetector2(SignalDetector):
 
     @property
     def warmup(self) -> int:
-        base_warmup = (self.rsi_period * 10 + self.lookback + self.extrema_window) * self.offset
+        base_warmup = (
+            self.rsi_period * 10 + self.lookback + self.extrema_window
+        ) * self.offset
         filter_warmup = max((f.warmup for f in self.filters), default=0)
         return max(base_warmup, filter_warmup)
 
@@ -436,7 +440,8 @@ class DivergenceDetector3(SignalDetector):
         n = len(close)
 
         bullish, bearish = _detect_divergence(
-            close, macd_hist,
+            close,
+            macd_hist,
             lookback=self.lookback,
             min_distance=self.min_distance,
             extrema_window=self.extrema_window,

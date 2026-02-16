@@ -445,7 +445,9 @@ class TestDetectorEdgeCases:
 class TestDetectorMultiPair:
     """Test that detectors handle multi-pair data correctly."""
 
-    @pytest.mark.parametrize("config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5])
+    @pytest.mark.parametrize(
+        "config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5]
+    )
     def test_multi_pair_no_cross_contamination(self, config_id, cls, params):
         """Signals from one pair should be identical whether run alone or with other pairs."""
         detector = cls(**params)
@@ -491,4 +493,6 @@ class TestDetectorMultiPair:
         if len(single_pair_signals) > 0:
             types_single = single_pair_signals["signal_type"].to_list()
             types_multi = multi_pair_signals["signal_type"].to_list()
-            assert types_single == types_multi, "Signal types differ between single and multi-pair"
+            assert types_single == types_multi, (
+                "Signal types differ between single and multi-pair"
+            )
