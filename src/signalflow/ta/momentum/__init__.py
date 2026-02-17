@@ -35,26 +35,26 @@ from signalflow.ta.momentum.oscillators import (
 )
 
 __all__ = [
+    # Kinematics
+    "AccelerationMom",
+    "AngularMomentumMom",
+    "AoMom",
+    "CciMom",
+    "CmoMom",
+    "JerkMom",
+    # MACD family
+    "MacdMom",
+    "MomMom",
+    "PpoMom",
+    "RocMom",
     # Core
     "RsiMom",
-    "RocMom",
-    "MomMom",
-    "CmoMom",
     # Oscillators
     "StochMom",
     "StochRsiMom",
-    "WillrMom",
-    "CciMom",
-    "UoMom",
-    "AoMom",
-    # MACD family
-    "MacdMom",
-    "PpoMom",
-    "TsiMom",
-    "TrixMom",
-    # Kinematics
-    "AccelerationMom",
-    "JerkMom",
-    "AngularMomentumMom",
     "TorqueMom",
+    "TrixMom",
+    "TsiMom",
+    "UoMom",
+    "WillrMom",
 ]

@@ -67,8 +67,8 @@ class MacdMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["macd_{fast}_{slow}", "macd_signal_{signal}", "macd_hist_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["macd_{fast}_{slow}", "macd_signal_{signal}", "macd_hist_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -95,9 +95,7 @@ class MacdMom(Feature):
             signal_line[signal_start] = np.mean(macd[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
-                signal_line[i] = (
-                    alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
-                )
+                signal_line[i] = alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
 
         histogram = macd - signal_line
 
@@ -172,8 +170,8 @@ class PpoMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["ppo_{fast}_{slow}", "ppo_signal_{signal}", "ppo_hist_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["ppo_{fast}_{slow}", "ppo_signal_{signal}", "ppo_hist_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -197,9 +195,7 @@ class PpoMom(Feature):
             signal_line[signal_start] = np.mean(ppo[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
-                signal_line[i] = (
-                    alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
-                )
+                signal_line[i] = alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
 
         histogram = ppo - signal_line
         ppo[:start_idx] = np.nan
@@ -273,8 +269,8 @@ class TsiMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["tsi_{fast}_{slow}", "tsi_signal_{signal}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["tsi_{fast}_{slow}", "tsi_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -312,9 +308,7 @@ class TsiMom(Feature):
 
                 for i in range(signal_start + 1, n):
                     if not np.isnan(tsi[i]) and not np.isnan(tsi_signal[i - 1]):
-                        tsi_signal[i] = (
-                            alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
-                        )
+                        tsi_signal[i] = alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
@@ -382,8 +376,8 @@ class TrixMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["trix_{period}", "trix_signal_{signal}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["trix_{period}", "trix_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -416,9 +410,7 @@ class TrixMom(Feature):
 
                 for i in range(signal_start + 1, n):
                     if not np.isnan(trix[i]) and not np.isnan(trix_signal[i - 1]):
-                        trix_signal[i] = (
-                            alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
-                        )
+                        trix_signal[i] = alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
 
         # Normalization: z-score for both outputs independently
         if self.normalized:

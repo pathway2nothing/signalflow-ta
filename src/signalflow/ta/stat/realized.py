@@ -29,8 +29,8 @@ class RealizedVolStat(Feature):
     annualize: bool = True
     trading_periods: int = 252
 
-    requires = ["close"]
-    outputs = ["realized_vol_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["realized_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -56,12 +56,7 @@ class RealizedVolStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return (
-            getattr(
-                self, "period", getattr(self, "length", getattr(self, "window", 20))
-            )
-            * 5
-        )
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
 
 
 @dataclass
@@ -82,8 +77,8 @@ class ParkinsonVolStat(Feature):
     annualize: bool = True
     trading_periods: int = 252
 
-    requires = ["high", "low"]
-    outputs = ["parkinson_vol_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[dict]] = ["parkinson_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -97,14 +92,9 @@ class ParkinsonVolStat(Feature):
         pv = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             window = hl_log[i - self.period + 1 : i + 1]
-            pv[i] = (
-                np.sqrt(factor_base * np.nansum(window**2) / self.period)
-                * factor_annual
-            )
+            pv[i] = np.sqrt(factor_base * np.nansum(window**2) / self.period) * factor_annual
 
-        return df.with_columns(
-            pl.Series(name=f"parkinson_vol_{self.period}", values=pv)
-        )
+        return df.with_columns(pl.Series(name=f"parkinson_vol_{self.period}", values=pv))
 
     test_params: ClassVar[list[dict]] = [
         {"period": 30, "annualize": True, "trading_periods": 252},
@@ -135,17 +125,17 @@ class GarmanKlassVolStat(Feature):
     annualize: bool = True
     trading_periods: int = 252
 
-    requires = ["open", "high", "low", "close"]
-    outputs = ["gk_vol_{period}"]
+    requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["gk_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         o = df["open"].to_numpy()
         h = df["high"].to_numpy()
-        l = df["low"].to_numpy()
+        low = df["low"].to_numpy()
         c = df["close"].to_numpy()
         n = len(c)
 
-        hl = np.log(h / l) ** 2
+        hl = np.log(h / low) ** 2
         co = np.log(c / o) ** 2
 
         factor = 2 * np.log(2) - 1
@@ -189,18 +179,18 @@ class RogersSatchellVolStat(Feature):
     annualize: bool = True
     trading_periods: int = 252
 
-    requires = ["open", "high", "low", "close"]
-    outputs = ["rs_vol_{period}"]
+    requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["rs_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         o = df["open"].to_numpy()
         h = df["high"].to_numpy()
-        l = df["low"].to_numpy()
+        low = df["low"].to_numpy()
         c = df["close"].to_numpy()
         n = len(c)
 
         term1 = np.log(h / c) * np.log(h / o)
-        term2 = np.log(l / c) * np.log(l / o)
+        term2 = np.log(low / c) * np.log(low / o)
 
         factor_annual = np.sqrt(self.trading_periods) if self.annualize else 1.0
 
@@ -243,13 +233,13 @@ class YangZhangVolStat(Feature):
     annualize: bool = True
     trading_periods: int = 252
 
-    requires = ["open", "high", "low", "close"]
-    outputs = ["yz_vol_{period}"]
+    requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["yz_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         o = df["open"].to_numpy()
         h = df["high"].to_numpy()
-        l = df["low"].to_numpy()
+        low = df["low"].to_numpy()
         c = df["close"].to_numpy()
         n = len(c)
 
@@ -258,7 +248,7 @@ class YangZhangVolStat(Feature):
 
         log_co = np.log(c / o)
 
-        rs_term = np.log(h / c) * np.log(h / o) + np.log(l / c) * np.log(l / o)
+        rs_term = np.log(h / c) * np.log(h / o) + np.log(low / c) * np.log(low / o)
 
         factor_annual = np.sqrt(self.trading_periods) if self.annualize else 1.0
         k = 0.34 / (1.34 + (self.period + 1) / (self.period - 1))

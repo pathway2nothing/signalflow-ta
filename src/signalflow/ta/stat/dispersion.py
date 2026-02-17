@@ -25,8 +25,8 @@ class VarianceStat(Feature):
     period: int = 30
     ddof: int = 1
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_var_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_var_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(
@@ -44,12 +44,7 @@ class VarianceStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return (
-            getattr(
-                self, "period", getattr(self, "length", getattr(self, "window", 20))
-            )
-            * 5
-        )
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
 
 
 @dataclass
@@ -66,8 +61,8 @@ class StdStat(Feature):
     period: int = 30
     ddof: int = 1
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_std_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_std_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(
@@ -103,8 +98,8 @@ class MadStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_mad_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_mad_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -115,9 +110,7 @@ class MadStat(Feature):
             window = values[i - self.period + 1 : i + 1]
             mad[i] = np.mean(np.abs(window - np.mean(window)))
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_mad_{self.period}", values=mad)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_mad_{self.period}", values=mad))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -147,17 +140,15 @@ class ZscoreStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_zscore_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_zscore_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
         mean = col.rolling_mean(window_size=self.period)
         std = col.rolling_std(window_size=self.period)
 
-        return df.with_columns(
-            ((col - mean) / std).alias(f"{self.source_col}_zscore_{self.period}")
-        )
+        return df.with_columns(((col - mean) / std).alias(f"{self.source_col}_zscore_{self.period}"))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -187,17 +178,15 @@ class CvStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_cv_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_cv_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
         std = col.rolling_std(window_size=self.period)
         mean = col.rolling_mean(window_size=self.period).abs()
 
-        return df.with_columns(
-            (std / mean).alias(f"{self.source_col}_cv_{self.period}")
-        )
+        return df.with_columns((std / mean).alias(f"{self.source_col}_cv_{self.period}"))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -226,16 +215,15 @@ class RangeStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_range_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_range_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
         return df.with_columns(
-            (
-                col.rolling_max(window_size=self.period)
-                - col.rolling_min(window_size=self.period)
-            ).alias(f"{self.source_col}_range_{self.period}")
+            (col.rolling_max(window_size=self.period) - col.rolling_min(window_size=self.period)).alias(
+                f"{self.source_col}_range_{self.period}"
+            )
         )
 
     test_params: ClassVar[list[dict]] = [
@@ -265,8 +253,8 @@ class IqrStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_iqr_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_iqr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -302,8 +290,8 @@ class AadStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_aad_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_aad_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -314,9 +302,7 @@ class AadStat(Feature):
             window = values[i - self.period + 1 : i + 1]
             aad[i] = np.mean(np.abs(window - np.median(window)))
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_aad_{self.period}", values=aad)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_aad_{self.period}", values=aad))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -346,8 +332,8 @@ class RobustZscoreStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_robz_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_robz_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -364,9 +350,7 @@ class RobustZscoreStat(Feature):
             if mad > 1e-10:
                 robz[i] = (values[i] - median) / (scale * mad)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_robz_{self.period}", values=robz)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_robz_{self.period}", values=robz))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},

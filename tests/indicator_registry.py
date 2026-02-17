@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
-from typing import Type
 
 TEST_PARAMS_LIMIT = 1
 
@@ -18,7 +17,7 @@ TEST_PARAMS_LIMIT = 1
 class IndicatorConfig:
     """Configuration for testing an indicator."""
 
-    cls: Type
+    cls: type
     name: str
     category: str
     params: dict = field(default_factory=dict)
@@ -39,15 +38,13 @@ class IndicatorConfig:
         if self.variation_idx is not None:
             # Create readable param string: period=7,std=2.0
             param_str = ",".join(
-                f"{k}={v}"
-                for k, v in self.params.items()
-                if k not in ("source_col", "pair_col", "ts_col")
+                f"{k}={v}" for k, v in self.params.items() if k not in ("source_col", "pair_col", "ts_col")
             )
             return f"{base}({param_str})"
         return base
 
 
-def get_default_params(cls: Type) -> dict:
+def get_default_params(cls: type) -> dict:
     """Extract default parameters from indicator class."""
     params = {}
 
@@ -82,15 +79,15 @@ def get_default_params(cls: Type) -> dict:
                 if field_info.default is not None and not callable(field_info.default):
                     params[name] = field_info.default
             elif field_info.default_factory is not _dc.MISSING:
-                try:
+                import contextlib
+
+                with contextlib.suppress(Exception):
                     params[name] = field_info.default_factory()
-                except:
-                    pass
 
     return params
 
 
-def get_requires(cls: Type) -> list[str]:
+def get_requires(cls: type) -> list[str]:
     """Extract required columns from indicator class."""
     # Check class attribute
     if hasattr(cls, "requires"):
@@ -103,7 +100,7 @@ def get_requires(cls: Type) -> list[str]:
     return ["close"]
 
 
-def get_outputs(cls: Type, params: dict) -> list[str]:
+def get_outputs(cls: type, params: dict) -> list[str]:
     """Extract output column names from indicator class."""
     if hasattr(cls, "outputs"):
         outputs = cls.outputs
@@ -140,7 +137,7 @@ def get_outputs(cls: Type, params: dict) -> list[str]:
     return [name]
 
 
-def get_bounds(cls: Type, category: str) -> tuple[float, float] | None:
+def get_bounds(cls: type, category: str) -> tuple[float, float] | None:
     """Determine value bounds based on indicator type."""
     name = cls.__name__.lower()
 
@@ -231,7 +228,7 @@ def get_bounds(cls: Type, category: str) -> tuple[float, float] | None:
     return None
 
 
-def get_warmup(cls: Type, params: dict) -> int:
+def get_warmup(cls: type, params: dict) -> int:
     """Estimate warmup period based on parameters.
 
     Handles various indicator parameter patterns:
@@ -428,134 +425,134 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
 
     try:
         from signalflow.ta import (
-            # Momentum
-            RsiMom,
-            RocMom,
-            MomMom,
-            CmoMom,
-            StochMom,
-            StochRsiMom,
-            WillrMom,
-            CciMom,
-            UoMom,
-            AoMom,
-            MacdMom,
-            PpoMom,
-            TsiMom,
-            TrixMom,
-            # Overlap - Smoothers
-            SmaSmooth,
-            EmaSmooth,
-            WmaSmooth,
-            RmaSmooth,
-            DemaSmooth,
-            TemaSmooth,
-            HmaSmooth,
-            TrimaSmooth,
-            SwmaSmooth,
-            SsfSmooth,
-            # Overlap - Adaptive
-            KamaSmooth,
+            AadStat,
+            AboveMeanRatioStat,
+            AccBandsVol,
+            AdVolume,
+            # Trend
+            AdxTrend,
             AlmaSmooth,
-            JmaSmooth,
-            VidyaSmooth,
-            T3Smooth,
-            ZlmaSmooth,
-            McGinleySmooth,
+            AoMom,
+            AroonTrend,
+            AtrVol,
+            AutocorrStat,
+            BetaStat,
+            BollingerVol,
+            CciMom,
+            ChandelierOverlay,
+            ChandelierTrend,
+            ChopTrend,
+            CkspTrend,
+            CmfVolume,
+            CmoMom,
+            # Stat - Regression
+            CorrelationStat,
+            CvStat,
+            DemaSmooth,
+            DonchianVol,
+            DpoTrend,
+            EfiVolume,
+            EmaSmooth,
+            EntropyStat,
+            EomVolume,
             FramaSmooth,
+            # Gap
+            GapVol,
+            GarmanKlassVolStat,
+            HiloOverlay,
+            HiloTrend,
             # Overlap - Price
             Hl2Price,
             Hlc3Price,
-            Ohlc4Price,
-            WcpPrice,
-            MidpointPrice,
-            MidpricePrice,
-            TypicalPrice,
-            # Overlap - Trend
-            SupertrendOverlay,
-            HiloOverlay,
-            IchimokuOverlay,
-            ChandelierOverlay,
-            # Performance
-            LogReturn,
-            PctReturn,
-            # Stat - Dispersion
-            VarianceStat,
-            StdevStat,
-            MadStat,
-            ZscoreStat,
-            CvStat,
-            RangeStat,
-            IqrStat,
-            AadStat,
-            RobustZscoreStat,
-            # Stat - Distribution
-            MedianStat,
-            QuantileStat,
-            PctRankStat,
-            MinMaxStat,
-            SkewStat,
-            KurtosisStat,
-            EntropyStat,
-            JarqueBeraStat,
-            ModeDistanceStat,
-            AboveMeanRatioStat,
+            HmaSmooth,
             # Stat - Memory
             HurstStat,
-            AutocorrStat,
-            VarianceRatioStat,
-            # Stat - Regression
-            CorrelationStat,
-            BetaStat,
-            RSquaredStat,
-            LinRegSlopeStat,
+            IchimokuOverlay,
+            IchimokuTrend,
+            IqrStat,
+            JarqueBeraStat,
+            JmaSmooth,
+            # Overlap - Adaptive
+            KamaSmooth,
+            KeltnerVol,
+            KurtosisStat,
+            KvoVolume,
             LinRegInterceptStat,
             LinRegResidualStat,
-            # Stat - Volatility
-            RealizedVolStat,
-            ParkinsonVolStat,
-            GarmanKlassVolStat,
-            RogersSatchellVolStat,
-            YangZhangVolStat,
-            # Trend
-            AdxTrend,
-            AroonTrend,
-            VortexTrend,
-            VhfTrend,
-            ChopTrend,
-            PsarTrend,
-            SupertrendTrend,
-            ChandelierTrend,
-            HiloTrend,
-            CkspTrend,
-            IchimokuTrend,
-            DpoTrend,
-            QstickTrend,
-            TtmTrend,
-            # Volatility
-            TrueRangeVol,
-            AtrVol,
-            NatrVol,
-            BollingerVol,
-            KeltnerVol,
-            DonchianVol,
-            AccBandsVol,
+            LinRegSlopeStat,
+            # Performance
+            LogReturn,
+            MacdMom,
+            MadStat,
             MassIndexVol,
-            UlcerIndexVol,
-            RviVol,
+            McGinleySmooth,
+            # Stat - Distribution
+            MedianStat,
+            MfiVolume,
+            MidpointPrice,
+            MidpricePrice,
+            MinMaxStat,
+            ModeDistanceStat,
+            MomMom,
+            NatrVol,
+            NviVolume,
             # Volume
             ObvVolume,
-            AdVolume,
-            PvtVolume,
-            NviVolume,
+            Ohlc4Price,
+            ParkinsonVolStat,
+            PctRankStat,
+            PctReturn,
+            PpoMom,
+            PsarTrend,
             PviVolume,
-            MfiVolume,
-            CmfVolume,
-            EfiVolume,
-            EomVolume,
-            KvoVolume,
-            # Gap
-            GapVol,
+            PvtVolume,
+            QstickTrend,
+            QuantileStat,
+            RangeStat,
+            # Stat - Volatility
+            RealizedVolStat,
+            RmaSmooth,
+            RobustZscoreStat,
+            RocMom,
+            RogersSatchellVolStat,
+            # Momentum
+            RsiMom,
+            RSquaredStat,
+            RviVol,
+            SkewStat,
+            # Overlap - Smoothers
+            SmaSmooth,
+            SsfSmooth,
+            StdevStat,
+            StochMom,
+            StochRsiMom,
+            # Overlap - Trend
+            SupertrendOverlay,
+            SupertrendTrend,
+            SwmaSmooth,
+            T3Smooth,
+            TemaSmooth,
+            TrimaSmooth,
+            TrixMom,
+            # Volatility
+            TrueRangeVol,
+            TsiMom,
+            TtmTrend,
+            TypicalPrice,
+            UlcerIndexVol,
+            UoMom,
+            VarianceRatioStat,
+            # Stat - Dispersion
+            VarianceStat,
+            VhfTrend,
+            VidyaSmooth,
+            VortexTrend,
+            WcpPrice,
+            WillrMom,
+            WmaSmooth,
+            YangZhangVolStat,
+            ZlmaSmooth,
+            ZscoreStat,
         )
     except ImportError as e:
         print(f"Could not import signalflow.ta indicators: {e}")
@@ -1874,9 +1871,7 @@ def _load_indicator_configs() -> list[IndicatorConfig]:
         if configs:
             # Filter out excluded indicators
             configs = [c for c in configs if c.name not in EXCLUDED_INDICATORS]
-            print(
-                f"[indicator_registry] Auto-discovered {len(configs)} indicators from signalflow.ta"
-            )
+            print(f"[indicator_registry] Auto-discovered {len(configs)} indicators from signalflow.ta")
             return configs
     except ImportError as e:
         print(f"[indicator_registry] signalflow.ta not available: {e}")
@@ -1889,21 +1884,15 @@ def _load_indicator_configs() -> list[IndicatorConfig]:
         if configs:
             # Filter out excluded indicators
             configs = [c for c in configs if c.name not in EXCLUDED_INDICATORS]
-            print(
-                f"[indicator_registry] Loaded {len(configs)} indicator configs manually"
-            )
+            print(f"[indicator_registry] Loaded {len(configs)} indicator configs manually")
             return configs
     except ImportError as e:
-        print(
-            f"[indicator_registry] Manual config failed - signalflow.ta not installed: {e}"
-        )
+        print(f"[indicator_registry] Manual config failed - signalflow.ta not installed: {e}")
     except Exception as e:
         print(f"[indicator_registry] Manual config failed: {e}")
 
     # Return empty list if nothing works
-    print(
-        "[indicator_registry] WARNING: No indicators available. Install signalflow.ta to run indicator tests."
-    )
+    print("[indicator_registry] WARNING: No indicators available. Install signalflow.ta to run indicator tests.")
     print("[indicator_registry] Core framework tests in test_core.py will still run.")
     return []
 
@@ -1935,9 +1924,7 @@ def get_indicator_ids() -> list[str]:
 # =============================================================================
 
 
-def filter_configs_by_options(
-    configs: list[IndicatorConfig], pytest_config=None
-) -> tuple[list, list]:
+def filter_configs_by_options(configs: list[IndicatorConfig], pytest_config=None) -> tuple[list, list]:
     """
     Filter indicator configs based on pytest command-line options.
 
@@ -1982,7 +1969,7 @@ def filter_configs_by_options(
 
             # Keep only first N param sets for each indicator
             filtered = []
-            for base_name, param_configs in sorted(by_indicator.items()):
+            for _base_name, param_configs in sorted(by_indicator.items()):
                 filtered.extend(param_configs[:max_params])
 
     if not filtered:
@@ -2011,11 +1998,7 @@ def print_available_indicators():
         print(f"  {cat}: {len(configs)} configs")
         for config in sorted(configs, key=lambda x: x.test_id):
             params_info = ", ".join(
-                f"{k}={v}"
-                for k, v in config.params.items()
-                if k not in ("source_col", "pair_col", "ts_col")
+                f"{k}={v}" for k, v in config.params.items() if k not in ("source_col", "pair_col", "ts_col")
             )
-            variation_marker = (
-                f" #{config.variation_idx}" if config.variation_idx is not None else ""
-            )
+            variation_marker = f" #{config.variation_idx}" if config.variation_idx is not None else ""
             print(f"    - {config.name}{variation_marker}: {params_info}")

@@ -36,8 +36,8 @@ class PsarTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["psar", "psar_dir"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["psar", "psar_dir"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -162,8 +162,8 @@ class SupertrendTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["supertrend_{period}", "supertrend_dir_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["supertrend_{period}", "supertrend_dir_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -173,9 +173,7 @@ class SupertrendTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 
@@ -285,8 +283,8 @@ class ChandelierTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["chandelier_long_{period}", "chandelier_short_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["chandelier_long_{period}", "chandelier_short_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -296,9 +294,7 @@ class ChandelierTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 
@@ -382,8 +378,8 @@ class HiloTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["hilo", "hilo_dir"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["hilo", "hilo_dir"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -494,8 +490,8 @@ class CkspTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["cksp_long", "cksp_short"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["cksp_long", "cksp_short"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -505,9 +501,7 @@ class CkspTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 

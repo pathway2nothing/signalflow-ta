@@ -63,15 +63,11 @@ class IsolationForestDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.features = [LogReturn(period=p) for p in self.return_periods]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Isolation Forest anomaly detection.
 
         Args:
@@ -103,16 +99,12 @@ class IsolationForestDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         n = len(features)
 
         # Build feature matrix from log returns
         return_cols = [f"logret_{p}_close" for p in self.return_periods]
-        feature_matrix = np.column_stack(
-            [features[col].to_numpy() for col in return_cols]
-        )
+        feature_matrix = np.column_stack([features[col].to_numpy() for col in return_cols])
 
         # Primary return for direction determination
         primary_return = features[return_cols[0]].to_numpy()
@@ -243,15 +235,11 @@ class IsolationForestDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.features = [RsiMom(period=p) for p in self.rsi_periods]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on RSI anomaly detection.
 
         Args:
@@ -283,9 +271,7 @@ class IsolationForestDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         n = len(features)
 
         # Build feature matrix from RSI values
@@ -326,15 +312,9 @@ class IsolationForestDetector2(SignalDetector):
 
                 # Generate signal if anomaly with extreme RSI
                 if score < self.anomaly_threshold:
-                    if (
-                        self.direction in ("long", "both")
-                        and primary_rsi[i] < self.rsi_long_threshold
-                    ):
+                    if self.direction in ("long", "both") and primary_rsi[i] < self.rsi_long_threshold:
                         signal_type[i] = SignalType.RISE.value
-                    elif (
-                        self.direction in ("short", "both")
-                        and primary_rsi[i] > self.rsi_short_threshold
-                    ):
+                    elif self.direction in ("short", "both") and primary_rsi[i] > self.rsi_short_threshold:
                         signal_type[i] = SignalType.FALL.value
 
         out = features.select(
@@ -439,9 +419,7 @@ class IsolationForestDetector3(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.features = [
@@ -449,9 +427,7 @@ class IsolationForestDetector3(SignalDetector):
             RsiMom(period=self.rsi_period),
         ]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on cross-sectional anomaly detection.
 
         Args:
@@ -483,9 +459,7 @@ class IsolationForestDetector3(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         n = len(features)
         close = features["close"].to_numpy()
         high = features["high"].to_numpy()
@@ -551,15 +525,9 @@ class IsolationForestDetector3(SignalDetector):
 
                 # Generate signal if anomaly
                 if score < self.anomaly_threshold:
-                    if (
-                        self.direction in ("long", "both")
-                        and rsi[i] < self.rsi_long_threshold
-                    ):
+                    if self.direction in ("long", "both") and rsi[i] < self.rsi_long_threshold:
                         signal_type[i] = SignalType.RISE.value
-                    elif (
-                        self.direction in ("short", "both")
-                        and rsi[i] > self.rsi_short_threshold
-                    ):
+                    elif self.direction in ("short", "both") and rsi[i] > self.rsi_short_threshold:
                         signal_type[i] = SignalType.FALL.value
 
         out = features.select(

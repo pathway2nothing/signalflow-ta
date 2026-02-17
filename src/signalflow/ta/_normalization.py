@@ -39,9 +39,7 @@ def normalize_bounded(
     return normalized
 
 
-def normalize_zscore(
-    values: np.ndarray, window: int, robust: bool = False
-) -> np.ndarray:
+def normalize_zscore(values: np.ndarray, window: int, robust: bool = False) -> np.ndarray:
     """
     Apply rolling z-score normalization to unbounded values.
 

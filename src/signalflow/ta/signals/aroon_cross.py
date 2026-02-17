@@ -51,17 +51,13 @@ class AroonCrossDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.aroon_up_col = f"aroon_up_{self.period}"
         self.aroon_dn_col = f"aroon_dn_{self.period}"
         self.features = [AroonTrend(period=self.period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Aroon crossovers.
 
         Args:
@@ -93,9 +89,7 @@ class AroonCrossDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         aroon_up = features[self.aroon_up_col].to_numpy()
         aroon_dn = features[self.aroon_dn_col].to_numpy()
 

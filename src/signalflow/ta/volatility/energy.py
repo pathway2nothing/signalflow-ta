@@ -16,7 +16,7 @@ from signalflow.feature.base import Feature
 class KineticEnergyVol(Feature):
     """Kinetic Energy of price movement.
 
-    KE = ½ × v²  where v = ln(Close / Close[1])
+    KE = ½ x v²  where v = ln(Close / Close[1])
 
     Smoothed over rolling period.
 
@@ -33,8 +33,8 @@ class KineticEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["ke_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["ke_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -109,8 +109,8 @@ class PotentialEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["pe_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["pe_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -173,7 +173,7 @@ class TotalEnergyVol(Feature):
 
     Combines kinetic (movement intensity) and potential (displacement) energy.
 
-    KE = ½ × v²
+    KE = ½ x v²
     PE = (ln(Close) - ln(MA))²
     E = KE + PE
 
@@ -191,8 +191,8 @@ class TotalEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["te_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["te_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -279,8 +279,8 @@ class EnergyFlowVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["eflow_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["eflow_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -372,8 +372,8 @@ class ElasticStrainVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["strain_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["strain_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -426,7 +426,7 @@ class ElasticStrainVol(Feature):
 class TemperatureVol(Feature):
     """Market Temperature - kinetic energy per degree of freedom.
 
-    T = Var(log-returns) × period
+    T = Var(log-returns) x period
 
     Statistical mechanics analogy: temperature is proportional
     to average kinetic energy.
@@ -444,8 +444,8 @@ class TemperatureVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["mtemp_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["mtemp_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -513,8 +513,8 @@ class HeatCapacityVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["heatcap_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["heatcap_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -526,7 +526,7 @@ class HeatCapacityVol(Feature):
             if close[i - 1] > 0 and close[i] > 0:
                 log_ret[i] = np.log(close[i] / close[i - 1])
 
-        # Temperature (rolling variance × period)
+        # Temperature (rolling variance x period)
         temp = np.full(n, np.nan)
         for i in range(self.period, n):
             window = log_ret[i - self.period + 1 : i + 1]
@@ -588,9 +588,9 @@ class HeatCapacityVol(Feature):
 @dataclass
 @sf_component(name="volatility/free_energy")
 class FreeEnergyVol(Feature):
-    """Helmholtz Free Energy (F = E - T×S).
+    """Helmholtz Free Energy (F = E - TxS).
 
-    Total energy minus "thermal" energy (temperature × entropy).
+    Total energy minus "thermal" energy (temperature x entropy).
     The "useful" energy available for directed movement.
 
     Interpretation:
@@ -607,8 +607,8 @@ class FreeEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["fenergy_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["fenergy_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -629,7 +629,7 @@ class FreeEnergyVol(Feature):
             # Energy = mean KE
             energy = np.mean(0.5 * valid**2)
 
-            # Temperature = variance × period
+            # Temperature = variance x period
             temperature = np.var(valid, ddof=1) * self.period
 
             # Entropy via histogram

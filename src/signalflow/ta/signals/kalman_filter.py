@@ -53,10 +53,7 @@ def _adaptive_kalman_filter(
         local_vals = values[start_idx : i + 1]
         valid_vals = local_vals[~np.isnan(local_vals)]
 
-        if len(valid_vals) > 1:
-            local_vol = np.std(valid_vals, ddof=1)
-        else:
-            local_vol = 1.0
+        local_vol = np.std(valid_vals, ddof=1) if len(valid_vals) > 1 else 1.0
 
         # Adaptive noise parameters
         q = process_noise * (1 + local_vol)
@@ -127,15 +124,11 @@ class KalmanFilterDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.features = []
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Kalman filter deviation.
 
         Args:
@@ -167,9 +160,7 @@ class KalmanFilterDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         high = features["high"].to_numpy()
         close = features["close"].to_numpy()
         n = len(close)

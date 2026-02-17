@@ -54,16 +54,12 @@ class MfiDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.mfi_col = f"mfi_{self.mfi_period}"
         self.features = [MfiVolume(period=self.mfi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on MFI extreme zones.
 
         Args:
@@ -95,9 +91,7 @@ class MfiDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         mfi = features[self.mfi_col].to_numpy()
         n = len(mfi)
 
@@ -186,16 +180,12 @@ class MfiDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.mfi_col = f"mfi_{self.mfi_period}"
         self.features = [MfiVolume(period=self.mfi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on MFI z-score with reversal."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
@@ -219,9 +209,7 @@ class MfiDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         mfi = features[self.mfi_col].to_numpy()
         n = len(mfi)
 
@@ -243,16 +231,8 @@ class MfiDetector2(SignalDetector):
         mfi_falling = mfi < mfi_prev
 
         # Signal conditions
-        long_signal = (
-            (zscore < -self.zscore_threshold)
-            & (mfi < self.oversold_threshold)
-            & mfi_rising
-        )
-        short_signal = (
-            (zscore > self.zscore_threshold)
-            & (mfi > self.overbought_threshold)
-            & mfi_falling
-        )
+        long_signal = (zscore < -self.zscore_threshold) & (mfi < self.oversold_threshold) & mfi_rising
+        short_signal = (zscore > self.zscore_threshold) & (mfi > self.overbought_threshold) & mfi_falling
 
         # Build signal type array
         signal_type = np.full(n, SignalType.NONE.value)

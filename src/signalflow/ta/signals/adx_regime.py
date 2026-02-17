@@ -51,18 +51,14 @@ class AdxRegimeDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.adx_col = f"adx_{self.adx_period}"
         self.plus_di_col = f"dmp_{self.adx_period}"
         self.minus_di_col = f"dmn_{self.adx_period}"
         self.features = [AdxTrend(period=self.adx_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on ADX regime and DI crossover.
 
         Args:
@@ -94,9 +90,7 @@ class AdxRegimeDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         adx = features[self.adx_col].to_numpy()
         plus_di = features[self.plus_di_col].to_numpy()
         minus_di = features[self.minus_di_col].to_numpy()
@@ -203,9 +197,7 @@ class AdxRegimeDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.adx_col = f"adx_{self.adx_period}"
         self.plus_di_col = f"dmp_{self.adx_period}"
@@ -217,9 +209,7 @@ class AdxRegimeDetector2(SignalDetector):
             RsiMom(period=self.rsi_period),
         ]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on ADX regime with RSI."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
@@ -243,9 +233,7 @@ class AdxRegimeDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         adx = features[self.adx_col].to_numpy()
         plus_di = features[self.plus_di_col].to_numpy()
         minus_di = features[self.minus_di_col].to_numpy()

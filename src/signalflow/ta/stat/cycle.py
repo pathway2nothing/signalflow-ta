@@ -12,9 +12,7 @@ from signalflow import sf_component
 from signalflow.feature.base import Feature
 
 
-def _detrend_and_hilbert(
-    values: np.ndarray, period: int, idx: int
-) -> tuple[float, float]:
+def _detrend_and_hilbert(values: np.ndarray, period: int, idx: int) -> tuple[float, float]:
     """Apply Hilbert transform to a detrended window, return amplitude and phase."""
     window = values[idx - period + 1 : idx + 1]
 
@@ -58,8 +56,8 @@ class InstAmplitudeStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_hamp_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_hamp_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -121,8 +119,8 @@ class InstPhaseStat(Feature):
     period: int = 40
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_hphase_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_hphase_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -178,8 +176,8 @@ class InstFrequencyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_hfreq_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_hfreq_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -236,7 +234,7 @@ class InstFrequencyStat(Feature):
 class PhaseAccelerationStat(Feature):
     """Phase Acceleration (second derivative of phase).
 
-    Rate of change of instantaneous frequency: α = Δω/Δt.
+    Rate of change of instantaneous frequency: alpha = Δω/Δt.
 
     Interpretation:
     - Positive acceleration: cycles speeding up
@@ -252,8 +250,8 @@ class PhaseAccelerationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_phaseaccel_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_phaseaccel_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -318,7 +316,7 @@ class ConstructiveInterferenceStat(Feature):
     Uses two Hilbert transforms at different periods.
     When phases align (cos(phase_diff) > 0), amplitudes reinforce.
 
-    interference = amp_fast × amp_slow × cos(phase_fast - phase_slow)
+    interference = amp_fast x amp_slow x cos(phase_fast - phase_slow)
 
     Smoothed over rolling window.
 
@@ -338,8 +336,8 @@ class ConstructiveInterferenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_cinterf_{fast_period}_{slow_period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_cinterf_{fast_period}_{slow_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -392,9 +390,7 @@ class ConstructiveInterferenceStat(Feature):
             interf = normalize_zscore(interf, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
-        col_name = (
-            f"{self.source_col}_cinterf_{self.fast_period}_{self.slow_period}{suffix}"
-        )
+        col_name = f"{self.source_col}_cinterf_{self.fast_period}_{self.slow_period}{suffix}"
         return df.with_columns(pl.Series(name=col_name, values=interf))
 
     test_params: ClassVar[list[dict]] = [
@@ -446,8 +442,8 @@ class BeatFrequencyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_beatfreq_{fast_period}_{slow_period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_beatfreq_{fast_period}_{slow_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -495,9 +491,7 @@ class BeatFrequencyStat(Feature):
             beat = normalize_zscore(beat, window=norm_window)
 
         suffix = "_norm" if self.normalized else ""
-        col_name = (
-            f"{self.source_col}_beatfreq_{self.fast_period}_{self.slow_period}{suffix}"
-        )
+        col_name = f"{self.source_col}_beatfreq_{self.fast_period}_{self.slow_period}{suffix}"
         return df.with_columns(pl.Series(name=col_name, values=beat))
 
     test_params: ClassVar[list[dict]] = [
@@ -549,8 +543,8 @@ class StandingWaveRatioStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_swr_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_swr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -607,7 +601,7 @@ class StandingWaveRatioStat(Feature):
 class SpectralCentroidStat(Feature):
     """Spectral Centroid - center of mass of frequency spectrum.
 
-    centroid = Σ(f_i × P_i) / Σ(P_i)
+    centroid = Σ(f_i x P_i) / Σ(P_i)
 
     where f_i = frequency bin, P_i = power at that frequency.
 
@@ -628,8 +622,8 @@ class SpectralCentroidStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_scentroid_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_scentroid_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -693,7 +687,7 @@ class SpectralCentroidStat(Feature):
 class SpectralEntropyStat(Feature):
     """Spectral Entropy - disorder of frequency distribution.
 
-    H = -Σ(p_i × log(p_i))
+    H = -Σ(p_i x log(p_i))
 
     where p_i = normalized power spectrum (probability distribution).
 
@@ -712,8 +706,8 @@ class SpectralEntropyStat(Feature):
     period: int = 64
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sentropy_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_sentropy_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)

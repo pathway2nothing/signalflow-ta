@@ -57,9 +57,7 @@ class StochasticDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.stoch_k_col = f"stoch_k_{self.stoch_period}"
         self.stoch_d_col = f"stoch_d_{self.stoch_period}"
@@ -71,9 +69,7 @@ class StochasticDetector1(SignalDetector):
             )
         ]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Stochastic crossovers.
 
         Args:
@@ -105,9 +101,7 @@ class StochasticDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         stoch_k = features[self.stoch_k_col].to_numpy()
         stoch_d = features[self.stoch_d_col].to_numpy()
         n = len(stoch_k)
@@ -211,9 +205,7 @@ class StochasticDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.stoch_k_col = f"stoch_k_{self.stoch_period}"
         self.features = [
@@ -224,9 +216,7 @@ class StochasticDetector2(SignalDetector):
             )
         ]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Stochastic z-score extremes."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
@@ -250,9 +240,7 @@ class StochasticDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         stoch_k = features[self.stoch_k_col].to_numpy()
         n = len(stoch_k)
 
@@ -268,12 +256,8 @@ class StochasticDetector2(SignalDetector):
                     zscore[i] = (stoch_k[i] - mean) / std
 
         # Signal conditions
-        oversold_extreme = (zscore < -self.zscore_threshold) & (
-            stoch_k < self.oversold_threshold
-        )
-        overbought_extreme = (zscore > self.zscore_threshold) & (
-            stoch_k > self.overbought_threshold
-        )
+        oversold_extreme = (zscore < -self.zscore_threshold) & (stoch_k < self.oversold_threshold)
+        overbought_extreme = (zscore > self.zscore_threshold) & (stoch_k > self.overbought_threshold)
 
         # Build signal type array
         signal_type = np.full(n, SignalType.NONE.value)
@@ -282,9 +266,7 @@ class StochasticDetector2(SignalDetector):
             signal_type = np.where(oversold_extreme, SignalType.RISE.value, signal_type)
 
         if self.direction in ("short", "both"):
-            signal_type = np.where(
-                overbought_extreme, SignalType.FALL.value, signal_type
-            )
+            signal_type = np.where(overbought_extreme, SignalType.FALL.value, signal_type)
 
         out = features.select(
             [

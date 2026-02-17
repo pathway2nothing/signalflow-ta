@@ -34,8 +34,8 @@ class MassIndexVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low"]
-    outputs = ["massi_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[dict]] = ["massi_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -119,8 +119,8 @@ class UlcerIndexVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["ulcer_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["ulcer_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -192,8 +192,8 @@ class RviVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["rvi_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["rvi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -277,8 +277,8 @@ class HistoricalVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["hv_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["hv_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -290,9 +290,7 @@ class HistoricalVol(Feature):
         hv = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
-            hv[i] = np.std(log_ret[i - self.period + 1 : i + 1], ddof=1) * np.sqrt(
-                self.annualize
-            )
+            hv[i] = np.std(log_ret[i - self.period + 1 : i + 1], ddof=1) * np.sqrt(self.annualize)
 
         # Normalization for unbounded output
         if self.normalized:
@@ -347,8 +345,8 @@ class AtrPercentVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["atr_pct_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["atr_pct_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -359,9 +357,7 @@ class AtrPercentVol(Feature):
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
         alpha = 1 / self.period

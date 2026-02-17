@@ -64,9 +64,7 @@ class KeltnerChannelDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.kc_lower_col = f"kc_lower_{self.kc_period}"
         self.kc_upper_col = f"kc_upper_{self.kc_period}"
@@ -77,9 +75,7 @@ class KeltnerChannelDetector1(SignalDetector):
             RsiMom(period=self.rsi_period),
         ]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Keltner Channel and RSI conditions.
 
         Args:
@@ -111,9 +107,7 @@ class KeltnerChannelDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         kc_lower = features[self.kc_lower_col].to_numpy()
         kc_upper = features[self.kc_upper_col].to_numpy()
@@ -143,17 +137,11 @@ class KeltnerChannelDetector1(SignalDetector):
         signal_type = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
-            if self.use_rsi_condition:
-                long_signal = below_lower & rsi_oversold
-            else:
-                long_signal = below_lower
+            long_signal = below_lower & rsi_oversold if self.use_rsi_condition else below_lower
             signal_type = np.where(long_signal, SignalType.RISE.value, signal_type)
 
         if self.direction in ("short", "both"):
-            if self.use_rsi_condition:
-                short_signal = above_upper & rsi_overbought
-            else:
-                short_signal = above_upper
+            short_signal = above_upper & rsi_overbought if self.use_rsi_condition else above_upper
             signal_type = np.where(short_signal, SignalType.FALL.value, signal_type)
 
         # Use KC difference as signal strength
@@ -259,9 +247,7 @@ class KeltnerChannelDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.kc_lower_col = f"kc_lower_{self.kc_period}"
         self.kc_upper_col = f"kc_upper_{self.kc_period}"
@@ -275,9 +261,7 @@ class KeltnerChannelDetector2(SignalDetector):
             MacdMom(fast=self.macd_fast, slow=self.macd_slow, signal=self.macd_signal),
         ]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on KC, MACD, and RSI conditions.
 
         Args:
@@ -309,9 +293,7 @@ class KeltnerChannelDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         kc_lower = features[self.kc_lower_col].to_numpy()
         kc_upper = features[self.kc_upper_col].to_numpy()

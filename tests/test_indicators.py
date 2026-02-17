@@ -12,10 +12,8 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-
-from conftest import generate_test_ohlcv, SEED
+from conftest import SEED, generate_test_ohlcv
 from indicator_registry import IndicatorConfig
-
 
 # =============================================================================
 # Test Configuration
@@ -287,9 +285,7 @@ class TestBasicValidation:
         df = generate_test_ohlcv(n_rows=500, seed=SEED)
         result = run_indicator(config, df)
 
-        assert len(result) == len(df), (
-            f"{config.name}: output length {len(result)} != input length {len(df)}"
-        )
+        assert len(result) == len(df), f"{config.name}: output length {len(result)} != input length {len(df)}"
 
     def test_produces_output_columns(self, config: IndicatorConfig):
         """Indicator should produce output columns."""
@@ -316,9 +312,7 @@ class TestBasicValidation:
             valid = ~np.isnan(values)
 
             if valid.any():
-                assert not np.any(np.isinf(values[valid])), (
-                    f"{config.name}.{col}: contains infinite values"
-                )
+                assert not np.any(np.isinf(values[valid])), f"{config.name}.{col}: contains infinite values"
 
 
 # =============================================================================

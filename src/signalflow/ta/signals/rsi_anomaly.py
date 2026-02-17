@@ -59,17 +59,13 @@ class RsiAnomalyDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.zscore_col = f"rsi_zscore_{self.rsi_period}"
         self.features = [RsiMom(period=self.rsi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on RSI z-score anomalies.
 
         Args:
@@ -101,9 +97,7 @@ class RsiAnomalyDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         rsi = features[self.rsi_col].to_numpy()
         zscore = normalize_zscore(rsi, window=self.zscore_window)
 
@@ -129,9 +123,7 @@ class RsiAnomalyDetector1(SignalDetector):
             [
                 self.pair_col,
                 self.ts_col,
-                signal_expr.otherwise(pl.lit(SignalType.NONE.value)).alias(
-                    "signal_type"
-                ),
+                signal_expr.otherwise(pl.lit(SignalType.NONE.value)).alias("signal_type"),
                 pl.col(self.zscore_col).alias("signal"),
             ]
         )

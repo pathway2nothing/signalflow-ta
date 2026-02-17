@@ -32,16 +32,12 @@ class SmaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_sma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        sma = (
-            df.select(pl.col(self.source_col).rolling_mean(window_size=self.period))
-            .to_series()
-            .to_numpy()
-        )
+        sma = df.select(pl.col(self.source_col).rolling_mean(window_size=self.period)).to_series().to_numpy()
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
@@ -73,8 +69,8 @@ class SmaSmooth(Feature):
 class EmaSmooth(Feature):
     """Exponential Moving Average.
 
-    EMA = α * price + (1 - α) * EMA_prev
-    α = 2 / (period + 1)
+    EMA = alpha * price + (1 - alpha) * EMA_prev
+    alpha = 2 / (period + 1)
 
     More weight to recent prices. Less lag than SMA.
 
@@ -88,16 +84,12 @@ class EmaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_ema_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_ema_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
-        ema = (
-            df.select(pl.col(self.source_col).ewm_mean(span=self.period, adjust=False))
-            .to_series()
-            .to_numpy()
-        )
+        ema = df.select(pl.col(self.source_col).ewm_mean(span=self.period, adjust=False)).to_series().to_numpy()
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
@@ -145,8 +137,8 @@ class WmaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_wma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_wma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -198,20 +190,14 @@ class RmaSmooth(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_rma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_rma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         equivalent_span = 2 * self.period - 1
 
-        rma = (
-            df.select(
-                pl.col(self.source_col).ewm_mean(span=equivalent_span, adjust=False)
-            )
-            .to_series()
-            .to_numpy()
-        )
+        rma = df.select(pl.col(self.source_col).ewm_mean(span=equivalent_span, adjust=False)).to_series().to_numpy()
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
@@ -258,8 +244,8 @@ class DemaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_dema_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_dema_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -312,8 +298,8 @@ class TemaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_tema_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_tema_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -368,8 +354,8 @@ class HmaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_hma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_hma_{period}"]
 
     def _wma(self, values: np.ndarray, period: int) -> np.ndarray:
         """Compute WMA."""
@@ -440,8 +426,8 @@ class TrimaSmooth(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_trima_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_trima_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -494,8 +480,8 @@ class SwmaSmooth(Feature):
     period: int = 4
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_swma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_swma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -506,9 +492,7 @@ class SwmaSmooth(Feature):
         if self.period % 2 == 0:
             weights = np.concatenate([np.arange(1, half + 1), np.arange(half, 0, -1)])
         else:
-            weights = np.concatenate(
-                [np.arange(1, half + 1), np.arange(half - 1, 0, -1)]
-            )
+            weights = np.concatenate([np.arange(1, half + 1), np.arange(half - 1, 0, -1)])
 
         weights = weights[: self.period].astype(np.float64)
         weight_sum = weights.sum()
@@ -566,8 +550,8 @@ class SsfSmooth(Feature):
     poles: Literal[2, 3] = 2
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_ssf_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_ssf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -586,9 +570,7 @@ class SsfSmooth(Feature):
             c1 = 1 - c2 - c3 - c4
 
             for i in range(3, n):
-                ssf[i] = (
-                    c1 * source[i] + c2 * ssf[i - 1] + c3 * ssf[i - 2] + c4 * ssf[i - 3]
-                )
+                ssf[i] = c1 * source[i] + c2 * ssf[i - 1] + c3 * ssf[i - 2] + c4 * ssf[i - 3]
         else:  # poles == 2
             x = np.pi * np.sqrt(2) / self.period
             a0 = np.exp(-x)
@@ -664,16 +646,14 @@ class FftSmooth(Feature):
     cutoff_ratio: float = 0.1
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_fft_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_fft_{period}"]
 
     def __post_init__(self) -> None:
         if not (0.0 < self.cutoff_ratio <= 1.0):
             raise ValueError(f"cutoff_ratio must be in (0, 1], got {self.cutoff_ratio}")
         if self.period < 4:
-            raise ValueError(
-                f"period must be >= 4 for meaningful FFT, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 4 for meaningful FFT, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -684,7 +664,7 @@ class FftSmooth(Feature):
         # Number of rfft bins (including DC)
         n_bins = self.period // 2 + 1
         # How many non-DC bins to keep (at least 1)
-        keep = max(1, int(round((n_bins - 1) * self.cutoff_ratio)))
+        keep = max(1, round((n_bins - 1) * self.cutoff_ratio))
 
         for i in range(self.period - 1, n):
             window = source[i - self.period + 1 : i + 1]

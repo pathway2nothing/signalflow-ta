@@ -61,17 +61,13 @@ class CciAnomalyDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.cci_col = f"cci_{self.cci_period}"
         self.zscore_col = f"cci_zscore_{self.cci_period}"
         self.features = [CciMom(period=self.cci_period, constant=self.cci_constant)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on CCI z-score anomalies.
 
         Args:
@@ -103,9 +99,7 @@ class CciAnomalyDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         cci = features[self.cci_col].to_numpy()
         zscore = normalize_zscore(cci, window=self.zscore_window)
 
@@ -131,9 +125,7 @@ class CciAnomalyDetector1(SignalDetector):
             [
                 self.pair_col,
                 self.ts_col,
-                signal_expr.otherwise(pl.lit(SignalType.NONE.value)).alias(
-                    "signal_type"
-                ),
+                signal_expr.otherwise(pl.lit(SignalType.NONE.value)).alias("signal_type"),
                 pl.col(self.zscore_col).alias("signal"),
             ]
         )

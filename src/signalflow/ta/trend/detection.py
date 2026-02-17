@@ -43,8 +43,8 @@ class IchimokuTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low"]
-    outputs = ["tenkan_sen", "kijun_sen", "senkou_a", "senkou_b"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[str]] = ["tenkan_sen", "kijun_sen", "senkou_a", "senkou_b"]
 
     def _midprice(self, high: np.ndarray, low: np.ndarray, period: int) -> np.ndarray:
         """Rolling (highest + lowest) / 2."""
@@ -145,8 +145,8 @@ class DpoTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["dpo_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["dpo_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -221,8 +221,8 @@ class QstickTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["open", "close"]
-    outputs = ["qstick_{period}"]
+    requires: ClassVar[list[str]] = ["open", "close"]
+    outputs: ClassVar[list[dict]] = ["qstick_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         open_price = df["open"].to_numpy()
@@ -296,8 +296,8 @@ class TtmTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["ttm_trend_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["ttm_trend_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -370,8 +370,8 @@ class AtrTrailingTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = [
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = [
         "atr_trail_long_{period}",
         "atr_trail_short_{period}",
         "atr_trail_dir_{period}",
@@ -385,9 +385,7 @@ class AtrTrailingTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 

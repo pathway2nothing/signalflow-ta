@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import polars as pl
@@ -38,18 +38,18 @@ class AutoFeatureNormalizer:
     winsor_high_q: float = 0.99
 
     keep_original: bool = False  # if False -> only normalized features
-    always_include: tuple[str, ...] = (
-        "robust",
-    )  # base channels for each feature: "robust"|"z"|"rank"|"none"
+    always_include: tuple[str, ...] = ("robust",)  # base channels for each feature: "robust"|"z"|"rank"|"none"
     allow_multi: bool = True  # allow multiple channels per feature
 
     artifact: dict[str, Any] | None = None
 
-    _CHANNEL_TO_METHOD: dict[str, str] = {
-        "robust": "rolling_robust",
-        "z": "rolling_z",
-        "rank": "rolling_rank",
-    }
+    _CHANNEL_TO_METHOD: dict[str, str] = field(
+        default_factory=lambda: {
+            "robust": "rolling_robust",
+            "z": "rolling_z",
+            "rank": "rolling_rank",
+        }
+    )
 
     def fit(self, df: pl.DataFrame) -> dict[str, Any]:
         df = self._ensure_sorted(df)
@@ -75,9 +75,7 @@ class AutoFeatureNormalizer:
         art = self.fit(df)
         return self.transform(df, art)
 
-    def transform(
-        self, df: pl.DataFrame, artifact: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def transform(self, df: pl.DataFrame, artifact: dict[str, Any] | None = None) -> pl.DataFrame:
         art = artifact or self.artifact
         if art is None:
             raise ValueError("No artifact. Call fit() or pass artifact to transform().")
@@ -173,11 +171,7 @@ class AutoFeatureNormalizer:
 
         if method == "signed_log1p":
             return (
-                pl.when(x.is_null())
-                .then(None)
-                .otherwise(
-                    pl.when(x >= 0).then(x.log1p()).otherwise(-(x.abs().log1p()))
-                )
+                pl.when(x.is_null()).then(None).otherwise(pl.when(x >= 0).then(x.log1p()).otherwise(-(x.abs().log1p())))
             )
 
         if method == "rolling_winsor":
@@ -196,25 +190,19 @@ class AutoFeatureNormalizer:
             return x.clip(lo, hi)
 
         if method == "rolling_robust":
-            med = x.rolling_median(self.window, min_periods=self.warmup).over(
+            med = x.rolling_median(self.window, min_periods=self.warmup).over(self.pair_col)
+            q1 = x.rolling_quantile(0.25, self.window, min_periods=self.warmup, interpolation="nearest").over(
                 self.pair_col
             )
-            q1 = x.rolling_quantile(
-                0.25, self.window, min_periods=self.warmup, interpolation="nearest"
-            ).over(self.pair_col)
-            q3 = x.rolling_quantile(
-                0.75, self.window, min_periods=self.warmup, interpolation="nearest"
-            ).over(self.pair_col)
+            q3 = x.rolling_quantile(0.75, self.window, min_periods=self.warmup, interpolation="nearest").over(
+                self.pair_col
+            )
             iqr = q3 - q1
             return (x - med) / (iqr.abs() + pl.lit(self.eps))
 
         if method == "rolling_z":
-            mu = x.rolling_mean(self.window, min_periods=self.warmup).over(
-                self.pair_col
-            )
-            sd = x.rolling_std(self.window, min_periods=self.warmup, ddof=1).over(
-                self.pair_col
-            )
+            mu = x.rolling_mean(self.window, min_periods=self.warmup).over(self.pair_col)
+            sd = x.rolling_std(self.window, min_periods=self.warmup, ddof=1).over(self.pair_col)
             return (x - mu) / (sd.abs() + pl.lit(self.eps))
 
         if method == "rolling_rank":
@@ -224,9 +212,7 @@ class AutoFeatureNormalizer:
 
         raise ValueError(f"Unknown method: {method}")
 
-    def _compute_feature_stats(
-        self, df: pl.DataFrame, feature_cols: list[str]
-    ) -> dict[str, dict[str, Any]]:
+    def _compute_feature_stats(self, df: pl.DataFrame, feature_cols: list[str]) -> dict[str, dict[str, Any]]:
         """
         Compute robust-enough per-feature stats to drive decisions.
 
@@ -265,13 +251,9 @@ class AutoFeatureNormalizer:
 
             tmp = per_pair.select(
                 [
-                    (mean_col / (std_col.abs() + pl.lit(self.eps)))
-                    .abs()
-                    .alias("mean_over_std"),
+                    (mean_col / (std_col.abs() + pl.lit(self.eps))).abs().alias("mean_over_std"),
                     skew_col.abs().alias("skew_abs"),
-                    (absmax_col / (absq95_col + pl.lit(self.eps))).alias(
-                        "outlier_ratio"
-                    ),
+                    (absmax_col / (absq95_col + pl.lit(self.eps))).alias("outlier_ratio"),
                     absq95_col.alias("scale_proxy"),
                     nuniq_col.alias("nuniq"),
                 ]
@@ -283,10 +265,9 @@ class AutoFeatureNormalizer:
                     pl.col("skew_abs").median().alias("skew_median"),
                     pl.col("outlier_ratio").median().alias("outlier_ratio_median"),
                     pl.col("nuniq").min().alias("n_unique_min"),
-                    (
-                        pl.col("scale_proxy").std(ddof=1)
-                        / (pl.col("scale_proxy").mean() + pl.lit(self.eps))
-                    ).alias("scale_cv"),
+                    (pl.col("scale_proxy").std(ddof=1) / (pl.col("scale_proxy").mean() + pl.lit(self.eps))).alias(
+                        "scale_cv"
+                    ),
                 ]
             ).to_dicts()[0]
 
@@ -325,9 +306,7 @@ class AutoFeatureNormalizer:
         sort_cols = [self.pair_col, self.ts_col]
         pair = df[self.pair_col]
         if pair.is_sorted():
-            ts_ok = df.select(
-                (pl.col(self.ts_col).diff().over(self.pair_col).drop_nulls() >= 0).all()
-            ).item()
+            ts_ok = df.select((pl.col(self.ts_col).diff().over(self.pair_col).drop_nulls() >= 0).all()).item()
             if ts_ok:
                 return df
         return df.sort(sort_cols)

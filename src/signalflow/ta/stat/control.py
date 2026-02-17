@@ -37,9 +37,7 @@ def _log_returns(values: np.ndarray) -> np.ndarray:
     return lr
 
 
-def _kalman_innovation_variance(
-    returns: np.ndarray, process_noise_ratio: float
-) -> float:
+def _kalman_innovation_variance(returns: np.ndarray, process_noise_ratio: float) -> float:
     """Normalized Innovation Statistic (NIS) from a 1-D local-level Kalman filter.
 
     Model:
@@ -363,18 +361,14 @@ class KalmanInnovationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kalman_innov_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_kalman_innov_{period}"]
 
     def __post_init__(self):
         if self.period < 30:
-            raise ValueError(
-                f"period must be >= 30 for Kalman filter convergence, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 30 for Kalman filter convergence, got {self.period}")
         if self.process_noise <= 0 or self.process_noise > 10.0:
-            raise ValueError(
-                f"process_noise must be in (0, 10], got {self.process_noise}"
-            )
+            raise ValueError(f"process_noise must be in (0, 10], got {self.process_noise}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -461,18 +455,15 @@ class ARCoefficientStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_ar_coeff_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_ar_coeff_{period}"]
 
     def __post_init__(self):
         if self.ar_order < 1 or self.ar_order > 5:
             raise ValueError(f"ar_order must be in [1, 5], got {self.ar_order}")
         min_period = self.ar_order * 10 + 10
         if self.period < min_period:
-            raise ValueError(
-                f"period must be >= {min_period} for ar_order={self.ar_order}, "
-                f"got {self.period}"
-            )
+            raise ValueError(f"period must be >= {min_period} for ar_order={self.ar_order}, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -563,25 +554,19 @@ class LyapunovExponentStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_lyapunov_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_lyapunov_{period}"]
 
     def __post_init__(self):
         if self.period < 50:
-            raise ValueError(
-                f"period must be >= 50 for reliable Lyapunov estimation, "
-                f"got {self.period}"
-            )
+            raise ValueError(f"period must be >= 50 for reliable Lyapunov estimation, got {self.period}")
         if self.embed_dim < 2 or self.embed_dim > 7:
             raise ValueError(f"embed_dim must be in [2, 7], got {self.embed_dim}")
         if self.tau < 1 or self.tau > 10:
             raise ValueError(f"tau must be in [1, 10], got {self.tau}")
         min_period = self.embed_dim * self.tau * 5
         if self.period < min_period:
-            raise ValueError(
-                f"period must be >= embed_dim * tau * 5 = {min_period}, "
-                f"got {self.period}"
-            )
+            raise ValueError(f"period must be >= embed_dim * tau * 5 = {min_period}, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -673,16 +658,14 @@ class PIDErrorStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_pid_error_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_pid_error_{period}"]
 
     def __post_init__(self):
         if self.period < 20:
             raise ValueError(f"period must be >= 20, got {self.period}")
         if self.kp < 0 or self.ki < 0 or self.kd < 0:
-            raise ValueError(
-                f"gains must be non-negative, got kp={self.kp}, ki={self.ki}, kd={self.kd}"
-            )
+            raise ValueError(f"gains must be non-negative, got kp={self.kp}, ki={self.ki}, kd={self.kd}")
         if self.kp == 0 and self.ki == 0 and self.kd == 0:
             raise ValueError("at least one gain (kp, ki, kd) must be > 0")
 
@@ -778,16 +761,14 @@ class PredictionErrorDecompositionStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_pred_err_decomp_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_pred_err_decomp_{period}"]
 
     def __post_init__(self):
         if self.period < 30:
             raise ValueError(f"period must be >= 30, got {self.period}")
         if self.forecast_horizon < 1 or self.forecast_horizon > 5:
-            raise ValueError(
-                f"forecast_horizon must be in [1, 5], got {self.forecast_horizon}"
-            )
+            raise ValueError(f"forecast_horizon must be in [1, 5], got {self.forecast_horizon}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

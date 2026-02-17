@@ -30,19 +30,17 @@ class CorrelationStat(Feature):
     target_col: str = "volume"
     period: int = 30
 
-    requires = ["{source_col}", "{target_col}"]
-    outputs = ["{source_col}_{target_col}_corr_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}", "{target_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_{target_col}_corr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"{self.source_col}_{self.target_col}_corr_{self.period}"
 
         return df.with_columns(
-            pl.corr(self.source_col, self.target_col)
-            .rolling(window_size=self.period)
-            .alias(out_col)
+            pl.corr(self.source_col, self.target_col).rolling(window_size=self.period).alias(out_col)
         )
 
-    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:  # noqa: F811
         x = df[self.source_col].to_numpy()
         y = df[self.target_col].to_numpy()
         n = len(x)
@@ -72,12 +70,7 @@ class CorrelationStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return (
-            getattr(
-                self, "period", getattr(self, "length", getattr(self, "window", 20))
-            )
-            * 5
-        )
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
 
 
 @dataclass
@@ -99,20 +92,16 @@ class BetaStat(Feature):
     benchmark_col: str = "benchmark"
     period: int = 30
 
-    requires = ["{source_col}", "{benchmark_col}"]
-    outputs = ["{source_col}_beta_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}", "{benchmark_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_beta_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         x = df[self.benchmark_col].to_numpy()
         y = df[self.source_col].to_numpy()
         n = len(x)
 
-        x_ret = np.diff(x, prepend=np.nan) / np.where(
-            x[:-1] != 0, np.append(x[:-1], 1), 1
-        )
-        y_ret = np.diff(y, prepend=np.nan) / np.where(
-            y[:-1] != 0, np.append(y[:-1], 1), 1
-        )
+        x_ret = np.diff(x, prepend=np.nan) / np.where(x[:-1] != 0, np.append(x[:-1], 1), 1)
+        y_ret = np.diff(y, prepend=np.nan) / np.where(y[:-1] != 0, np.append(y[:-1], 1), 1)
         x_ret = np.append(np.nan, x_ret[1:])
         y_ret = np.append(np.nan, y_ret[1:])
 
@@ -128,9 +117,7 @@ class BetaStat(Feature):
                 if var > 1e-10:
                     beta[i] = cov / var
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_beta_{self.period}", values=beta)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_beta_{self.period}", values=beta))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "benchmark_col": "volume", "period": 30},
@@ -161,8 +148,8 @@ class RSquaredStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_r2_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_r2_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -185,9 +172,7 @@ class RSquaredStat(Feature):
                 if ss_tot > 1e-10:
                     r2[i] = 1 - ss_res / ss_tot
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_r2_{self.period}", values=r2)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_r2_{self.period}", values=r2))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -219,8 +204,8 @@ class LinRegSlopeStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_slope_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_slope_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -235,9 +220,7 @@ class LinRegSlopeStat(Feature):
                 coeffs = np.polyfit(x, y, 1)
                 slope[i] = coeffs[0]
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_slope_{self.period}", values=slope)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_slope_{self.period}", values=slope))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -264,8 +247,8 @@ class LinRegInterceptStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_intercept_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_intercept_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -280,11 +263,7 @@ class LinRegInterceptStat(Feature):
                 coeffs = np.polyfit(x, y, 1)
                 intercept[i] = coeffs[1]
 
-        return df.with_columns(
-            pl.Series(
-                name=f"{self.source_col}_intercept_{self.period}", values=intercept
-            )
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_intercept_{self.period}", values=intercept))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -316,8 +295,8 @@ class LinRegResidualStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_residual_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_residual_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -333,9 +312,7 @@ class LinRegResidualStat(Feature):
                 y_pred = coeffs[0] * (self.period - 1) + coeffs[1]
                 residual[i] = y[-1] - y_pred
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_residual_{self.period}", values=residual)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_residual_{self.period}", values=residual))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},

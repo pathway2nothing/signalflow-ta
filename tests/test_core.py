@@ -13,20 +13,20 @@ in backtesting and live trading scenarios.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import polars as pl
 import pytest
-from typing import Type
 
 # Import fixtures
 from conftest import (
-    generate_static_ohlcv,
-    generate_sinusoidal_ohlcv,
-    generate_random_walk_ohlcv,
     generate_empty_column_df,
     generate_ohlcv_with_nulls,
+    generate_random_walk_ohlcv,
+    generate_sinusoidal_ohlcv,
+    generate_static_ohlcv,
 )
-
 
 # =============================================================================
 # Test Configuration - Indicators to Test
@@ -35,22 +35,22 @@ from conftest import (
 # List all indicator classes to be tested
 # This will be populated dynamically or manually
 
-MOMENTUM_INDICATORS: list[tuple[Type, dict]] = [
+MOMENTUM_INDICATORS: list[tuple[type, dict]] = [
     # (IndicatorClass, default_params)
 ]
 
-OVERLAP_INDICATORS: list[tuple[Type, dict]] = []
+OVERLAP_INDICATORS: list[tuple[type, dict]] = []
 
-VOLATILITY_INDICATORS: list[tuple[Type, dict]] = []
+VOLATILITY_INDICATORS: list[tuple[type, dict]] = []
 
-VOLUME_INDICATORS: list[tuple[Type, dict]] = []
+VOLUME_INDICATORS: list[tuple[type, dict]] = []
 
-STAT_INDICATORS: list[tuple[Type, dict]] = []
+STAT_INDICATORS: list[tuple[type, dict]] = []
 
-TREND_INDICATORS: list[tuple[Type, dict]] = []
+TREND_INDICATORS: list[tuple[type, dict]] = []
 
 
-def get_all_indicators() -> list[tuple[Type, dict, str]]:
+def get_all_indicators() -> list[tuple[type, dict, str]]:
     """Get all indicators with their categories."""
     all_indicators = []
 
@@ -91,7 +91,7 @@ def get_feature_columns(df: pl.DataFrame) -> list[str]:
 
 
 def run_indicator(
-    indicator_cls: Type,
+    indicator_cls: type,
     df: pl.DataFrame,
     params: dict | None = None,
 ) -> pl.DataFrame:
@@ -157,9 +157,7 @@ class TestEmptyColumnHandling:
 
     def test_all_empty_columns_does_not_crash(self):
         """Indicators should handle all empty price columns."""
-        df = generate_empty_column_df(
-            n_rows=100, empty_columns=["open", "high", "low", "close", "volume"]
-        )
+        df = generate_empty_column_df(n_rows=100, empty_columns=["open", "high", "low", "close", "volume"])
 
         for col in ["open", "high", "low", "close", "volume"]:
             assert df[col].null_count() == len(df)
@@ -181,12 +179,7 @@ class TestEmptyColumnHandling:
         # Make first 10 rows null using Polars
         df = (
             df.with_row_index("_row_idx")
-            .with_columns(
-                pl.when(pl.col("_row_idx") < 10)
-                .then(None)
-                .otherwise(pl.col("close"))
-                .alias("close")
-            )
+            .with_columns(pl.when(pl.col("_row_idx") < 10).then(None).otherwise(pl.col("close")).alias("close"))
             .drop("_row_idx")
         )
 
@@ -200,12 +193,7 @@ class TestEmptyColumnHandling:
         n = len(df)
         df = (
             df.with_row_index("_row_idx")
-            .with_columns(
-                pl.when(pl.col("_row_idx") >= n - 10)
-                .then(None)
-                .otherwise(pl.col("close"))
-                .alias("close")
-            )
+            .with_columns(pl.when(pl.col("_row_idx") >= n - 10).then(None).otherwise(pl.col("close")).alias("close"))
             .drop("_row_idx")
         )
 
@@ -238,7 +226,7 @@ class TestLookAheadBias:
     def _test_no_lookahead_bias_single(
         self,
         df: pl.DataFrame,
-        indicator_cls: Type,
+        indicator_cls: type,
         params: dict | None = None,
     ) -> None:
         """
@@ -277,8 +265,7 @@ class TestLookAheadBias:
             np.testing.assert_array_equal(
                 full_nan_mask,
                 trunc_nan_mask,
-                err_msg=f"Look-ahead bias detected in {indicator_cls.__name__}.{col}: "
-                f"NaN patterns differ",
+                err_msg=f"Look-ahead bias detected in {indicator_cls.__name__}.{col}: NaN patterns differ",
             )
 
             # Non-NaN values should match
@@ -354,13 +341,9 @@ class TestLookAheadBias:
         df = generate_sinusoidal_ohlcv(n_rows=500)
 
         # Compute rolling mean with Polars (proper implementation)
-        df_full = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        df_full = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
-        df_trunc = df.head(400).with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        df_trunc = df.head(400).with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Should match exactly
         full_sma = df_full["sma_20"][:400].to_numpy()
@@ -389,13 +372,13 @@ class TestReproducibility:
     3. Safe for incremental updates
     """
 
-    WARMUP_PERIODS = [50, 100, 200]  # Different entry points to test
+    WARMUP_PERIODS: ClassVar[list[int]] = [50, 100, 200]  # Different entry points to test
     TOLERANCE = 1e-10
 
     def _test_reproducibility_single(
         self,
         df: pl.DataFrame,
-        indicator_cls: Type,
+        indicator_cls: type,
         params: dict | None = None,
         warmup: int = 100,
     ) -> None:
@@ -432,14 +415,10 @@ class TestReproducibility:
 
         for col in feature_cols:
             # Values from full computation (shifted to match timestamps)
-            full_values = result_full[col][
-                compare_start : compare_start + compare_length
-            ].to_numpy()
+            full_values = result_full[col][compare_start : compare_start + compare_length].to_numpy()
 
             # Values from late-start computation (after indicator warmup)
-            late_values = result_late[col][
-                indicator_warmup : indicator_warmup + compare_length
-            ].to_numpy()
+            late_values = result_late[col][indicator_warmup : indicator_warmup + compare_length].to_numpy()
 
             # Handle NaN comparison
             full_nan = np.isnan(full_values)
@@ -455,8 +434,7 @@ class TestReproducibility:
                 late_values[valid_both],
                 rtol=self.TOLERANCE,
                 atol=self.TOLERANCE,
-                err_msg=f"Reproducibility issue in {indicator_cls.__name__}.{col}: "
-                f"values differ based on entry point",
+                err_msg=f"Reproducibility issue in {indicator_cls.__name__}.{col}: values differ based on entry point",
             )
 
     def test_reproducibility_framework_works(self):
@@ -464,23 +442,17 @@ class TestReproducibility:
         df = generate_sinusoidal_ohlcv(n_rows=1000)
 
         # Compute SMA from start
-        df_full = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        df_full = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Compute SMA from bar 200
-        df_late = df.slice(200, 800).with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        df_late = df.slice(200, 800).with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Compare overlapping region (after warmup on late start)
         warmup = 20
         compare_start = 200 + warmup
         compare_length = len(df_late) - warmup
 
-        full_sma = df_full["sma_20"][
-            compare_start : compare_start + compare_length
-        ].to_numpy()
+        full_sma = df_full["sma_20"][compare_start : compare_start + compare_length].to_numpy()
         late_sma = df_late["sma_20"][warmup : warmup + compare_length].to_numpy()
 
         valid = ~np.isnan(full_sma) & ~np.isnan(late_sma)
@@ -498,17 +470,13 @@ class TestReproducibility:
         warmup = 20
 
         # Compute SMA on full dataset
-        df_full = df.with_columns(
-            pl.col("close").rolling_mean(window_size=warmup).alias("sma_20")
-        )
+        df_full = df.with_columns(pl.col("close").rolling_mean(window_size=warmup).alias("sma_20"))
         full_sma = df_full["sma_20"].to_numpy()
 
         # Compute SMA starting from different points
         for start in [100, 500, 1000]:
             df_slice = df.slice(start, len(df) - start)
-            df_result = df_slice.with_columns(
-                pl.col("close").rolling_mean(window_size=warmup).alias("sma_20")
-            )
+            df_result = df_slice.with_columns(pl.col("close").rolling_mean(window_size=warmup).alias("sma_20"))
             slice_sma = df_result["sma_20"].to_numpy()
 
             # Compare overlapping region (after warmup in the slice)
@@ -533,12 +501,8 @@ class TestReproducibility:
         df2 = generate_sinusoidal_ohlcv(n_rows=500, seed=42)
 
         # Compute same indicator
-        result1 = df1.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
-        result2 = df2.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result1 = df1.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
+        result2 = df2.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Should be exactly identical
         assert result1.equals(result2)
@@ -573,9 +537,7 @@ class TestOutputValidation:
         df = generate_sinusoidal_ohlcv(n_rows=500)
 
         # Test with a simple rolling mean
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         assert len(result) == len(df)
 
@@ -583,9 +545,7 @@ class TestOutputValidation:
         """Indicator should produce expected feature columns."""
         df = generate_sinusoidal_ohlcv(n_rows=500)
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         assert "sma_20" in result.columns
 
@@ -593,9 +553,7 @@ class TestOutputValidation:
         """Indicator should preserve pair and timestamp columns."""
         df = generate_sinusoidal_ohlcv(n_rows=500)
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         assert "pair" in result.columns
         assert "timestamp" in result.columns
@@ -656,9 +614,7 @@ class TestEdgeCases:
         """Indicators should handle minimum data length."""
         df = generate_sinusoidal_ohlcv(n_rows=5)  # Very short
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=3).alias("sma_3")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=3).alias("sma_3"))
 
         # Should not crash, may have NaN for warmup period
         assert len(result) == 5
@@ -667,9 +623,7 @@ class TestEdgeCases:
         """Indicators should handle single row without crashing."""
         df = generate_sinusoidal_ohlcv(n_rows=1)
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=1).alias("sma_1")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=1).alias("sma_1"))
 
         assert len(result) == 1
 
@@ -694,9 +648,7 @@ class TestEdgeCases:
         """Indicators should handle extreme volatility."""
         df = generate_random_walk_ohlcv(n_rows=500, volatility=0.5)  # 50% volatility
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Should not crash or produce invalid values
         valid = result["sma_20"].drop_nulls()
@@ -711,9 +663,7 @@ class TestEdgeCases:
             amplitude=0.000001,
         )
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Should produce valid small values
         valid = result["sma_20"].drop_nulls()
@@ -728,9 +678,7 @@ class TestEdgeCases:
             amplitude=1e8,
         )
 
-        result = df.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        result = df.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Should produce valid large values
         valid = result["sma_20"].drop_nulls()
@@ -761,9 +709,7 @@ class TestMultiPairHandling:
 
         # Compute indicator
         result = df.group_by("pair", maintain_order=True).map_groups(
-            lambda g: g.with_columns(
-                pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-            )
+            lambda g: g.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
         )
 
         # BTC SMA should be ~100, ETH SMA should be ~50000
@@ -779,16 +725,12 @@ class TestMultiPairHandling:
         df2 = generate_sinusoidal_ohlcv(n_rows=200, pair="ETHUSDT", seed=123)
 
         # Compute single pair
-        btc_single = df1.with_columns(
-            pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-        )
+        btc_single = df1.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
 
         # Compute both pairs together
         df_combined = pl.concat([df1, df2])
         result_combined = df_combined.group_by("pair", maintain_order=True).map_groups(
-            lambda g: g.with_columns(
-                pl.col("close").rolling_mean(window_size=20).alias("sma_20")
-            )
+            lambda g: g.with_columns(pl.col("close").rolling_mean(window_size=20).alias("sma_20"))
         )
         btc_combined = result_combined.filter(pl.col("pair") == "BTCUSDT")
 

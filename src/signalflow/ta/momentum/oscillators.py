@@ -47,8 +47,8 @@ class StochMom(Feature):
     smooth_k: int = 3
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["stoch_k_{k_period}", "stoch_d_{k_period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["stoch_k_{k_period}", "stoch_d_{k_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -139,8 +139,8 @@ class StochRsiMom(Feature):
     d_period: int = 3
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["stochrsi_k_{rsi_period}", "stochrsi_d_{rsi_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["stochrsi_k_{rsi_period}", "stochrsi_d_{rsi_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -252,8 +252,8 @@ class WillrMom(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["willr_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["willr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -317,8 +317,8 @@ class CciMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["cci_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["cci_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -391,8 +391,8 @@ class UoMom(Feature):
     slow_weight: float = 1.0
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["uo_{fast}_{medium}_{slow}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["uo_{fast}_{medium}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -424,11 +424,7 @@ class UoMom(Feature):
                 slow_avg = slow_bp / slow_tr
 
                 total_weight = self.fast_weight + self.medium_weight + self.slow_weight
-                weighted = (
-                    self.fast_weight * fast_avg
-                    + self.medium_weight * med_avg
-                    + self.slow_weight * slow_avg
-                )
+                weighted = self.fast_weight * fast_avg + self.medium_weight * med_avg + self.slow_weight * slow_avg
 
                 uo[i] = 100 * weighted / total_weight
 
@@ -477,8 +473,8 @@ class AoMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low"]
-    outputs = ["ao_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[dict]] = ["ao_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

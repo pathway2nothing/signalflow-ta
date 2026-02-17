@@ -43,8 +43,8 @@ class AdxTrend(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["adx_{period}", "dmp_{period}", "dmn_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["adx_{period}", "dmp_{period}", "dmn_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -54,9 +54,7 @@ class AdxTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 
@@ -164,8 +162,8 @@ class AroonTrend(Feature):
     period: int = 25
     normalized: bool = False
 
-    requires = ["high", "low"]
-    outputs = ["aroon_up_{period}", "aroon_dn_{period}", "aroon_osc_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[dict]] = ["aroon_up_{period}", "aroon_dn_{period}", "aroon_osc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -250,8 +248,8 @@ class VortexTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["vi_plus_{period}", "vi_minus_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["vi_plus_{period}", "vi_minus_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -261,9 +259,7 @@ class VortexTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 
@@ -342,8 +338,8 @@ class VhfTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["vhf_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["vhf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -425,8 +421,8 @@ class ChopTrend(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["chop_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["chop_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -436,9 +432,7 @@ class ChopTrend(Feature):
 
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         tr[0] = high[0] - low[0]
 
@@ -504,8 +498,8 @@ class ViscosityTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["viscosity_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["viscosity_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -570,7 +564,7 @@ class ViscosityTrend(Feature):
 class ReynoldsTrend(Feature):
     """Market Reynolds Number - laminar vs turbulent regime.
 
-    Re = |mean(v)| × period / std(v)
+    Re = |mean(v)| x period / std(v)
 
     Ratio of inertial forces (directed movement) to viscous forces
     (random fluctuation).
@@ -589,8 +583,8 @@ class ReynoldsTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["reynolds_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["reynolds_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -646,7 +640,7 @@ class ReynoldsTrend(Feature):
 class RotationalInertiaTrend(Feature):
     """Rotational Inertia (Moment of Inertia) - resistance to trend change.
 
-    I = Σ(volume_i × distance_i²)
+    I = Σ(volume_i x distance_i²)
 
     where distance_i = ln(close_i / SMA) (log-displacement from mean).
 
@@ -663,8 +657,8 @@ class RotationalInertiaTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["rot_inertia_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["rot_inertia_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -732,8 +726,8 @@ class MarketImpedanceTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "volume"]
-    outputs = ["impedance_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "volume"]
+    outputs: ClassVar[list[dict]] = ["impedance_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -786,12 +780,12 @@ class MarketImpedanceTrend(Feature):
 class RCTimeConstantTrend(Feature):
     """RC Time Constant - market response time.
 
-    τ = R × C
+    τ = R x C
 
     R (resistance) = impedance (price_range / volume)
     C (capacitance) = volume / |Δprice|
 
-    τ = (Σrange / Σvolume) × (Σvolume / |Δprice_total|)
+    τ = (Σrange / Σvolume) x (Σvolume / |Δprice_total|)
       = Σrange / |Δprice_total|
 
     Measures how quickly the market "charges" to new levels.
@@ -809,8 +803,8 @@ class RCTimeConstantTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["rc_tau_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["rc_tau_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -880,8 +874,8 @@ class SNRTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["snr_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["snr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -955,8 +949,8 @@ class OrderParameterTrend(Feature):
     period: int = 20
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["order_param_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["order_param_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -1000,7 +994,7 @@ class OrderParameterTrend(Feature):
 class SusceptibilityTrend(Feature):
     """Market Susceptibility - sensitivity to perturbation.
 
-    χ = var(order_parameter) × period
+    χ = var(order_parameter) x period
 
     Variance of the order parameter over a rolling window.
     Peaks at phase transitions (trend ↔ range).
@@ -1020,8 +1014,8 @@ class SusceptibilityTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["susceptibility_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[dict]] = ["susceptibility_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -1041,7 +1035,7 @@ class SusceptibilityTrend(Feature):
             if len(valid) > 0:
                 order[i] = np.abs(np.mean(valid))
 
-        # Susceptibility = variance of order parameter × period
+        # Susceptibility = variance of order parameter x period
         chi = np.full(n, np.nan)
         start = self.period + self.chi_window - 1
         for i in range(start, n):

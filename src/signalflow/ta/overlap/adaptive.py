@@ -77,8 +77,8 @@ class KamaSmooth(Feature):
     slow: int = 30
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kama_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_kama_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -157,8 +157,8 @@ class AlmaSmooth(Feature):
     sigma: float = 6.0
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_alma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_alma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -167,9 +167,7 @@ class AlmaSmooth(Feature):
         m = self.offset * (self.period - 1)
         s = self.period / self.sigma
 
-        weights = np.array(
-            [np.exp(-((i - m) ** 2) / (2 * s * s)) for i in range(self.period)]
-        )
+        weights = np.array([np.exp(-((i - m) ** 2) / (2 * s * s)) for i in range(self.period)])
 
         alma = np.full(n, np.nan)
         for i in range(self.period - 1, n):
@@ -230,8 +228,8 @@ class JmaSmooth(Feature):
     phase: float = 0  # -100 to 100
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_jma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_jma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -243,22 +241,13 @@ class JmaSmooth(Feature):
 
         # Initialize with SMA for reproducibility
         warmup = min(self.period, n)
-        if warmup > 0:
-            init_val = np.mean(source[:warmup])
-        else:
-            init_val = 0.0
+        init_val = np.mean(source[:warmup]) if warmup > 0 else 0.0
 
         jma[warmup - 1] = ma1 = uBand = lBand = init_val
         kv = det0 = det1 = ma2 = 0.0
 
         length = 0.5 * (self.period - 1)
-        pr = (
-            0.5
-            if self.phase < -100
-            else 2.5
-            if self.phase > 100
-            else 1.5 + self.phase * 0.01
-        )
+        pr = 0.5 if self.phase < -100 else 2.5 if self.phase > 100 else 1.5 + self.phase * 0.01
         length1 = max(np.log(np.sqrt(length)) / np.log(2.0) + 2.0, 0)
         pow1 = max(length1 - 2.0, 0.5)
         length2 = length1 * np.sqrt(length)
@@ -333,7 +322,7 @@ class VidyaSmooth(Feature):
     Adapts based on Chande Momentum Oscillator (CMO).
     High volatility = fast, Low volatility = slow.
 
-    VIDYA = α * |CMO| * price + (1 - α * |CMO|) * VIDYA_prev
+    VIDYA = alpha * |CMO| * price + (1 - alpha * |CMO|) * VIDYA_prev
 
     In normalized mode, returns percentage difference from source:
     normalized = (source - ma) / source
@@ -345,8 +334,8 @@ class VidyaSmooth(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_vidya_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_vidya_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -368,16 +357,10 @@ class VidyaSmooth(Feature):
             pos_sum = np.sum(pos[i - self.period + 1 : i + 1])
             neg_sum = np.sum(neg[i - self.period + 1 : i + 1])
 
-            cmo = (
-                (pos_sum - neg_sum) / (pos_sum + neg_sum)
-                if (pos_sum + neg_sum) > 0
-                else 0
-            )
+            cmo = (pos_sum - neg_sum) / (pos_sum + neg_sum) if (pos_sum + neg_sum) > 0 else 0
             abs_cmo = abs(cmo)
 
-            vidya[i] = (
-                alpha * abs_cmo * source[i] + (1 - alpha * abs_cmo) * vidya[i - 1]
-            )
+            vidya[i] = alpha * abs_cmo * source[i] + (1 - alpha * abs_cmo) * vidya[i - 1]
 
         # Normalization: percentage difference from source
         if self.normalized:
@@ -428,8 +411,8 @@ class T3Smooth(Feature):
     vfactor: float = 0.7
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_t3_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_t3_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -499,8 +482,8 @@ class ZlmaSmooth(Feature):
     ma_type: Literal["ema", "sma"] = "ema"
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_zlma_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_zlma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -564,8 +547,8 @@ class McGinleySmooth(Feature):
     k: float = 0.6
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_mcg_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_mcg_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -618,7 +601,7 @@ class FramaSmooth(Feature):
     Higher dimension (choppy) = slower. Lower (trending) = faster.
 
     D = (log(N1 + N2) - log(N3)) / log(2)
-    α = exp(-4.6 * (D - 1))
+    alpha = exp(-4.6 * (D - 1))
 
     In normalized mode, returns percentage difference from source:
     normalized = (source - ma) / source
@@ -630,8 +613,8 @@ class FramaSmooth(Feature):
     period: int = 16
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_frama_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_frama_{period}"]
 
     def __post_init__(self):
         if self.period % 2 != 0:
@@ -647,21 +630,13 @@ class FramaSmooth(Feature):
 
         for i in range(self.period, n):
             n1 = (
-                np.max(source[i - self.period + 1 : i - half + 1])
-                - np.min(source[i - self.period + 1 : i - half + 1])
+                np.max(source[i - self.period + 1 : i - half + 1]) - np.min(source[i - self.period + 1 : i - half + 1])
             ) / half
-            n2 = (
-                np.max(source[i - half + 1 : i + 1])
-                - np.min(source[i - half + 1 : i + 1])
-            ) / half
+            n2 = (np.max(source[i - half + 1 : i + 1]) - np.min(source[i - half + 1 : i + 1])) / half
             n3 = (
-                np.max(source[i - self.period + 1 : i + 1])
-                - np.min(source[i - self.period + 1 : i + 1])
+                np.max(source[i - self.period + 1 : i + 1]) - np.min(source[i - self.period + 1 : i + 1])
             ) / self.period
-            if n1 + n2 > 0 and n3 > 0:
-                d = (np.log(n1 + n2) - np.log(n3)) / np.log(2)
-            else:
-                d = 1
+            d = (np.log(n1 + n2) - np.log(n3)) / np.log(2) if n1 + n2 > 0 and n3 > 0 else 1
             alpha = np.exp(-4.6 * (d - 1))
             alpha = np.clip(alpha, 0.01, 1)
 
@@ -748,9 +723,7 @@ def _kalman_filter_series(
 
     for i in range(window, n):
         segment = data[i - window : i]
-        filtered_value, process_noise = _kalman_filter_single_window(
-            segment, process_noise, measurement_noise
-        )
+        filtered_value, process_noise = _kalman_filter_single_window(segment, process_noise, measurement_noise)
         result[i] = filtered_value
 
     return result
@@ -781,15 +754,13 @@ class KalmanSmooth(Feature):
     measurement_noise: float = 0.1
     normalized: bool = False
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kalman_{window}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_kalman_{window}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
 
-        kalman = _kalman_filter_series(
-            source, self.window, self.process_noise, self.measurement_noise
-        )
+        kalman = _kalman_filter_series(source, self.window, self.process_noise, self.measurement_noise)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct

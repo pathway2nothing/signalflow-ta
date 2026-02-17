@@ -54,11 +54,7 @@ def _williams_alligator_trend(
         elif nascent_trend == -2 and current_trend != 0 and prev_trend != current_trend:
             nascent_trend = current_trend
             nascent_trend_start = i
-        elif (
-            nascent_trend != -2
-            and current_trend == nascent_trend
-            and i - nascent_trend_start >= confirmation_length
-        ):
+        elif nascent_trend != -2 and current_trend == nascent_trend and i - nascent_trend_start >= confirmation_length:
             trend_indicators[i] = nascent_trend
             nascent_trend = -2
         elif nascent_trend != -2 and current_trend != nascent_trend:
@@ -124,8 +120,8 @@ class WilliamsAlligatorRegime(Feature):
     jaws_shift: int = 8
     confirmation_length: int = 2
 
-    requires = ["high", "low"]
-    outputs = ["alligator_regime", "alligator_regime_dist"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[str]] = ["alligator_regime", "alligator_regime_dist"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -215,8 +211,8 @@ class TwoMaRegime(Feature):
     fast_length: int = 10
     slow_length: int = 50
 
-    requires = ["{source_col}"]
-    outputs = ["two_ma_regime_{fast_length}_{slow_length}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["two_ma_regime_{fast_length}_{slow_length}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -230,9 +226,7 @@ class TwoMaRegime(Feature):
         for i in range(self.slow_length - 1, n):
             slow_ma[i] = np.mean(source[i - self.slow_length + 1 : i + 1])
 
-        regime = np.where(
-            fast_ma > slow_ma, 1, np.where(fast_ma < slow_ma, -1, 0)
-        ).astype(np.int8)
+        regime = np.where(fast_ma > slow_ma, 1, np.where(fast_ma < slow_ma, -1, 0)).astype(np.int8)
 
         distance = _distance_to_trend_point(regime)
 
@@ -274,8 +268,8 @@ class SmaDirection(Feature):
     source_col: str = "close"
     period: int = 14
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sma_dir_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_sma_dir_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -326,8 +320,8 @@ class SmaDiffDirection(Feature):
     first_period: int = 14
     second_period: int = 50
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sma_diff_dir_{first_period}_{second_period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_sma_diff_dir_{first_period}_{second_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -347,12 +341,8 @@ class SmaDiffDirection(Feature):
 
         direction = ((sma_diff - prev_diff) > 0).astype(np.int8)
 
-        col_diff = (
-            f"{self.source_col}_sma_diff_{self.first_period}_{self.second_period}"
-        )
-        col_dir = (
-            f"{self.source_col}_sma_diff_dir_{self.first_period}_{self.second_period}"
-        )
+        col_diff = f"{self.source_col}_sma_diff_{self.first_period}_{self.second_period}"
+        col_dir = f"{self.source_col}_sma_diff_dir_{self.first_period}_{self.second_period}"
 
         return df.with_columns(
             [
@@ -372,9 +362,7 @@ class SmaDiffDirection(Feature):
 
 
 @njit
-def _rolling_linreg_numba(
-    close: np.ndarray, window: int
-) -> tuple[np.ndarray, np.ndarray]:
+def _rolling_linreg_numba(close: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarray]:
     """Fast rolling linear regression using numba.
 
     Args:
@@ -428,13 +416,13 @@ class LinRegDirection(Feature):
     source_col: str = "close"
     period: int = 15
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_linreg_dir_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_linreg_dir_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
 
-        slopes, intercepts = _rolling_linreg_numba(source, self.period)
+        slopes, _intercepts = _rolling_linreg_numba(source, self.period)
 
         direction = (slopes > 0).astype(np.int8)
 
@@ -471,18 +459,14 @@ class LinRegDiffDirection(Feature):
     first_period: int = 14
     second_period: int = 60
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_linreg_diff_dir_{first_period}_{second_period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_linreg_diff_dir_{first_period}_{second_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
 
-        first_slopes, first_intercepts = _rolling_linreg_numba(
-            source, self.first_period
-        )
-        second_slopes, second_intercepts = _rolling_linreg_numba(
-            source, self.second_period
-        )
+        first_slopes, first_intercepts = _rolling_linreg_numba(source, self.first_period)
+        second_slopes, second_intercepts = _rolling_linreg_numba(source, self.second_period)
 
         first_linreg = first_slopes * source + first_intercepts
         second_linreg = second_slopes * source + second_intercepts
@@ -490,9 +474,7 @@ class LinRegDiffDirection(Feature):
         diff = first_linreg - second_linreg
         direction = (diff > 0).astype(np.int8)
 
-        col_diff = (
-            f"{self.source_col}_linreg_diff_{self.first_period}_{self.second_period}"
-        )
+        col_diff = f"{self.source_col}_linreg_diff_{self.first_period}_{self.second_period}"
         col_dir = f"{self.source_col}_linreg_diff_dir_{self.first_period}_{self.second_period}"
 
         return df.with_columns(
@@ -523,8 +505,8 @@ class LinRegPriceDiff(Feature):
     source_col: str = "close"
     period: int = 15
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_linreg_price_dir_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_linreg_price_dir_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)

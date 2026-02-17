@@ -12,28 +12,26 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-
-from conftest import generate_sinusoidal_ohlcv, generate_random_walk_ohlcv
+from conftest import generate_random_walk_ohlcv, generate_sinusoidal_ohlcv
 
 # Import new indicators
 from signalflow.ta import (
     # Overlap
     KalmanSmooth,
-    # Trend Regime
-    WilliamsAlligatorRegime,
-    TwoMaRegime,
-    SmaDirection,
     LinRegDirection,
     LinRegPriceDiff,
     # Structure Statistics
     ReversePointsStat,
+    RollingMaxStat,
+    RollingMinStat,
+    SmaDirection,
     TimeSinceSpikeStat,
+    TwoMaRegime,
     VolatilitySpikeStat,
     VolumeSpikeStat,
-    RollingMinStat,
-    RollingMaxStat,
+    # Trend Regime
+    WilliamsAlligatorRegime,
 )
-
 
 # =============================================================================
 # Helper Functions
@@ -90,9 +88,7 @@ class TestKalmanSmooth:
     def test_normalized_output(self):
         """Normalized Kalman should produce normalized values."""
         df = generate_sinusoidal_ohlcv(n_rows=500)
-        indicator = KalmanSmooth(
-            window=60, process_noise=0.1, measurement_noise=0.1, normalized=True
-        )
+        indicator = KalmanSmooth(window=60, process_noise=0.1, measurement_noise=0.1, normalized=True)
         result = run_indicator(indicator, df)
 
         assert "close_kalman_60_norm" in result.columns
@@ -412,9 +408,7 @@ class TestNoLookAheadBias:
         # Handle NaN
         valid = ~np.isnan(full_values) & ~np.isnan(trunc_values)
         if valid.sum() > 0:
-            np.testing.assert_allclose(
-                full_values[valid], trunc_values[valid], rtol=self.TOLERANCE
-            )
+            np.testing.assert_allclose(full_values[valid], trunc_values[valid], rtol=self.TOLERANCE)
 
     def test_kalman_no_lookahead(self):
         """KalmanSmooth should not have look-ahead bias."""

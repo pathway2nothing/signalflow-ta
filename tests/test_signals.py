@@ -15,10 +15,9 @@ from dataclasses import fields
 
 import polars as pl
 import pytest
+from conftest import SEED, generate_static_ohlcv, generate_test_ohlcv
 
-from conftest import generate_test_ohlcv, generate_static_ohlcv, SEED
 from signalflow.core import SignalType
-
 
 # =============================================================================
 # Detector Registry
@@ -34,10 +33,8 @@ def get_all_detector_classes() -> list[tuple[str, type]]:
         if name.startswith("_"):
             continue
         obj = getattr(signals, name)
-        if isinstance(obj, type) and hasattr(obj, "detect") and hasattr(obj, "warmup"):
-            # Check it has test_params
-            if hasattr(obj, "test_params"):
-                detector_classes.append((name, obj))
+        if isinstance(obj, type) and hasattr(obj, "detect") and hasattr(obj, "warmup") and hasattr(obj, "test_params"):
+            detector_classes.append((name, obj))
     return detector_classes
 
 
@@ -195,9 +192,9 @@ class TestDetectorOutput:
         """Generate feature data by running all possible features."""
         df = test_data
         # Run common features that might be needed
-        from signalflow.ta.momentum import RsiMom, MacdMom, StochMom
-        from signalflow.ta.volatility import BollingerVol
+        from signalflow.ta.momentum import MacdMom, RsiMom, StochMom
         from signalflow.ta.trend import AdxTrend
+        from signalflow.ta.volatility import BollingerVol
         from signalflow.ta.volume import MfiVolume
 
         features = [
@@ -210,10 +207,10 @@ class TestDetectorOutput:
         ]
 
         for feature in features:
-            try:
+            import contextlib
+
+            with contextlib.suppress(Exception):
                 df = feature.compute_pair(df)
-            except Exception:
-                pass  # Some features may fail, that's ok
 
         return df
 
@@ -310,9 +307,7 @@ class TestDetectorOutput:
             pytest.skip("No signals generated")
 
         # NONE signals should be filtered out
-        none_count = output_df.filter(
-            pl.col("signal_type") == SignalType.NONE.value
-        ).height
+        none_count = output_df.filter(pl.col("signal_type") == SignalType.NONE.value).height
         assert none_count == 0, "Output contains NONE signals"
 
 
@@ -331,18 +326,16 @@ class TestFilterIntegration:
 
     def test_detector_accepts_filters(self, test_data):
         """Detector should accept filters parameter."""
-        from signalflow.ta.signals import StochasticDetector1, RsiZscoreFilter
+        from signalflow.ta.signals import RsiZscoreFilter, StochasticDetector1
 
         # Create detector with filter
-        detector = StochasticDetector1(
-            direction="both", filters=[RsiZscoreFilter(threshold=-1.0)]
-        )
+        detector = StochasticDetector1(direction="both", filters=[RsiZscoreFilter(threshold=-1.0)])
 
         assert len(detector.filters) == 1
 
     def test_filter_affects_warmup(self, test_data):
         """Filter warmup should be considered in detector warmup."""
-        from signalflow.ta.signals import StochasticDetector1, RsiZscoreFilter
+        from signalflow.ta.signals import RsiZscoreFilter, StochasticDetector1
 
         detector_no_filter = StochasticDetector1(direction="long")
         detector_with_filter = StochasticDetector1(
@@ -362,9 +355,7 @@ class TestFilterIntegration:
 class TestDetectorReproducibility:
     """Test that detectors produce reproducible results."""
 
-    @pytest.mark.parametrize(
-        "config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5]
-    )
+    @pytest.mark.parametrize("config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5])
     def test_same_input_same_output(self, config_id, cls, params):
         """Same input should produce same output."""
         detector = cls(**params)
@@ -444,9 +435,7 @@ class TestDetectorEdgeCases:
 class TestDetectorMultiPair:
     """Test that detectors handle multi-pair data correctly."""
 
-    @pytest.mark.parametrize(
-        "config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5]
-    )
+    @pytest.mark.parametrize("config_id,cls,params", DETECTOR_CONFIGS[:5], ids=DETECTOR_IDS[:5])
     def test_multi_pair_no_cross_contamination(self, config_id, cls, params):
         """Signals from one pair should be identical whether run alone or with other pairs."""
         detector = cls(**params)
@@ -478,9 +467,7 @@ class TestDetectorMultiPair:
             pytest.skip(f"Multi-pair detection failed: {e}")
 
         # Extract signals for the original pair from multi-pair result
-        multi_pair_signals = result_multi.value.filter(
-            pl.col("pair") == "BTCUSDT"
-        ).sort("timestamp")
+        multi_pair_signals = result_multi.value.filter(pl.col("pair") == "BTCUSDT").sort("timestamp")
         single_pair_signals = result_single.value.sort("timestamp")
 
         # Results for the same pair should be identical
@@ -492,6 +479,4 @@ class TestDetectorMultiPair:
         if len(single_pair_signals) > 0:
             types_single = single_pair_signals["signal_type"].to_list()
             types_multi = multi_pair_signals["signal_type"].to_list()
-            assert types_single == types_multi, (
-                "Signal types differ between single and multi-pair"
-            )
+            assert types_single == types_multi, "Signal types differ between single and multi-pair"

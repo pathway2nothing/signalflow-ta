@@ -27,21 +27,19 @@ class TrueRangeVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["true_range"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["true_range"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
         # Normalization for unbounded output
@@ -99,8 +97,8 @@ class AtrVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["atr_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["atr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -111,9 +109,7 @@ class AtrVol(Feature):
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
         atr = np.full(n, np.nan)
@@ -187,8 +183,8 @@ class NatrVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["natr_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[dict]] = ["natr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -199,9 +195,7 @@ class NatrVol(Feature):
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
         atr = np.full(n, np.nan)

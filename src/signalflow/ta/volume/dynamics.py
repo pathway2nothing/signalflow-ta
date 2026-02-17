@@ -14,13 +14,13 @@ from signalflow.feature.base import Feature
 @dataclass
 @sf_component(name="volume/market_force")
 class MarketForceVolume(Feature):
-    """Market Force (F = m × a).
+    """Market Force (F = m x a).
 
     Volume-weighted price acceleration.
 
     velocity = ln(Close / Close[1])
     acceleration = velocity - velocity[1]
-    force = volume × acceleration
+    force = volume x acceleration
 
     Interpretation:
     - Large positive force: strong buying with increasing momentum
@@ -35,8 +35,8 @@ class MarketForceVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mforce_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["mforce_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -97,11 +97,11 @@ class MarketForceVolume(Feature):
 @dataclass
 @sf_component(name="volume/impulse")
 class ImpulseVolume(Feature):
-    """Market Impulse (J = Σ F × Δt).
+    """Market Impulse (J = Σ F x Δt).
 
     Cumulative force over a rolling window.
 
-    force = volume × acceleration
+    force = volume x acceleration
     impulse = Σ(force, period)
 
     Interpretation:
@@ -117,8 +117,8 @@ class ImpulseVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["impulse_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["impulse_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -179,13 +179,13 @@ class ImpulseVolume(Feature):
 @dataclass
 @sf_component(name="volume/market_momentum")
 class MarketMomentumVolume(Feature):
-    """Market Momentum (p = m × v).
+    """Market Momentum (p = m x v).
 
     Volume-weighted velocity. Unlike simple price momentum,
     this weights by "mass" (volume participation).
 
     velocity = ln(Close / Close[1])
-    momentum = volume × velocity
+    momentum = volume x velocity
 
     Smoothed over rolling period.
 
@@ -195,15 +195,15 @@ class MarketMomentumVolume(Feature):
     - Divergence from OBV: acceleration vs cumulative bias
     - More responsive than OBV to recent activity
 
-    Reference: Newtonian momentum (mass × velocity)
+    Reference: Newtonian momentum (mass x velocity)
     """
 
     period: int = 14
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mmom_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["mmom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -258,14 +258,14 @@ class MarketMomentumVolume(Feature):
 @dataclass
 @sf_component(name="volume/market_power")
 class MarketPowerVolume(Feature):
-    """Market Power (P = F × v).
+    """Market Power (P = F x v).
 
     Rate at which work is being done by market participants.
 
     velocity = ln(Close / Close[1])
     acceleration = velocity - velocity[1]
-    force = volume × acceleration
-    power = force × velocity
+    force = volume x acceleration
+    power = force x velocity
 
     Smoothed over rolling period.
 
@@ -275,15 +275,15 @@ class MarketPowerVolume(Feature):
     - Power spikes precede significant moves
     - Combines directionality (velocity sign) with conviction (force magnitude)
 
-    Reference: Newtonian power (force × velocity)
+    Reference: Newtonian power (force x velocity)
     """
 
     period: int = 14
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mpower_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["mpower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -363,8 +363,8 @@ class MarketCapacitanceVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mcap_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["mcap_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -428,8 +428,8 @@ class GravitationalPullVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["gpull_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[dict]] = ["gpull_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()

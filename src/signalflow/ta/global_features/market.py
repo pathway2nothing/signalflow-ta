@@ -39,15 +39,9 @@ class MarketVolatilityFeature(GlobalFeature):
 
     outputs: ClassVar[list[str]] = ["market_volatility", "market_volatility_std"]
 
-    def compute(
-        self, df: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         # Compute per-bar volatility for each pair
-        df = df.with_columns(
-            ((pl.col("high") - pl.col("low")) / (pl.col("open") + 1e-10)).alias(
-                "_volatility"
-            )
-        )
+        df = df.with_columns(((pl.col("high") - pl.col("low")) / (pl.col("open") + 1e-10)).alias("_volatility"))
 
         # Aggregate across pairs per timestamp
         result = (
@@ -78,9 +72,7 @@ class MarketIndexFeature(GlobalFeature):
 
     outputs: ClassVar[list[str]] = ["market_close"]
 
-    def compute(
-        self, df: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         result = (
             df.group_by(self.ts_col)
             .agg(
@@ -113,15 +105,9 @@ class MarketRsiFeature(GlobalFeature):
 
     outputs: ClassVar[list[str]] = ["market_rsi"]
 
-    def compute(
-        self, df: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         # First compute market index
-        market = (
-            df.group_by(self.ts_col)
-            .agg([pl.col("close").mean().alias("market_close")])
-            .sort(self.ts_col)
-        )
+        market = df.group_by(self.ts_col).agg([pl.col("close").mean().alias("market_close")]).sort(self.ts_col)
 
         close = market["market_close"].to_numpy()
         n = len(close)
@@ -172,15 +158,9 @@ class MarketZscoreFeature(GlobalFeature):
 
     outputs: ClassVar[list[str]] = ["market_zscore"]
 
-    def compute(
-        self, df: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         # First compute market index
-        market = (
-            df.group_by(self.ts_col)
-            .agg([pl.col("close").mean().alias("market_close")])
-            .sort(self.ts_col)
-        )
+        market = df.group_by(self.ts_col).agg([pl.col("close").mean().alias("market_close")]).sort(self.ts_col)
 
         close = market["market_close"].to_numpy()
         n = len(close)
@@ -217,9 +197,7 @@ class MarketRollingMinFeature(GlobalFeature):
 
     outputs: ClassVar[list[str]] = ["at_rolling_min"]
 
-    def compute(
-        self, df: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         # This operates per-pair, not cross-sectional
         # But we include it here for completeness
         close = df["close"].to_numpy()
@@ -238,9 +216,7 @@ class MarketRollingMinFeature(GlobalFeature):
         return self.window
 
 
-def compute_global_features(
-    df: pl.DataFrame, features: list[GlobalFeature]
-) -> pl.DataFrame:
+def compute_global_features(df: pl.DataFrame, features: list[GlobalFeature]) -> pl.DataFrame:
     """Compute multiple global features and join them.
 
     Args:
@@ -259,9 +235,6 @@ def compute_global_features(
 
     for feat in features:
         feat_df = feat.compute(df)
-        if result is None:
-            result = feat_df
-        else:
-            result = result.join(feat_df, on=ts_col, how="outer")
+        result = feat_df if result is None else result.join(feat_df, on=ts_col, how="outer")
 
     return result.sort(ts_col)

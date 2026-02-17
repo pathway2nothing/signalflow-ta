@@ -55,18 +55,14 @@ class BollingerBandDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.bb_upper_col = f"bb_upper_{self.period}"
         self.bb_lower_col = f"bb_lower_{self.period}"
         self.bb_pct_col = f"bb_pct_{self.period}"
         self.features = [BollingerVol(period=self.period, std_dev=self.std_dev)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on BB band crossings.
 
         Args:
@@ -98,9 +94,7 @@ class BollingerBandDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         bb_upper = features[self.bb_upper_col].to_numpy()
         bb_lower = features[self.bb_lower_col].to_numpy()

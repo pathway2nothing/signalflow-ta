@@ -56,7 +56,6 @@ class CrossSectionalStat(GlobalFeature):
 
     requires: ClassVar[list[str]] = []
     outputs: ClassVar[list[str]] = []
-
     _SUPPORTED_STATS: ClassVar[set[str]] = {
         "rank",
         "zscore",
@@ -71,9 +70,7 @@ class CrossSectionalStat(GlobalFeature):
     def __post_init__(self):
         unknown = set(self.stats) - self._SUPPORTED_STATS
         if unknown:
-            raise ValueError(
-                f"Unknown stats: {unknown}. Supported: {sorted(self._SUPPORTED_STATS)}"
-            )
+            raise ValueError(f"Unknown stats: {unknown}. Supported: {sorted(self._SUPPORTED_STATS)}")
         if not self.stats:
             raise ValueError("stats must contain at least one entry")
 
@@ -94,14 +91,10 @@ class CrossSectionalStat(GlobalFeature):
     # Core computation
     # ------------------------------------------------------------------
 
-    def compute(
-        self, df: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> pl.DataFrame:
+    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         """Compute cross-sectional statistics across all pairs."""
         if self.col not in df.columns:
-            raise ValueError(
-                f"Column '{self.col}' not found in DataFrame. Available: {df.columns}"
-            )
+            raise ValueError(f"Column '{self.col}' not found in DataFrame. Available: {df.columns}")
 
         src = pl.col(self.col)
         ts = self.ts_col
@@ -114,9 +107,7 @@ class CrossSectionalStat(GlobalFeature):
                 exprs.append((src.rank().over(ts) / src.count().over(ts)).alias(name))
 
             elif stat == "zscore":
-                exprs.append(
-                    ((src - src.mean().over(ts)) / src.std().over(ts)).alias(name)
-                )
+                exprs.append(((src - src.mean().over(ts)) / src.std().over(ts)).alias(name))
 
             elif stat == "mean":
                 exprs.append(src.mean().over(ts).alias(name))

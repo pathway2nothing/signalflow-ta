@@ -13,9 +13,7 @@ from signalflow.ta.momentum import MacdMom, RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
-def _find_local_extrema(
-    values: np.ndarray, window: int = 5
-) -> tuple[np.ndarray, np.ndarray]:
+def _find_local_extrema(values: np.ndarray, window: int = 5) -> tuple[np.ndarray, np.ndarray]:
     """Find local minima and maxima indices (causal, no look-ahead).
 
     An extremum at bar ``i`` requires ``window`` bars on each side to confirm.
@@ -86,7 +84,7 @@ def _detect_divergence(
     bearish = np.zeros(n, dtype=bool)
 
     price_minima, price_maxima = _find_local_extrema(price, window=extrema_window)
-    ind_minima, ind_maxima = _find_local_extrema(indicator, window=extrema_window)
+    _ind_minima, _ind_maxima = _find_local_extrema(indicator, window=extrema_window)
 
     # Find bullish divergence (at price lows)
     for i in range(lookback, n):
@@ -226,21 +224,15 @@ class DivergenceDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.features = [RsiMom(period=self.rsi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         return _detect_multi_pair(self, features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         rsi = features[self.rsi_col].to_numpy()
         n = len(close)
@@ -259,9 +251,7 @@ class DivergenceDetector1(SignalDetector):
         if self.direction in ("short", "both"):
             signal_type = np.where(bearish, SignalType.FALL.value, signal_type)
 
-        return _build_signals_df(
-            features, signal_type, rsi, self.filters, self.pair_col, self.ts_col
-        )
+        return _build_signals_df(features, signal_type, rsi, self.filters, self.pair_col, self.ts_col)
 
     @property
     def warmup(self) -> int:
@@ -323,23 +313,17 @@ class DivergenceDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
         if self.offset < 2:
             raise ValueError(f"offset must be >= 2, got {self.offset}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.features = [RsiMom(period=self.rsi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         return _detect_multi_pair(self, features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         rsi = features[self.rsi_col].to_numpy()
         n = len(close)
@@ -369,15 +353,11 @@ class DivergenceDetector2(SignalDetector):
         if self.direction in ("short", "both"):
             signal_type = np.where(bearish, SignalType.FALL.value, signal_type)
 
-        return _build_signals_df(
-            features, signal_type, rsi, self.filters, self.pair_col, self.ts_col
-        )
+        return _build_signals_df(features, signal_type, rsi, self.filters, self.pair_col, self.ts_col)
 
     @property
     def warmup(self) -> int:
-        base_warmup = (
-            self.rsi_period * 10 + self.lookback + self.extrema_window
-        ) * self.offset
+        base_warmup = (self.rsi_period * 10 + self.lookback + self.extrema_window) * self.offset
         filter_warmup = max((f.warmup for f in self.filters), default=0)
         return max(base_warmup, filter_warmup)
 
@@ -418,23 +398,15 @@ class DivergenceDetector3(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.macd_hist_col = f"macd_hist_{self.macd_fast}_{self.macd_slow}"
-        self.features = [
-            MacdMom(fast=self.macd_fast, slow=self.macd_slow, signal=self.macd_signal)
-        ]
+        self.features = [MacdMom(fast=self.macd_fast, slow=self.macd_slow, signal=self.macd_signal)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         return _detect_multi_pair(self, features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         macd_hist = features[self.macd_hist_col].to_numpy()
         n = len(close)
@@ -453,9 +425,7 @@ class DivergenceDetector3(SignalDetector):
         if self.direction in ("short", "both"):
             signal_type = np.where(bearish, SignalType.FALL.value, signal_type)
 
-        return _build_signals_df(
-            features, signal_type, macd_hist, self.filters, self.pair_col, self.ts_col
-        )
+        return _build_signals_df(features, signal_type, macd_hist, self.filters, self.pair_col, self.ts_col)
 
     @property
     def warmup(self) -> int:

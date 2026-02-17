@@ -223,7 +223,7 @@ class MeanExtensionFilter(SignalFilter):
         return self.window
 
 
-from signalflow.ta.signals._utils import _rma_sma_init
+from signalflow.ta.signals._utils import _rma_sma_init  # noqa: E402
 
 
 @dataclass
@@ -272,10 +272,7 @@ class RsiZscoreFilter(SignalFilter):
                 if std > 1e-10:
                     zscore[i] = (rsi[i] - mean) / std
 
-        if self.condition == "<":
-            mask = zscore < self.threshold
-        else:
-            mask = zscore > self.threshold
+        mask = zscore < self.threshold if self.condition == "<" else zscore > self.threshold
 
         return pl.Series(values=mask)
 
@@ -395,10 +392,7 @@ class CciZscoreFilter(SignalFilter):
                 if std > 1e-10:
                     zscore[i] = (cci[i] - mean) / std
 
-        if self.condition == "<":
-            mask = zscore < self.threshold
-        else:
-            mask = zscore > self.threshold
+        mask = zscore < self.threshold if self.condition == "<" else zscore > self.threshold
 
         return pl.Series(values=mask)
 
@@ -455,10 +449,7 @@ class MacdBelowSignalFilter(SignalFilter):
 
         for i in range(start_idx + 1, n):
             if not np.isnan(macd_line[i]) and not np.isnan(signal_line[i - 1]):
-                signal_line[i] = (
-                    signal_alpha * macd_line[i]
-                    + (1 - signal_alpha) * signal_line[i - 1]
-                )
+                signal_line[i] = signal_alpha * macd_line[i] + (1 - signal_alpha) * signal_line[i - 1]
 
         mask = macd_line < signal_line
         return pl.Series(values=mask)
@@ -514,10 +505,7 @@ class MacdAboveSignalFilter(SignalFilter):
 
         for i in range(start_idx + 1, n):
             if not np.isnan(macd_line[i]) and not np.isnan(signal_line[i - 1]):
-                signal_line[i] = (
-                    signal_alpha * macd_line[i]
-                    + (1 - signal_alpha) * signal_line[i - 1]
-                )
+                signal_line[i] = signal_alpha * macd_line[i] + (1 - signal_alpha) * signal_line[i - 1]
 
         mask = macd_line > signal_line
         return pl.Series(values=mask)

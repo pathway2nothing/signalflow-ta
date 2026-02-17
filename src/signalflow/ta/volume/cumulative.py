@@ -59,8 +59,8 @@ class ObvVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["obv"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["obv"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -140,8 +140,8 @@ class AdVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["ad"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["ad"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -217,8 +217,8 @@ class PvtVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["pvt"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["pvt"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -293,8 +293,8 @@ class NviVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["nvi"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["nvi"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -371,8 +371,8 @@ class PviVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["pvi"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["pvi"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()

@@ -35,8 +35,8 @@ class AccelerationMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_accel_{lag}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_accel_{lag}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -118,8 +118,8 @@ class JerkMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_jerk_{lag}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_jerk_{lag}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -184,13 +184,13 @@ class JerkMom(Feature):
 @dataclass
 @sf_component(name="momentum/angular_momentum")
 class AngularMomentumMom(Feature):
-    """Angular Momentum (L = displacement × velocity).
+    """Angular Momentum (L = displacement x velocity).
 
     Cross-product analogy: displacement from MA times velocity.
 
     displacement = ln(Close) - ln(SMA)
     velocity = ln(Close / Close[1])
-    L = displacement × velocity
+    L = displacement x velocity
 
     Smoothed over rolling period.
 
@@ -210,8 +210,8 @@ class AngularMomentumMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_angmom_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_angmom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -233,7 +233,7 @@ class AngularMomentumMom(Feature):
             if values[i - 1] > 0 and values[i] > 0:
                 velocity[i] = np.log(values[i] / values[i - 1])
 
-        # Angular momentum = displacement × velocity
+        # Angular momentum = displacement x velocity
         L_raw = displacement * velocity
 
         # Smooth
@@ -296,8 +296,8 @@ class TorqueMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_torque_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_torque_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

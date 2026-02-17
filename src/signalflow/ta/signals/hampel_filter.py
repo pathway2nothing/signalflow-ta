@@ -35,9 +35,8 @@ def _hampel_filter(values: np.ndarray, window: int, n_sigmas: float) -> np.ndarr
         median = np.median(window_vals)
         mad = k * np.median(np.abs(window_vals - median))
 
-        if mad > 1e-10:
-            if np.abs(values[i] - median) > n_sigmas * mad:
-                result[i] = median
+        if mad > 1e-10 and np.abs(values[i] - median) > n_sigmas * mad:
+            result[i] = median
 
     return result
 
@@ -78,9 +77,8 @@ def _adaptive_hampel_filter(
         vol_median = np.median(vol_window_vals)
         mad = k * np.median(np.abs(vol_window_vals - vol_median))
 
-        if mad > 1e-10:
-            if np.abs(values[i] - median) > n_sigmas * mad:
-                result[i] = median
+        if mad > 1e-10 and np.abs(values[i] - median) > n_sigmas * mad:
+            result[i] = median
 
     return result
 
@@ -127,15 +125,11 @@ class HampelFilterDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.features = []
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on Hampel filter deviation.
 
         Args:
@@ -167,9 +161,7 @@ class HampelFilterDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         n = len(close)
 
@@ -278,15 +270,11 @@ class HampelFilterDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.features = []
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on adaptive Hampel filter deviation.
 
         Args:
@@ -318,16 +306,12 @@ class HampelFilterDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         n = len(close)
 
         # Apply adaptive Hampel filter
-        filtered = _adaptive_hampel_filter(
-            close, self.window, self.n_sigmas, self.volatility_window
-        )
+        filtered = _adaptive_hampel_filter(close, self.window, self.n_sigmas, self.volatility_window)
 
         # Calculate deviation score
         score = (close - filtered) / (close + 1e-10)

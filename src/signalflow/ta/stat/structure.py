@@ -29,7 +29,9 @@ def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray
 
     # First window
     for i in range(2, min(window_size, n)):
-        if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (close[i] < close[i - 1] and close[i - 1] > close[i - 2]):
+        if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (
+            close[i] < close[i - 1] and close[i - 1] > close[i - 2]
+        ):
             reverse_count += 1
         reverse_counts[i] = reverse_count
 
@@ -37,15 +39,13 @@ def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray
 
     # Rolling window
     for i in range(window_size, n):
-        if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (close[i] < close[i - 1] and close[i - 1] > close[i - 2]):
+        if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (
+            close[i] < close[i - 1] and close[i - 1] > close[i - 2]
+        ):
             reverse_count += 1
 
-        if (
-            close[tail_idx] > close[tail_idx - 1]
-            and close[tail_idx] > close[tail_idx + 1]
-        ) or (
-            close[tail_idx] < close[tail_idx - 1]
-            and close[tail_idx] < close[tail_idx + 1]
+        if (close[tail_idx] > close[tail_idx - 1] and close[tail_idx] > close[tail_idx + 1]) or (
+            close[tail_idx] < close[tail_idx - 1] and close[tail_idx] < close[tail_idx + 1]
         ):
             reverse_count -= 1
 
@@ -72,8 +72,8 @@ class ReversePointsStat(Feature):
     source_col: str = "close"
     window: int = 20
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_reverse_points_{window}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_reverse_points_{window}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -81,9 +81,7 @@ class ReversePointsStat(Feature):
         reverse_counts = _calculate_reverse_points(source, self.window)
 
         max_possible = self.window - 2
-        normalized = (
-            reverse_counts / max_possible if max_possible > 0 else reverse_counts
-        )
+        normalized = reverse_counts / max_possible if max_possible > 0 else reverse_counts
 
         col_raw = f"{self.source_col}_reverse_points_{self.window}"
         col_norm = f"{self.source_col}_reverse_points_norm_{self.window}"
@@ -144,8 +142,8 @@ class TimeSinceSpikeStat(Feature):
 
     source_col: str = "spike"
 
-    requires = ["{source_col}"]
-    outputs = ["time_since_{source_col}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["time_since_{source_col}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         spike_values = df[self.source_col].to_numpy().astype(np.float64)
@@ -181,8 +179,8 @@ class VolatilitySpikeStat(Feature):
     period: int = 60
     threshold: float = 1.0
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_volat_spike_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_volat_spike_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -233,8 +231,8 @@ class VolatilitySpikeDiffStat(Feature):
     second_period: int = 240
     threshold: float = 0.5
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_volat_spike_diff_{first_period}_{second_period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_volat_spike_diff_{first_period}_{second_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -260,9 +258,7 @@ class VolatilitySpikeDiffStat(Feature):
         diff_zscore = (zscore1 - zscore2) / (np.abs(zscore1) + 1e-10)
         spike = (diff_zscore > self.threshold).astype(np.int8)
 
-        col_diff = (
-            f"{self.source_col}_volat_diff_{self.first_period}_{self.second_period}"
-        )
+        col_diff = f"{self.source_col}_volat_diff_{self.first_period}_{self.second_period}"
         col_spike = f"{self.source_col}_volat_spike_diff_{self.first_period}_{self.second_period}"
 
         return df.with_columns(
@@ -297,8 +293,8 @@ class VolumeSpikeStat(Feature):
     period: int = 60
     threshold: float = 1.0
 
-    requires = ["volume"]
-    outputs = ["volume_spike_{period}"]
+    requires: ClassVar[list[str]] = ["volume"]
+    outputs: ClassVar[list[dict]] = ["volume_spike_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         volume = df["volume"].to_numpy()
@@ -347,8 +343,8 @@ class VolumeSpikeDiffStat(Feature):
     second_period: int = 240
     threshold: float = 0.5
 
-    requires = ["volume"]
-    outputs = ["volume_spike_diff_{first_period}_{second_period}"]
+    requires: ClassVar[list[str]] = ["volume"]
+    outputs: ClassVar[list[dict]] = ["volume_spike_diff_{first_period}_{second_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         volume = df["volume"].to_numpy()
@@ -404,14 +400,12 @@ class RollingMinStat(Feature):
     source_col: str = "close"
     period: int = 14
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_min_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_min_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col_name = f"{self.source_col}_min_{self.period}"
-        return df.with_columns(
-            pl.col(self.source_col).rolling_min(window_size=self.period).alias(col_name)
-        )
+        return df.with_columns(pl.col(self.source_col).rolling_min(window_size=self.period).alias(col_name))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 14},
@@ -435,14 +429,12 @@ class RollingMaxStat(Feature):
     source_col: str = "close"
     period: int = 14
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_max_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_max_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col_name = f"{self.source_col}_max_{self.period}"
-        return df.with_columns(
-            pl.col(self.source_col).rolling_max(window_size=self.period).alias(col_name)
-        )
+        return df.with_columns(pl.col(self.source_col).rolling_max(window_size=self.period).alias(col_name))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 14},

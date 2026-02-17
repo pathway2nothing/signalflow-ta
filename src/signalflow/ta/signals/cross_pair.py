@@ -70,9 +70,7 @@ class CrossPairDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.bb_lower_col = f"bb_lower_{self.bb_period}"
         self.features = [BollingerVol(period=self.bb_period, std_dev=self.bb_std)]
@@ -93,9 +91,7 @@ class CrossPairDetector1(SignalDetector):
 
         return zscore
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on cross-pair correlation.
 
         Args:
@@ -127,9 +123,7 @@ class CrossPairDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         close = features["close"].to_numpy()
         bb_lower = features[self.bb_lower_col].to_numpy()
         n = len(close)
@@ -154,12 +148,8 @@ class CrossPairDetector1(SignalDetector):
             df = df.join(target_returns, on=self.ts_col, how="left")
 
             # Get return columns (assume named 'returns' or similar)
-            ref_col = [
-                c for c in df.columns if "ref" in c.lower() or "btc" in c.lower()
-            ]
-            target_col = [
-                c for c in df.columns if "target" in c.lower() or "usdt" in c.lower()
-            ]
+            ref_col = [c for c in df.columns if "ref" in c.lower() or "btc" in c.lower()]
+            target_col = [c for c in df.columns if "target" in c.lower() or "usdt" in c.lower()]
 
             if ref_col and target_col:
                 ref_vals = df[ref_col[0]].to_numpy()
@@ -184,9 +174,7 @@ class CrossPairDetector1(SignalDetector):
 
         # Combine signals
         long_signal = bb_signal & correlation_signal
-        short_signal = (
-            close > features[f"bb_upper_{self.bb_period}"].to_numpy()
-        ) & ~correlation_signal
+        short_signal = (close > features[f"bb_upper_{self.bb_period}"].to_numpy()) & ~correlation_signal
 
         # Build signal type array
         signal_type = np.full(n, SignalType.NONE.value)

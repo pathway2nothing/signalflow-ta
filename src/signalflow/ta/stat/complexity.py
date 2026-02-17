@@ -104,9 +104,8 @@ def _sample_entropy(x: np.ndarray, m: int, r: float) -> float:
             if np.max(np.abs(x[i : i + m] - x[j : j + m])) <= r:
                 b_count += 1
                 # Check (m+1)-length match
-                if i + m < n and j + m < n:
-                    if abs(x[i + m] - x[j + m]) <= r:
-                        a_count += 1
+                if i + m < n and j + m < n and abs(x[i + m] - x[j + m]) <= r:
+                    a_count += 1
 
     if b_count == 0:
         return np.nan
@@ -132,15 +131,15 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
 
     s = binary_seq.astype(int).tolist()
     complexity = 1
-    l = 1  # current prefix length
+    prefix_len = 1  # current prefix length
     k = 1  # current component length
     k_max = 1
 
-    while l + k <= n:
-        # Check if s[l:l+k] is in s[0:l+k-1]
-        sub = s[l : l + k]
+    while prefix_len + k <= n:
+        # Check if s[prefix_len:prefix_len+k] is in s[0:prefix_len+k-1]
+        sub = s[prefix_len : prefix_len + k]
         found = False
-        for start in range(l + k - k):
+        for start in range(prefix_len + k - k):
             if s[start : start + k] == sub:
                 found = True
                 break
@@ -151,7 +150,7 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
                 k_max = k
         else:
             complexity += 1
-            l += k_max if k_max > k else k
+            prefix_len += k_max if k_max > k else k
             k = 1
             k_max = 1
 
@@ -221,9 +220,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
 
     # Generate box sizes (log-spaced)
     box_sizes = np.unique(
-        np.logspace(
-            np.log10(min_box), np.log10(max_box), num=min(15, max_box - min_box + 1)
-        ).astype(int)
+        np.logspace(np.log10(min_box), np.log10(max_box), num=min(15, max_box - min_box + 1)).astype(int)
     )
     box_sizes = box_sizes[(box_sizes >= min_box) & (box_sizes <= max_box)]
 
@@ -334,16 +331,14 @@ class PermutationEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_perm_entropy_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_perm_entropy_{period}"]
 
     def __post_init__(self):
         if self.m < 2 or self.m > 7:
             raise ValueError(f"m must be in [2, 7], got {self.m}")
         if self.period < self.m + 10:
-            raise ValueError(
-                f"period must be >= m + 10, got period={self.period}, m={self.m}"
-            )
+            raise ValueError(f"period must be >= m + 10, got period={self.period}, m={self.m}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -426,16 +421,14 @@ class SampleEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sampen_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_sampen_{period}"]
 
     def __post_init__(self):
         if self.m < 1 or self.m > 4:
             raise ValueError(f"m must be in [1, 4], got {self.m}")
         if self.period < 30:
-            raise ValueError(
-                f"period must be >= 30 for reliable SampEn, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 30 for reliable SampEn, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -521,14 +514,12 @@ class LempelZivStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_lzc_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_lzc_{period}"]
 
     def __post_init__(self):
         if self.period < 20:
-            raise ValueError(
-                f"period must be >= 20 for reliable LZC, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 20 for reliable LZC, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -616,16 +607,14 @@ class FisherInformationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_fisher_info_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_fisher_info_{period}"]
 
     def __post_init__(self):
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 2:
-            raise ValueError(
-                f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}"
-            )
+            raise ValueError(f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -713,14 +702,12 @@ class DfaExponentStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_dfa_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_dfa_{period}"]
 
     def __post_init__(self):
         if self.period < 50:
-            raise ValueError(
-                f"period must be >= 50 for reliable DFA, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 50 for reliable DFA, got {self.period}")
         if self.min_box < 3:
             raise ValueError(f"min_box must be >= 3, got {self.min_box}")
 

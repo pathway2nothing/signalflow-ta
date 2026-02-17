@@ -34,8 +34,8 @@ class GapVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["open", "high", "low", "close"]
-    outputs = [
+    requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
+    outputs: ClassVar[list[str]] = [
         "gap_val",
         "gap_pct",
         "gap_fill_pct",

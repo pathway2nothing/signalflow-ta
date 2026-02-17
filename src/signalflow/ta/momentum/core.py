@@ -67,12 +67,12 @@ class RsiMom(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["rsi_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["rsi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
-        n = len(close)
+        len(close)
 
         # Price changes
         diff = np.diff(close, prepend=close[0])
@@ -132,8 +132,8 @@ class RocMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["roc_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["roc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -143,9 +143,7 @@ class RocMom(Feature):
 
         for i in range(self.period, n):
             if close[i - self.period] != 0:
-                roc[i] = (
-                    100 * (close[i] - close[i - self.period]) / close[i - self.period]
-                )
+                roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
@@ -199,8 +197,8 @@ class MomMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["mom_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["mom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -262,8 +260,8 @@ class CmoMom(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["cmo_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["cmo_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()

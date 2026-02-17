@@ -80,9 +80,7 @@ def _jensen_shannon_divergence(p: np.ndarray, q: np.ndarray) -> float:
     p_s = p_s / p_s.sum()
     q_s = q_s / q_s.sum()
     m = 0.5 * (p_s + q_s)
-    return float(
-        0.5 * np.sum(p_s * np.log2(p_s / m)) + 0.5 * np.sum(q_s * np.log2(q_s / m))
-    )
+    return float(0.5 * np.sum(p_s * np.log2(p_s / m)) + 0.5 * np.sum(q_s * np.log2(q_s / m)))
 
 
 def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
@@ -260,8 +258,8 @@ class KLDivergenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kl_div_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_kl_div_{period}"]
 
     def __post_init__(self):
         if self.short_period is None:
@@ -270,14 +268,10 @@ class KLDivergenceStat(Feature):
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.short_period * 2:
             raise ValueError(
-                f"period must be >= 2 * short_period, got period={self.period}, "
-                f"short_period={self.short_period}"
+                f"period must be >= 2 * short_period, got period={self.period}, short_period={self.short_period}"
             )
         if self.short_period < self.bins:
-            raise ValueError(
-                f"short_period must be >= bins, got short_period={self.short_period}, "
-                f"bins={self.bins}"
-            )
+            raise ValueError(f"short_period must be >= bins, got short_period={self.short_period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -385,8 +379,8 @@ class JSDivergenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_js_div_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_js_div_{period}"]
 
     def __post_init__(self):
         if self.short_period is None:
@@ -395,14 +389,10 @@ class JSDivergenceStat(Feature):
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.short_period * 2:
             raise ValueError(
-                f"period must be >= 2 * short_period, got period={self.period}, "
-                f"short_period={self.short_period}"
+                f"period must be >= 2 * short_period, got period={self.period}, short_period={self.short_period}"
             )
         if self.short_period < self.bins:
-            raise ValueError(
-                f"short_period must be >= bins, got short_period={self.short_period}, "
-                f"bins={self.bins}"
-            )
+            raise ValueError(f"short_period must be >= bins, got short_period={self.short_period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -518,8 +508,8 @@ class RenyiEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_renyi_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_renyi_{period}"]
 
     def __post_init__(self):
         if self.alpha < 0:
@@ -527,9 +517,7 @@ class RenyiEntropyStat(Feature):
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 2:
-            raise ValueError(
-                f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}"
-            )
+            raise ValueError(f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -616,8 +604,8 @@ class AutoMutualInfoStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_ami_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_ami_{period}"]
 
     def __post_init__(self):
         if self.lag < 1:
@@ -626,8 +614,7 @@ class AutoMutualInfoStat(Feature):
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.lag + self.bins * 2:
             raise ValueError(
-                f"period must be >= lag + 2*bins, got period={self.period}, "
-                f"lag={self.lag}, bins={self.bins}"
+                f"period must be >= lag + 2*bins, got period={self.period}, lag={self.lag}, bins={self.bins}"
             )
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -709,16 +696,14 @@ class RelativeInfoGainStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_info_gain_{period}"]
+    requires: ClassVar[list[dict]] = ["{source_col}"]
+    outputs: ClassVar[list[dict]] = ["{source_col}_info_gain_{period}"]
 
     def __post_init__(self):
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 4:
-            raise ValueError(
-                f"period must be >= 4 * bins, got period={self.period}, bins={self.bins}"
-            )
+            raise ValueError(f"period must be >= 4 * bins, got period={self.period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

@@ -63,16 +63,12 @@ class MarketConditionDetector1(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.features = [RsiMom(period=self.rsi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on RSI and market volatility conditions.
 
         Args:
@@ -105,14 +101,10 @@ class MarketConditionDetector1(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         # Get global features from context
         if context is None or "global_features" not in context:
-            raise ValueError(
-                "MarketConditionDetector1 requires 'global_features' in context"
-            )
+            raise ValueError("MarketConditionDetector1 requires 'global_features' in context")
 
         global_feats = context["global_features"]
 
@@ -132,9 +124,7 @@ class MarketConditionDetector1(SignalDetector):
         # Signal conditions
         rsi_oversold = rsi < self.rsi_threshold
         rsi_overbought = rsi > (100 - self.rsi_threshold)
-        vol_condition = (market_vol_std > self.vol_std_threshold) & (
-            market_vol > self.vol_threshold
-        )
+        vol_condition = (market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)
 
         # Build signal type array
         signal_type = np.full(len(df), SignalType.NONE.value)
@@ -227,16 +217,12 @@ class MarketConditionDetector2(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.features = [RsiMom(period=self.rsi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals based on RSI relative to market."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
@@ -260,13 +246,9 @@ class MarketConditionDetector2(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         if context is None or "global_features" not in context:
-            raise ValueError(
-                "MarketConditionDetector2 requires 'global_features' in context"
-            )
+            raise ValueError("MarketConditionDetector2 requires 'global_features' in context")
 
         global_feats = context["global_features"]
         df = features.join(global_feats, on=self.ts_col, how="left")
@@ -293,10 +275,9 @@ class MarketConditionDetector2(SignalDetector):
         # Signal conditions
         rsi_below_threshold = rsi < self.rsi_threshold
         rsi_below_market = rsi < (market_rsi * self.rsi_ratio)
-        vol_condition = (
-            (market_vol_std > self.vol_std_threshold)
-            & (market_vol > self.vol_threshold)
-        ) | ((market_vol + market_vol_std) > self.sum_vol_threshold)
+        vol_condition = ((market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)) | (
+            (market_vol + market_vol_std) > self.sum_vol_threshold
+        )
 
         signal_type = np.full(n, SignalType.NONE.value)
 
@@ -382,16 +363,12 @@ class MarketConditionDetector3(SignalDetector):
 
     def __post_init__(self) -> None:
         if self.direction not in ("long", "short", "both"):
-            raise ValueError(
-                f"direction must be 'long', 'short', or 'both', got {self.direction}"
-            )
+            raise ValueError(f"direction must be 'long', 'short', or 'both', got {self.direction}")
 
         self.rsi_col = f"rsi_{self.rsi_period}"
         self.features = [RsiMom(period=self.rsi_period)]
 
-    def detect(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         """Generate signals with multiple condition pathways."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
@@ -415,13 +392,9 @@ class MarketConditionDetector3(SignalDetector):
             )
         return self._detect_single(features, context)
 
-    def _detect_single(
-        self, features: pl.DataFrame, context: dict[str, Any] | None = None
-    ) -> Signals:
+    def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         if context is None or "global_features" not in context:
-            raise ValueError(
-                "MarketConditionDetector3 requires 'global_features' in context"
-            )
+            raise ValueError("MarketConditionDetector3 requires 'global_features' in context")
 
         global_feats = context["global_features"]
         df = features.join(global_feats, on=self.ts_col, how="left")
@@ -463,26 +436,19 @@ class MarketConditionDetector3(SignalDetector):
 
         # Condition 1: RSI + vol based
         rsi_cond = (rsi < self.rsi_threshold) & (rsi < market_rsi * self.rsi_ratio)
-        vol_cond = (
-            (market_vol_std > self.vol_std_threshold)
-            & (market_vol > self.vol_threshold)
-        ) | ((market_vol + market_vol_std) > self.sum_vol_threshold)
+        vol_cond = ((market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)) | (
+            (market_vol + market_vol_std) > self.sum_vol_threshold
+        )
         base_signal = rsi_cond & vol_cond
 
         # Condition 2: Z-score based
-        zscore_signal = (zscore < self.zscore_threshold) & (
-            market_zscore > self.market_zscore_threshold
-        )
+        zscore_signal = (zscore < self.zscore_threshold) & (market_zscore > self.market_zscore_threshold)
 
         # Condition 3: Forced entry on extreme market conditions
-        forced_signal = (market_zscore < self.forced_zscore) & (
-            zscore < self.forced_zscore
-        )
+        forced_signal = (market_zscore < self.forced_zscore) & (zscore < self.forced_zscore)
 
         # Condition 4: Extreme volatility
-        extreme_vol = (market_vol + market_vol_std) > (
-            self.sum_vol_threshold * self.forced_vol_multiplier
-        )
+        extreme_vol = (market_vol + market_vol_std) > (self.sum_vol_threshold * self.forced_vol_multiplier)
 
         # Combine conditions
         main_signal = base_signal | zscore_signal | forced_signal | extreme_vol

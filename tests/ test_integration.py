@@ -14,23 +14,20 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-
 from conftest import (
-    generate_static_ohlcv,
-    generate_sinusoidal_ohlcv,
-    generate_random_walk_ohlcv,
+    SEED,
     generate_empty_column_df,
     generate_ohlcv_with_nulls,
-    SEED,
+    generate_random_walk_ohlcv,
+    generate_sinusoidal_ohlcv,
+    generate_static_ohlcv,
 )
-
 from indicator_registry import (
-    IndicatorConfig,
-    get_configs_by_category,
     _CONFIGS_FOR_PARAM,
     _IDS_FOR_PARAM,
+    IndicatorConfig,
+    get_configs_by_category,
 )
-
 
 # =============================================================================
 # Helper for skipping tests when no indicators available
@@ -143,9 +140,7 @@ class TestIndicatorEmptyColumn:
 
                 # Should have output columns
                 out_cols = get_output_columns(result, config)
-                assert len(out_cols) > 0 or len(result.columns) > 7, (
-                    f"No output columns from {config.name}"
-                )
+                assert len(out_cols) > 0 or len(result.columns) > 7, f"No output columns from {config.name}"
 
                 # Output length should match input
                 assert len(result) == len(df), f"{config.name} changed row count"
@@ -161,17 +156,13 @@ class TestIndicatorEmptyColumn:
                     "required",
                     "column",
                 ]
-                assert any(kw in error_msg for kw in acceptable_errors), (
-                    f"{config.name} raised unclear error: {e}"
-                )
+                assert any(kw in error_msg for kw in acceptable_errors), f"{config.name} raised unclear error: {e}"
 
     def test_partial_null_handling(self, config: IndicatorConfig):
         """Indicator should handle partial null values."""
         config = _ensure_config(config)
         df = generate_sinusoidal_ohlcv(n_rows=200)
-        df_nulls = generate_ohlcv_with_nulls(
-            df, null_fraction=0.05, columns=config.requires
-        )
+        df_nulls = generate_ohlcv_with_nulls(df, null_fraction=0.05, columns=config.requires)
 
         try:
             result = run_indicator(config, df_nulls)
@@ -220,10 +211,7 @@ class TestIndicatorLookAhead:
             n_compare = len(result_trunc)
 
             for out_col in out_cols:
-                if (
-                    out_col not in result_full.columns
-                    or out_col not in result_trunc.columns
-                ):
+                if out_col not in result_full.columns or out_col not in result_trunc.columns:
                     continue
 
                 full_vals = result_full[out_col][:n_compare].to_numpy()
@@ -269,10 +257,7 @@ class TestIndicatorLookAhead:
             n_compare = len(result_trunc)
 
             for out_col in out_cols:
-                if (
-                    out_col not in result_full.columns
-                    or out_col not in result_trunc.columns
-                ):
+                if out_col not in result_full.columns or out_col not in result_trunc.columns:
                     continue
 
                 full_vals = result_full[out_col][:n_compare].to_numpy()
@@ -351,18 +336,11 @@ class TestIndicatorReproducibility:
             failures = []
 
             for out_col in out_cols:
-                if (
-                    out_col not in result_full.columns
-                    or out_col not in result_late.columns
-                ):
+                if out_col not in result_full.columns or out_col not in result_late.columns:
                     continue
 
-                full_vals = result_full[out_col][
-                    compare_start : compare_start + compare_len
-                ].to_numpy()
-                late_vals = result_late[out_col][
-                    warmup : warmup + compare_len
-                ].to_numpy()
+                full_vals = result_full[out_col][compare_start : compare_start + compare_len].to_numpy()
+                late_vals = result_late[out_col][warmup : warmup + compare_len].to_numpy()
 
                 valid = ~np.isnan(full_vals) & ~np.isnan(late_vals)
 
@@ -482,9 +460,7 @@ class TestIndicatorOutputValidation:
 
         try:
             result = run_indicator(config, df)
-            assert len(result) == len(df), (
-                f"{config.name} changed row count: {len(result)} != {len(df)}"
-            )
+            assert len(result) == len(df), f"{config.name} changed row count: {len(result)} != {len(df)}"
         except Exception as e:
             if "empty" in str(e).lower() or "null" in str(e).lower():
                 pytest.skip(f"{config.name} requires non-null data")
@@ -499,9 +475,7 @@ class TestIndicatorOutputValidation:
             result = run_indicator(config, df)
             out_cols = get_output_columns(result, config)
 
-            assert len(out_cols) > 0 or len(result.columns) > 7, (
-                f"{config.name} produced no new columns"
-            )
+            assert len(out_cols) > 0 or len(result.columns) > 7, f"{config.name} produced no new columns"
         except Exception as e:
             if "empty" in str(e).lower() or "null" in str(e).lower():
                 pytest.skip(f"{config.name} requires non-null data")
@@ -538,20 +512,14 @@ class TestIndicatorOutputValidation:
                     violations = values < min_bound - 1e-6
                     if violations.any():
                         min_val = values[violations].min()
-                        pytest.fail(
-                            f"{config.name}.{out_col} below min bound {min_bound}: "
-                            f"min value = {min_val}"
-                        )
+                        pytest.fail(f"{config.name}.{out_col} below min bound {min_bound}: min value = {min_val}")
 
                 # Check max bound
                 if max_bound is not None and max_bound != float("inf"):
                     violations = values > max_bound + 1e-6
                     if violations.any():
                         max_val = values[violations].max()
-                        pytest.fail(
-                            f"{config.name}.{out_col} above max bound {max_bound}: "
-                            f"max value = {max_val}"
-                        )
+                        pytest.fail(f"{config.name}.{out_col} above max bound {max_bound}: max value = {max_val}")
 
         except Exception as e:
             if "empty" in str(e).lower() or "null" in str(e).lower():
@@ -575,9 +543,7 @@ class TestIndicatorOutputValidation:
                 valid = ~np.isnan(values)
 
                 if valid.any():
-                    assert not np.any(np.isinf(values[valid])), (
-                        f"{config.name}.{out_col} contains infinite values"
-                    )
+                    assert not np.any(np.isinf(values[valid])), f"{config.name}.{out_col} contains infinite values"
 
         except Exception as e:
             if "empty" in str(e).lower() or "null" in str(e).lower():
@@ -599,7 +565,7 @@ class TestIndicatorMultiPair:
         try:
             # Compute separately
             result1 = run_indicator(config, df1)
-            result2 = run_indicator(config, df2)
+            run_indicator(config, df2)
 
             # Compute together (simulating grouped computation)
             df_combined = pl.concat([df1, df2])
@@ -732,9 +698,7 @@ class TestMomentumIndicators:
                     if len(values) > 100:
                         mean_rsi = np.mean(values)
                         # RSI should oscillate around 50 (±15)
-                        assert 35 < mean_rsi < 65, (
-                            f"{config.name} mean RSI = {mean_rsi:.1f}, expected ~50"
-                        )
+                        assert 35 < mean_rsi < 65, f"{config.name} mean RSI = {mean_rsi:.1f}, expected ~50"
             except Exception:
                 continue
 
@@ -766,9 +730,7 @@ class TestVolatilityIndicators:
                 valid = ~np.isnan(values)
 
                 if valid.any():
-                    assert np.all(values[valid] >= 0), (
-                        f"{config.name}.{col} has negative values"
-                    )
+                    assert np.all(values[valid] >= 0), f"{config.name}.{col} has negative values"
 
 
 # =============================================================================

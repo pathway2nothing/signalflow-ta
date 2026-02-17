@@ -4,14 +4,11 @@ Pivot Detection Utilities
 Functions for finding local extrema (highs and lows) in time series data.
 """
 
-
 import numpy as np
 from scipy.signal import argrelextrema
 
 
-def find_pivots_scipy(
-    series: np.ndarray, order: int = 5, min_distance: int = 1
-) -> tuple[np.ndarray, np.ndarray]:
+def find_pivots_scipy(series: np.ndarray, order: int = 5, min_distance: int = 1) -> tuple[np.ndarray, np.ndarray]:
     """
     Find local maxima and minima using scipy.signal.argrelextrema.
 
@@ -71,9 +68,7 @@ def find_pivots_scipy(
     return highs, lows
 
 
-def find_pivots_window(
-    series: np.ndarray, window: int = 5, min_distance: int = 10
-) -> tuple[np.ndarray, np.ndarray]:
+def find_pivots_window(series: np.ndarray, window: int = 5, min_distance: int = 10) -> tuple[np.ndarray, np.ndarray]:
     """
     Find local maxima and minima using rolling window comparison.
 
@@ -228,11 +223,11 @@ def find_divergence_pairs(
     # Only look at recent pivots
     recent_cutoff = max(0, len(price_indices) - lookback // 10)
     price_indices_recent = price_indices[recent_cutoff:]
-    price_pivots_recent = price_pivots[recent_cutoff:]
+    price_pivots[recent_cutoff:]
 
     indicator_cutoff = max(0, len(indicator_indices) - lookback // 10)
     indicator_indices_recent = indicator_indices[indicator_cutoff:]
-    indicator_pivots_recent = indicator_pivots[indicator_cutoff:]
+    indicator_pivots[indicator_cutoff:]
 
     # Find aligned pivots
     for i, p_idx in enumerate(price_indices_recent):
