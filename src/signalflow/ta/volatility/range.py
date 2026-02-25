@@ -8,6 +8,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_kernels import rma_sma_init, ema_sma_init, sma_nb
 
 
 @dataclass
@@ -112,21 +113,13 @@ class AtrVol(Feature):
         tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        atr = np.full(n, np.nan)
-
+        tr_f = tr.astype(np.float64)
         if self.ma_type == "sma":
-            for i in range(self.period - 1, n):
-                atr[i] = np.mean(tr[i - self.period + 1 : i + 1])
+            atr = sma_nb(tr_f, self.period)
         elif self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
-            atr[self.period - 1] = np.mean(tr[: self.period])
-            for i in range(self.period, n):
-                atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+            atr = ema_sma_init(tr_f, self.period)
         else:
-            alpha = 1 / self.period
-            atr[self.period - 1] = np.mean(tr[: self.period])
-            for i in range(self.period, n):
-                atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+            atr = rma_sma_init(tr_f, self.period)
 
         # Normalization for unbounded output
         if self.normalized:
@@ -198,22 +191,13 @@ class NatrVol(Feature):
         tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        atr = np.full(n, np.nan)
-
+        tr_f = tr.astype(np.float64)
         if self.ma_type == "rma":
-            alpha = 1 / self.period
+            atr = rma_sma_init(tr_f, self.period)
         elif self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
+            atr = ema_sma_init(tr_f, self.period)
         else:
-            alpha = None
-
-        if alpha is not None:
-            atr[self.period - 1] = np.mean(tr[: self.period])
-            for i in range(self.period, n):
-                atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
-        else:
-            for i in range(self.period - 1, n):
-                atr[i] = np.mean(tr[i - self.period + 1 : i + 1])
+            atr = sma_nb(tr_f, self.period)
 
         natr = 100 * atr / close
 

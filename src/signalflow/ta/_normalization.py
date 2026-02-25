@@ -7,6 +7,8 @@ This module provides functions for normalizing technical indicators:
 
 import numpy as np
 
+from signalflow.ta._numba_kernels import normalize_zscore_nb, normalize_zscore_robust_nb
+
 
 def normalize_bounded(
     values: np.ndarray,
@@ -60,33 +62,10 @@ def normalize_zscore(values: np.ndarray, window: int, robust: bool = False) -> n
         - Handles NaN values gracefully
         - Returns NaN for insufficient data points
     """
-    n = len(values)
-    result = np.full(n, np.nan)
-
     if robust:
-        # Robust z-score: (x - median) / (1.4826 * MAD)
-        # 1.4826 is the scaling factor to make MAD comparable to std dev
-        scale = 1.4826
-        for i in range(window - 1, n):
-            window_vals = values[i - window + 1 : i + 1]
-            valid = window_vals[~np.isnan(window_vals)]
-            if len(valid) > 1:
-                median = np.median(valid)
-                mad = np.median(np.abs(valid - median))
-                if mad > 1e-10:
-                    result[i] = (values[i] - median) / (scale * mad)
+        return normalize_zscore_robust_nb(values.astype(np.float64), window)
     else:
-        # Standard z-score: (x - mean) / std
-        for i in range(window - 1, n):
-            window_vals = values[i - window + 1 : i + 1]
-            valid = window_vals[~np.isnan(window_vals)]
-            if len(valid) > 1:
-                mean = np.mean(valid)
-                std = np.std(valid, ddof=1)
-                if std > 1e-10:
-                    result[i] = (values[i] - mean) / std
-
-    return result
+        return normalize_zscore_nb(values.astype(np.float64), window)
 
 
 def get_norm_window(period: int, multiplier: float = 3.0, minimum: int = 60) -> int:

@@ -10,35 +10,8 @@ from signalflow import sf_component
 from signalflow.feature.base import Feature
 
 
-def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
-    """
-    Calculate RMA (Wilder's smoothing) with SMA initialization.
-
-    RMA uses alpha = 1/period (unlike EMA which uses 2/(period+1)).
-    Initialize with SMA for reproducibility.
-
-    Args:
-        values: Input array
-        period: RMA period
-
-    Returns:
-        RMA array with first (period-1) values as NaN
-    """
-    n = len(values)
-    alpha = 1 / period
-    rma = np.full(n, np.nan)
-
-    if n < period:
-        return rma
-
-    # Initialize with SMA of first `period` values
-    rma[period - 1] = np.mean(values[:period])
-
-    # Continue with Wilder's smoothing
-    for i in range(period, n):
-        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-
-    return rma
+from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
+from signalflow.ta._numba_kernels import cmo_kernel as _cmo_kernel
 
 
 @dataclass
@@ -273,15 +246,7 @@ class CmoMom(Feature):
         gains = np.where(diff > 0, diff, 0)
         losses = np.where(diff < 0, -diff, 0)
 
-        cmo = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            sum_gains = np.sum(gains[i - self.period + 1 : i + 1])
-            sum_losses = np.sum(losses[i - self.period + 1 : i + 1])
-
-            total = sum_gains + sum_losses
-            if total > 0:
-                cmo[i] = 100 * (sum_gains - sum_losses) / total
+        cmo = _cmo_kernel(gains, losses, self.period)
 
         # Normalization: [-100, 100] → [-1, 1]
         if self.normalized:

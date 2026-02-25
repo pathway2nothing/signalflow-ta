@@ -8,6 +8,7 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_kernels import adx_kernel as _adx_kernel, aroon_kernel as _aroon_kernel
 
 
 @dataclass
@@ -47,10 +48,9 @@ class AdxTrend(Feature):
     outputs: ClassVar[list[dict]] = ["adx_{period}", "dmp_{period}", "dmn_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
-        n = len(close)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
 
         tr = np.maximum(
             high - low,
@@ -62,34 +62,10 @@ class AdxTrend(Feature):
         dn = np.roll(low, 1) - low
         up[0] = dn[0] = 0
 
-        pdm = np.where((up > dn) & (up > 0), up, 0)
-        ndm = np.where((dn > up) & (dn > 0), dn, 0)
-        alpha = 1.0 / self.period
+        pdm = np.where((up > dn) & (up > 0), up, 0).astype(np.float64)
+        ndm = np.where((dn > up) & (dn > 0), dn, 0).astype(np.float64)
 
-        atr = np.full(n, np.nan)
-        smooth_pdm = np.full(n, np.nan)
-        smooth_ndm = np.full(n, np.nan)
-
-        atr[self.period - 1] = np.mean(tr[: self.period])
-        smooth_pdm[self.period - 1] = np.mean(pdm[: self.period])
-        smooth_ndm[self.period - 1] = np.mean(ndm[: self.period])
-
-        for i in range(self.period, n):
-            atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
-            smooth_pdm[i] = alpha * pdm[i] + (1 - alpha) * smooth_pdm[i - 1]
-            smooth_ndm[i] = alpha * ndm[i] + (1 - alpha) * smooth_ndm[i - 1]
-
-        dmp = 100 * smooth_pdm / atr
-        dmn = 100 * smooth_ndm / atr
-
-        dx = 100 * np.abs(dmp - dmn) / (dmp + dmn + 1e-10)
-
-        adx = np.full(n, np.nan)
-        start = 2 * self.period - 1
-        if start < n:
-            adx[start] = np.nanmean(dx[self.period : start + 1])
-            for i in range(start + 1, n):
-                adx[i] = alpha * dx[i] + (1 - alpha) * adx[i - 1]
+        adx, dmp, dmn = _adx_kernel(tr, pdm, ndm, self.period)
 
         # Normalization: [0, 100] → [0, 1]
         if self.normalized:
@@ -166,23 +142,10 @@ class AroonTrend(Feature):
     outputs: ClassVar[list[dict]] = ["aroon_up_{period}", "aroon_dn_{period}", "aroon_osc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        n = len(high)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
 
-        aroon_up = np.full(n, np.nan)
-        aroon_dn = np.full(n, np.nan)
-
-        for i in range(self.period, n):
-            window_high = high[i - self.period : i + 1]
-            window_low = low[i - self.period : i + 1]
-
-            periods_from_hh = self.period - np.argmax(window_high[::-1])
-            periods_from_ll = self.period - np.argmin(window_low[::-1])
-
-            aroon_up[i] = 100 * (self.period - periods_from_hh) / self.period
-            aroon_dn[i] = 100 * (self.period - periods_from_ll) / self.period
-
+        aroon_up, aroon_dn = _aroon_kernel(high, low, self.period)
         aroon_osc = aroon_up - aroon_dn
 
         # Normalization: [0, 100] → [0, 1] for up/dn, [-100, 100] → [-1, 1] for osc
