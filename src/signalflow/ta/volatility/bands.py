@@ -8,6 +8,15 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_kernels import (
+    rolling_max as _rolling_max,
+    rolling_min as _rolling_min,
+    sma_nb as _sma_nb,
+    ema_sma_init as _ema_sma_init,
+    rma_sma_init as _rma_sma_init,
+    bollinger_kernel as _bollinger_kernel,
+    keltner_kernel as _keltner_kernel,
+)
 
 
 @dataclass
@@ -54,36 +63,22 @@ class BollingerVol(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
+        from signalflow.ta._numba_kernels import rolling_std as _rolling_std
 
-        middle = np.full(n, np.nan)
-        std = np.full(n, np.nan)
+        # Rolling std (ddof=1) → correct to ddof=0 for Bollinger
+        std_raw = _rolling_std(close, self.period)
+        factor = np.sqrt((self.period - 1) / self.period)
+        std = std_raw * factor
 
         if self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
-
-            if n >= self.period:
-                # Initialize with SMA for reproducibility
-                middle[self.period - 1] = np.mean(close[: self.period])
-
-            for i in range(self.period, n):
-                middle[i] = alpha * close[i] + (1 - alpha) * middle[i - 1]
-
-            # Standard deviation still uses rolling window
-            for i in range(self.period - 1, n):
-                std[i] = np.std(close[i - self.period + 1 : i + 1], ddof=0)
-        else:  # SMA
-            for i in range(self.period - 1, n):
-                window = close[i - self.period + 1 : i + 1]
-                middle[i] = np.mean(window)
-                std[i] = np.std(window, ddof=0)
+            middle = _ema_sma_init(close, self.period)
+        else:
+            middle = _sma_nb(close, self.period)
 
         upper = middle + self.std_dev * std
         lower = middle - self.std_dev * std
-
-        width = 100 * (upper - lower) / middle
-
+        width = 100 * (upper - lower) / (middle + 1e-10)
         pct = (close - lower) / (upper - lower + 1e-10)
 
         # Normalization for unbounded outputs
@@ -189,23 +184,16 @@ class KeltnerVol(Feature):
         else:
             range_vals = high - low
 
-        basis = np.full(n, np.nan)
-        atr = np.full(n, np.nan)
+        close_f = close.astype(np.float64)
+        range_f = range_vals.astype(np.float64)
 
         if self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
-            basis[0] = close[0]
-            atr[0] = range_vals[0]
-            for i in range(1, n):
-                basis[i] = alpha * close[i] + (1 - alpha) * basis[i - 1]
-                atr[i] = alpha * range_vals[i] + (1 - alpha) * atr[i - 1]
+            upper, basis, lower = _keltner_kernel(close_f, range_f, self.period, self.multiplier)
         else:
-            for i in range(self.period - 1, n):
-                basis[i] = np.mean(close[i - self.period + 1 : i + 1])
-                atr[i] = np.mean(range_vals[i - self.period + 1 : i + 1])
-
-        upper = basis + self.multiplier * atr
-        lower = basis - self.multiplier * atr
+            basis = _sma_nb(close_f, self.period)
+            atr = _sma_nb(range_f, self.period)
+            upper = basis + self.multiplier * atr
+            lower = basis - self.multiplier * atr
 
         # Normalization for unbounded outputs
         if self.normalized:
@@ -292,17 +280,11 @@ class DonchianVol(Feature):
     outputs: ClassVar[list[dict]] = ["dc_upper_{period}", "dc_middle_{period}", "dc_lower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        n = len(high)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
 
-        upper = np.full(n, np.nan)
-        lower = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            upper[i] = np.max(high[i - self.period + 1 : i + 1])
-            lower[i] = np.min(low[i - self.period + 1 : i + 1])
-
+        upper = _rolling_max(high, self.period)
+        lower = _rolling_min(low, self.period)
         middle = (upper + lower) / 2
 
         # Normalization for unbounded outputs

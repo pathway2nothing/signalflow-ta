@@ -10,6 +10,10 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_kernels import (
+    wma_kernel as _wma_kernel,
+    ssf_kernel as _ssf_kernel,
+)
 
 
 @dataclass
@@ -141,16 +145,9 @@ class WmaSmooth(Feature):
     outputs: ClassVar[list[dict]] = ["{source_col}_wma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        source = df[self.source_col].to_numpy()
-        n = len(source)
+        source = df[self.source_col].to_numpy().astype(np.float64)
 
-        weights = np.arange(1, self.period + 1, dtype=np.float64)
-        weight_sum = weights.sum()
-
-        wma = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            window = source[i - self.period + 1 : i + 1]
-            wma[i] = np.dot(window, weights) / weight_sum
+        wma = _wma_kernel(source, self.period)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
@@ -357,29 +354,17 @@ class HmaSmooth(Feature):
     requires: ClassVar[list[dict]] = ["{source_col}"]
     outputs: ClassVar[list[dict]] = ["{source_col}_hma_{period}"]
 
-    def _wma(self, values: np.ndarray, period: int) -> np.ndarray:
-        """Compute WMA."""
-        n = len(values)
-        weights = np.arange(1, period + 1, dtype=np.float64)
-        weight_sum = weights.sum()
-
-        result = np.full(n, np.nan)
-        for i in range(period - 1, n):
-            window = values[i - period + 1 : i + 1]
-            result[i] = np.dot(window, weights) / weight_sum
-        return result
-
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        source = df[self.source_col].to_numpy()
+        source = df[self.source_col].to_numpy().astype(np.float64)
 
         half_period = int(self.period / 2)
         sqrt_period = int(np.sqrt(self.period))
 
-        wma_half = self._wma(source, half_period)
-        wma_full = self._wma(source, self.period)
+        wma_half = _wma_kernel(source, half_period)
+        wma_full = _wma_kernel(source, self.period)
 
         raw_hma = 2 * wma_half - wma_full
-        hma = self._wma(raw_hma, sqrt_period)
+        hma = _wma_kernel(raw_hma, sqrt_period)
 
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
@@ -554,33 +539,9 @@ class SsfSmooth(Feature):
     outputs: ClassVar[list[dict]] = ["{source_col}_ssf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        source = df[self.source_col].to_numpy()
-        n = len(source)
-        ssf = source.copy().astype(np.float64)
+        source = df[self.source_col].to_numpy().astype(np.float64)
 
-        if self.poles == 3:
-            x = np.pi / self.period
-            a0 = np.exp(-x)
-            b0 = 2 * a0 * np.cos(np.sqrt(3) * x)
-            c0 = a0 * a0
-
-            c4 = c0 * c0
-            c3 = -c0 * (1 + b0)
-            c2 = c0 + b0
-            c1 = 1 - c2 - c3 - c4
-
-            for i in range(3, n):
-                ssf[i] = c1 * source[i] + c2 * ssf[i - 1] + c3 * ssf[i - 2] + c4 * ssf[i - 3]
-        else:  # poles == 2
-            x = np.pi * np.sqrt(2) / self.period
-            a0 = np.exp(-x)
-            a1 = -a0 * a0
-            b1 = 2 * a0 * np.cos(x)
-            c1 = 1 - a1 - b1
-
-            for i in range(2, n):
-                ssf[i] = c1 * source[i] + b1 * ssf[i - 1] + a1 * ssf[i - 2]
-
+        ssf = _ssf_kernel(source, self.period, self.poles)
         ssf[: self.period - 1] = np.nan
 
         # Normalization: percentage difference from source

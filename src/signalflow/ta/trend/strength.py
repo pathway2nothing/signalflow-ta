@@ -8,7 +8,16 @@ import polars as pl
 
 from signalflow.core import sf_component
 from signalflow.feature.base import Feature
-from signalflow.ta._numba_kernels import adx_kernel as _adx_kernel, aroon_kernel as _aroon_kernel
+from signalflow.ta._numba_kernels import (
+    adx_kernel as _adx_kernel,
+    aroon_kernel as _aroon_kernel,
+    rolling_sum as _rolling_sum,
+    rolling_max as _rolling_max,
+    rolling_min as _rolling_min,
+    velocity_kernel as _velocity_kernel,
+    rolling_mean_nan as _rolling_mean_nan,
+    sma_nb as _sma_nb,
+)
 
 
 @dataclass
@@ -215,9 +224,9 @@ class VortexTrend(Feature):
     outputs: ClassVar[list[dict]] = ["vi_plus_{period}", "vi_minus_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
         tr = np.maximum(
@@ -230,14 +239,15 @@ class VortexTrend(Feature):
         vm_minus = np.abs(low - np.roll(high, 1))
         vm_plus[0] = vm_minus[0] = 0
 
+        tr_sum = _rolling_sum(tr, self.period)
+        vmp_sum = _rolling_sum(vm_plus, self.period)
+        vmm_sum = _rolling_sum(vm_minus, self.period)
+
         vi_plus = np.full(n, np.nan)
         vi_minus = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            tr_sum = np.sum(tr[i - self.period + 1 : i + 1])
-            if tr_sum > 0:
-                vi_plus[i] = np.sum(vm_plus[i - self.period + 1 : i + 1]) / tr_sum
-                vi_minus[i] = np.sum(vm_minus[i - self.period + 1 : i + 1]) / tr_sum
+        valid = tr_sum > 0
+        vi_plus[valid] = vmp_sum[valid] / tr_sum[valid]
+        vi_minus[valid] = vmm_sum[valid] / tr_sum[valid]
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
@@ -305,22 +315,18 @@ class VhfTrend(Feature):
     outputs: ClassVar[list[dict]] = ["vhf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
         diff = np.abs(np.diff(close, prepend=close[0]))
 
+        hcp = _rolling_max(close, self.period)
+        lcp = _rolling_min(close, self.period)
+        diff_sum = _rolling_sum(diff, self.period)
+
         vhf = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            window = close[i - self.period + 1 : i + 1]
-            hcp = np.max(window)
-            lcp = np.min(window)
-
-            diff_sum = np.sum(diff[i - self.period + 1 : i + 1])
-
-            if diff_sum > 0:
-                vhf[i] = np.abs(hcp - lcp) / diff_sum
+        valid = diff_sum > 0
+        vhf[valid] = np.abs(hcp[valid] - lcp[valid]) / diff_sum[valid]
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
@@ -388,9 +394,9 @@ class ChopTrend(Feature):
     outputs: ClassVar[list[dict]] = ["chop_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
         tr = np.maximum(
@@ -399,17 +405,15 @@ class ChopTrend(Feature):
         )
         tr[0] = high[0] - low[0]
 
+        hh = _rolling_max(high, self.period)
+        ll = _rolling_min(low, self.period)
+        tr_sum = _rolling_sum(tr, self.period)
+
         chop = np.full(n, np.nan)
         log_period = np.log10(self.period)
-
-        for i in range(self.period - 1, n):
-            hh = np.max(high[i - self.period + 1 : i + 1])
-            ll = np.min(low[i - self.period + 1 : i + 1])
-            tr_sum = np.sum(tr[i - self.period + 1 : i + 1])
-
-            diff = hh - ll
-            if diff > 0:
-                chop[i] = 100 * np.log10(tr_sum / diff) / log_period
+        diff = hh - ll
+        valid = diff > 0
+        chop[valid] = 100 * np.log10(tr_sum[valid] / diff[valid]) / log_period
 
         # Normalization: [0, 100] → [0, 1]
         if self.normalized:
@@ -465,34 +469,22 @@ class ViscosityTrend(Feature):
     outputs: ClassVar[list[dict]] = ["viscosity_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity (log-returns)
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                velocity[i] = np.log(close[i] / close[i - 1])
+        velocity = _velocity_kernel(close)
 
-        # Acceleration (change in velocity)
+        # Acceleration (change in velocity, vectorized)
         accel = np.full(n, np.nan)
-        for i in range(2, n):
-            if not np.isnan(velocity[i]) and not np.isnan(velocity[i - 1]):
-                accel[i] = velocity[i] - velocity[i - 1]
+        accel[2:] = velocity[2:] - velocity[1:-1]
+
+        # Rolling means of absolute values (NaN-aware)
+        mean_abs_v = _rolling_mean_nan(np.abs(velocity), self.period)
+        mean_abs_a = _rolling_mean_nan(np.abs(accel), self.period)
 
         visc = np.full(n, np.nan)
-        for i in range(self.period + 1, n):
-            v_window = velocity[i - self.period + 1 : i + 1]
-            a_window = accel[i - self.period + 1 : i + 1]
-
-            v_valid = v_window[~np.isnan(v_window)]
-            a_valid = a_window[~np.isnan(a_window)]
-
-            if len(v_valid) > 0 and len(a_valid) > 0:
-                mean_abs_v = np.mean(np.abs(v_valid))
-                mean_abs_a = np.mean(np.abs(a_valid))
-                if mean_abs_v > 1e-10:
-                    visc[i] = mean_abs_a / mean_abs_v
+        valid = mean_abs_v > 1e-10
+        visc[valid] = mean_abs_a[valid] / mean_abs_v[valid]
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -550,14 +542,10 @@ class ReynoldsTrend(Feature):
     outputs: ClassVar[list[dict]] = ["reynolds_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity (log-returns)
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                velocity[i] = np.log(close[i] / close[i - 1])
+        velocity = _velocity_kernel(close)
 
         reynolds = np.full(n, np.nan)
         for i in range(self.period, n):
@@ -624,18 +612,18 @@ class RotationalInertiaTrend(Feature):
     outputs: ClassVar[list[dict]] = ["rot_inertia_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         volume = df["volume"].to_numpy().astype(np.float64)
         n = len(close)
 
+        sma = _sma_nb(close, self.period)
+
         inertia = np.full(n, np.nan)
         for i in range(self.period - 1, n):
-            c_window = close[i - self.period + 1 : i + 1]
-            v_window = volume[i - self.period + 1 : i + 1]
-            sma = np.mean(c_window)
-
-            if sma > 1e-10:
-                log_disp = np.log(c_window / sma)
+            if sma[i] > 1e-10:
+                c_window = close[i - self.period + 1 : i + 1]
+                v_window = volume[i - self.period + 1 : i + 1]
+                log_disp = np.log(c_window / sma[i])
                 inertia[i] = np.sum(v_window * log_disp**2)
 
         if self.normalized:
@@ -693,22 +681,18 @@ class MarketImpedanceTrend(Feature):
     outputs: ClassVar[list[dict]] = ["impedance_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
         volume = df["volume"].to_numpy().astype(np.float64)
         n = len(high)
 
+        hl_range = high - low
+        range_sum = _rolling_sum(hl_range, self.period)
+        vol_sum = _rolling_sum(volume, self.period)
+
         impedance = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            h_window = high[i - self.period + 1 : i + 1]
-            l_window = low[i - self.period + 1 : i + 1]
-            v_window = volume[i - self.period + 1 : i + 1]
-
-            price_range = np.sum(h_window - l_window)
-            vol_sum = np.sum(v_window)
-
-            if vol_sum > 1e-10:
-                impedance[i] = price_range / vol_sum
+        valid = vol_sum > 1e-10
+        impedance[valid] = range_sum[valid] / vol_sum[valid]
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -770,21 +754,19 @@ class RCTimeConstantTrend(Feature):
     outputs: ClassVar[list[dict]] = ["rc_tau_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
+        hl_range = high - low
+        range_sum = _rolling_sum(hl_range, self.period)
+
         tau = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            h_window = high[i - self.period + 1 : i + 1]
-            l_window = low[i - self.period + 1 : i + 1]
-
-            range_sum = np.sum(h_window - l_window)
-            price_change = np.abs(close[i] - close[i - self.period + 1])
-
-            if price_change > 1e-10:
-                tau[i] = range_sum / price_change
+        start = self.period - 1
+        price_change = np.abs(close[start:] - close[:n - start])
+        valid = price_change > 1e-10
+        tau[start:][valid] = range_sum[start:][valid] / price_change[valid]
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -841,14 +823,10 @@ class SNRTrend(Feature):
     outputs: ClassVar[list[dict]] = ["snr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Log-returns
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                velocity[i] = np.log(close[i] / close[i - 1])
+        velocity = _velocity_kernel(close)
 
         snr = np.full(n, np.nan)
         for i in range(self.period, n):
@@ -916,21 +894,14 @@ class OrderParameterTrend(Feature):
     outputs: ClassVar[list[dict]] = ["order_param_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Returns sign
+        # Returns sign (vectorized)
         ret_sign = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0:
-                ret_sign[i] = np.sign(close[i] - close[i - 1])
+        ret_sign[1:] = np.sign(close[1:] - close[:-1])
 
-        order = np.full(n, np.nan)
-        for i in range(self.period, n):
-            window = ret_sign[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                order[i] = np.abs(np.mean(valid))
+        order = np.abs(_rolling_mean_nan(ret_sign, self.period))
 
         # Already bounded [0, 1]
         if self.normalized:
@@ -981,22 +952,15 @@ class SusceptibilityTrend(Feature):
     outputs: ClassVar[list[dict]] = ["susceptibility_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Returns sign
+        # Returns sign (vectorized)
         ret_sign = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0:
-                ret_sign[i] = np.sign(close[i] - close[i - 1])
+        ret_sign[1:] = np.sign(close[1:] - close[:-1])
 
-        # Order parameter
-        order = np.full(n, np.nan)
-        for i in range(self.period, n):
-            window = ret_sign[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                order[i] = np.abs(np.mean(valid))
+        # Order parameter (vectorized)
+        order = np.abs(_rolling_mean_nan(ret_sign, self.period))
 
         # Susceptibility = variance of order parameter x period
         chi = np.full(n, np.nan)

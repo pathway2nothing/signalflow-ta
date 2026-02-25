@@ -177,6 +177,65 @@ class TestKernelCorrectness:
         assert valid_k.min() >= -0.01
         assert valid_k.max() <= 100.01
 
+    def test_rolling_sum(self, medium_ohlcv):
+        from signalflow.ta._numba_kernels import rolling_sum
+
+        close = medium_ohlcv["close"].to_numpy().astype(np.float64)
+        period = 14
+        result = rolling_sum(close, period)
+
+        # Reference: manual rolling sum
+        for i in [period - 1, period, 500, 1000]:
+            expected = np.sum(close[i - period + 1 : i + 1])
+            assert abs(result[i] - expected) < 1e-6, f"Mismatch at {i}"
+
+    def test_rolling_std(self, medium_ohlcv):
+        from signalflow.ta._numba_kernels import rolling_std
+
+        close = medium_ohlcv["close"].to_numpy().astype(np.float64)
+        period = 20
+        result = rolling_std(close, period)
+
+        # Reference: manual rolling std (ddof=1)
+        for i in [period - 1, 500, 1000]:
+            expected = np.std(close[i - period + 1 : i + 1], ddof=1)
+            assert abs(result[i] - expected) < 1e-6, f"Mismatch at {i}"
+
+    def test_velocity_kernel(self, medium_ohlcv):
+        from signalflow.ta._numba_kernels import velocity_kernel
+
+        close = medium_ohlcv["close"].to_numpy().astype(np.float64)
+        result = velocity_kernel(close)
+
+        # Index 1+ should match log-returns
+        for i in [1, 100, 500]:
+            expected = np.log(close[i] / close[i - 1])
+            assert abs(result[i] - expected) < 1e-12
+
+    def test_psar_kernel(self, medium_ohlcv):
+        from signalflow.ta._numba_kernels import psar_kernel
+
+        high = medium_ohlcv["high"].to_numpy().astype(np.float64)
+        low = medium_ohlcv["low"].to_numpy().astype(np.float64)
+
+        psar, direction = psar_kernel(high, low, 0.02, 0.2)
+
+        # Direction should be +1 or -1
+        valid_dir = direction[~np.isnan(direction)]
+        assert set(np.unique(valid_dir)).issubset({-1.0, 1.0})
+
+    def test_supertrend_kernel(self, medium_ohlcv):
+        from signalflow.ta._numba_kernels import supertrend_kernel
+
+        high = medium_ohlcv["high"].to_numpy().astype(np.float64)
+        low = medium_ohlcv["low"].to_numpy().astype(np.float64)
+        close = medium_ohlcv["close"].to_numpy().astype(np.float64)
+
+        st, direction = supertrend_kernel(high, low, close, 10, 3.0)
+
+        valid_dir = direction[~np.isnan(direction)]
+        assert set(np.unique(valid_dir)).issubset({-1.0, 1.0})
+
 
 # ── Indicator-Level Speedup Tests ────────────────────────────
 
@@ -239,3 +298,71 @@ class TestSpeedup:
         # RSI with normalized=True uses zscore kernel
         t = _time_indicator(RsiMom, {"period": 14, "normalized": True}, large_ohlcv)
         assert t < 1.0, f"RSI+zscore took {t:.3f}s on 100k rows"
+
+    # ── Phase 4b: Batch A-F benchmarks ─────────────────────
+
+    def test_cci_runs_fast(self, large_ohlcv):
+        from signalflow.ta.momentum.oscillators import CciMom
+
+        t = _time_indicator(CciMom, {"period": 20}, large_ohlcv)
+        assert t < 0.5, f"CCI took {t:.3f}s on 100k rows"
+
+    def test_bollinger_runs_fast(self, large_ohlcv):
+        from signalflow.ta.volatility.bands import BollingerVol
+
+        t = _time_indicator(BollingerVol, {"period": 20, "std_dev": 2.0}, large_ohlcv)
+        assert t < 0.5, f"Bollinger took {t:.3f}s on 100k rows"
+
+    def test_psar_runs_fast(self, large_ohlcv):
+        from signalflow.ta.trend.stops import PsarTrend
+
+        t = _time_indicator(PsarTrend, {"af_step": 0.02, "af_max": 0.2}, large_ohlcv)
+        assert t < 0.5, f"PSAR took {t:.3f}s on 100k rows"
+
+    def test_supertrend_runs_fast(self, large_ohlcv):
+        from signalflow.ta.trend.stops import SupertrendTrend
+
+        t = _time_indicator(SupertrendTrend, {"period": 10, "multiplier": 3.0}, large_ohlcv)
+        assert t < 0.5, f"Supertrend took {t:.3f}s on 100k rows"
+
+    def test_ichimoku_runs_fast(self, large_ohlcv):
+        from signalflow.ta.trend.detection import IchimokuTrend
+
+        t = _time_indicator(IchimokuTrend, {"tenkan": 9, "kijun": 26, "senkou": 52}, large_ohlcv)
+        assert t < 0.5, f"Ichimoku took {t:.3f}s on 100k rows"
+
+    def test_wma_runs_fast(self, large_ohlcv):
+        from signalflow.ta.overlap.smoothers import WmaSmooth
+
+        t = _time_indicator(WmaSmooth, {"period": 20}, large_ohlcv)
+        assert t < 0.5, f"WMA took {t:.3f}s on 100k rows"
+
+    def test_hma_runs_fast(self, large_ohlcv):
+        from signalflow.ta.overlap.smoothers import HmaSmooth
+
+        t = _time_indicator(HmaSmooth, {"period": 20}, large_ohlcv)
+        assert t < 0.5, f"HMA took {t:.3f}s on 100k rows"
+
+    def test_vortex_runs_fast(self, large_ohlcv):
+        from signalflow.ta.trend.strength import VortexTrend
+
+        t = _time_indicator(VortexTrend, {"period": 14}, large_ohlcv)
+        assert t < 0.5, f"Vortex took {t:.3f}s on 100k rows"
+
+    def test_chop_runs_fast(self, large_ohlcv):
+        from signalflow.ta.trend.strength import ChopTrend
+
+        t = _time_indicator(ChopTrend, {"period": 14}, large_ohlcv)
+        assert t < 0.5, f"CHOP took {t:.3f}s on 100k rows"
+
+    def test_kinetic_energy_runs_fast(self, large_ohlcv):
+        from signalflow.ta.volatility.energy import KineticEnergyVol
+
+        t = _time_indicator(KineticEnergyVol, {"period": 20}, large_ohlcv)
+        assert t < 1.0, f"KineticEnergy took {t:.3f}s on 100k rows"
+
+    def test_order_parameter_runs_fast(self, large_ohlcv):
+        from signalflow.ta.trend.strength import OrderParameterTrend
+
+        t = _time_indicator(OrderParameterTrend, {"period": 20}, large_ohlcv)
+        assert t < 1.0, f"OrderParameter took {t:.3f}s on 100k rows"

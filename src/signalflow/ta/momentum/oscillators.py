@@ -15,6 +15,8 @@ from signalflow.ta._numba_kernels import stoch_kernel as _stoch_kernel
 from signalflow.ta._numba_kernels import sma_nb as _sma_nb
 from signalflow.ta._numba_kernels import rolling_min as _rolling_min
 from signalflow.ta._numba_kernels import rolling_max as _rolling_max
+from signalflow.ta._numba_kernels import cci_kernel as _cci_kernel
+from signalflow.ta._numba_kernels import uo_kernel as _uo_kernel
 
 
 @dataclass
@@ -197,21 +199,16 @@ class WillrMom(Feature):
     outputs: ClassVar[list[dict]] = ["willr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
-        n = len(close)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        willr = np.full(n, np.nan)
+        hh = _rolling_max(high, self.period)
+        ll = _rolling_min(low, self.period)
 
-        for i in range(self.period - 1, n):
-            hh = np.max(high[i - self.period + 1 : i + 1])
-            ll = np.min(low[i - self.period + 1 : i + 1])
-
-            if hh != ll:
-                willr[i] = -100 * (hh - close[i]) / (hh - ll)
-            else:
-                willr[i] = -50.0
+        diff = hh - ll
+        willr = np.where(diff != 0, -100 * (hh - close) / diff, -50.0)
+        willr[: self.period - 1] = np.nan
 
         # Normalization: [-100, 0] → [0, 1]
         if self.normalized:
@@ -267,16 +264,9 @@ class CciMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
 
-        tp = (high + low + close) / 3
-        cci = np.full(n, np.nan)
+        tp = ((high + low + close) / 3).astype(np.float64)
 
-        for i in range(self.period - 1, n):
-            window = tp[i - self.period + 1 : i + 1]
-            sma = np.mean(window)
-            mad = np.mean(np.abs(window - sma))
-
-            if mad > 0:
-                cci[i] = (tp[i] - sma) / (self.constant * mad)
+        cci = _cci_kernel(tp, self.period, self.constant)
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
@@ -344,30 +334,14 @@ class UoMom(Feature):
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        bp = close - np.minimum(low, prev_close)
-        tr = np.maximum(high, prev_close) - np.minimum(low, prev_close)
+        bp = (close - np.minimum(low, prev_close)).astype(np.float64)
+        tr = (np.maximum(high, prev_close) - np.minimum(low, prev_close)).astype(np.float64)
 
-        uo = np.full(n, np.nan)
-
-        for i in range(self.slow - 1, n):
-            fast_bp = np.sum(bp[i - self.fast + 1 : i + 1])
-            fast_tr = np.sum(tr[i - self.fast + 1 : i + 1])
-
-            med_bp = np.sum(bp[i - self.medium + 1 : i + 1])
-            med_tr = np.sum(tr[i - self.medium + 1 : i + 1])
-
-            slow_bp = np.sum(bp[i - self.slow + 1 : i + 1])
-            slow_tr = np.sum(tr[i - self.slow + 1 : i + 1])
-
-            if fast_tr > 0 and med_tr > 0 and slow_tr > 0:
-                fast_avg = fast_bp / fast_tr
-                med_avg = med_bp / med_tr
-                slow_avg = slow_bp / slow_tr
-
-                total_weight = self.fast_weight + self.medium_weight + self.slow_weight
-                weighted = self.fast_weight * fast_avg + self.medium_weight * med_avg + self.slow_weight * slow_avg
-
-                uo[i] = 100 * weighted / total_weight
+        uo = _uo_kernel(
+            bp, tr,
+            self.fast, self.medium, self.slow,
+            self.fast_weight, self.medium_weight, self.slow_weight,
+        )
 
         # Normalization: [0, 100] → [0, 1]
         if self.normalized:
@@ -418,17 +392,13 @@ class AoMom(Feature):
     outputs: ClassVar[list[dict]] = ["ao_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        n = len(high)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
 
         median = (high + low) / 2
-        ao = np.full(n, np.nan)
-
-        for i in range(self.slow - 1, n):
-            fast_sma = np.mean(median[i - self.fast + 1 : i + 1])
-            slow_sma = np.mean(median[i - self.slow + 1 : i + 1])
-            ao[i] = fast_sma - slow_sma
+        fast_sma = _sma_nb(median, self.fast)
+        slow_sma = _sma_nb(median, self.slow)
+        ao = fast_sma - slow_sma
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:

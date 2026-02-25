@@ -611,3 +611,661 @@ def cmo_kernel(
             cmo[i] = 100.0 * (sum_g - sum_l) / total
 
     return cmo
+
+
+# ── Batch 2 kernels ─────────────────────────────────────────
+
+
+@njit(cache=True)
+def rolling_sum(arr: np.ndarray, period: int) -> np.ndarray:
+    """O(n) rolling sum using cumulative approach."""
+    n = len(arr)
+    out = np.full(n, np.nan)
+    if n < period:
+        return out
+
+    s = 0.0
+    for j in range(period):
+        s += arr[j]
+    out[period - 1] = s
+
+    for i in range(period, n):
+        s += arr[i] - arr[i - period]
+        out[i] = s
+
+    return out
+
+
+@njit(cache=True)
+def rolling_std(arr: np.ndarray, period: int) -> np.ndarray:
+    """O(n) rolling standard deviation (ddof=1) using Welford online."""
+    n = len(arr)
+    out = np.full(n, np.nan)
+    if n < period:
+        return out
+
+    # Initial window
+    mean_val = 0.0
+    for j in range(period):
+        mean_val += arr[j]
+    mean_val /= period
+    ss = 0.0
+    for j in range(period):
+        d = arr[j] - mean_val
+        ss += d * d
+    out[period - 1] = np.sqrt(ss / (period - 1))
+
+    # Sliding window
+    for i in range(period, n):
+        old_val = arr[i - period]
+        new_val = arr[i]
+        old_mean = mean_val
+        mean_val += (new_val - old_val) / period
+        ss += (new_val - old_val) * (new_val - mean_val + old_val - old_mean)
+        if ss < 0.0:
+            ss = 0.0
+        out[i] = np.sqrt(ss / (period - 1))
+
+    return out
+
+
+@njit(cache=True)
+def velocity_kernel(close: np.ndarray) -> np.ndarray:
+    """Log returns: log(close[i] / close[i-1])."""
+    n = len(close)
+    vel = np.empty(n)
+    vel[0] = 0.0
+    for i in range(1, n):
+        if close[i - 1] > 0.0:
+            vel[i] = np.log(close[i] / close[i - 1])
+        else:
+            vel[i] = 0.0
+    return vel
+
+
+@njit(cache=True)
+def rolling_mean_nan(arr: np.ndarray, period: int) -> np.ndarray:
+    """Rolling mean that skips NaN values."""
+    n = len(arr)
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        s = 0.0
+        cnt = 0
+        for j in range(i - period + 1, i + 1):
+            v = arr[j]
+            if not np.isnan(v):
+                s += v
+                cnt += 1
+        if cnt > 0:
+            out[i] = s / cnt
+    return out
+
+
+@njit(cache=True)
+def wma_kernel(source: np.ndarray, period: int) -> np.ndarray:
+    """Weighted Moving Average. Weight = position in window."""
+    n = len(source)
+    out = np.full(n, np.nan)
+    denom = period * (period + 1) / 2.0
+
+    for i in range(period - 1, n):
+        s = 0.0
+        for j in range(period):
+            s += source[i - period + 1 + j] * (j + 1)
+        out[i] = s / denom
+
+    return out
+
+
+@njit(cache=True)
+def cci_kernel(
+    tp: np.ndarray,
+    period: int,
+    constant: float,
+) -> np.ndarray:
+    """CCI: (TP - SMA(TP)) / (constant * MAD(TP))."""
+    n = len(tp)
+    cci = np.full(n, np.nan)
+
+    for i in range(period - 1, n):
+        # SMA
+        s = 0.0
+        for j in range(i - period + 1, i + 1):
+            s += tp[j]
+        sma = s / period
+
+        # Mean Absolute Deviation
+        mad = 0.0
+        for j in range(i - period + 1, i + 1):
+            mad += abs(tp[j] - sma)
+        mad /= period
+
+        if mad > 1e-10:
+            cci[i] = (tp[i] - sma) / (constant * mad)
+
+    return cci
+
+
+@njit(cache=True)
+def uo_kernel(
+    bp: np.ndarray,
+    tr: np.ndarray,
+    fast: int,
+    medium: int,
+    slow: int,
+    fw: float,
+    mw: float,
+    sw: float,
+) -> np.ndarray:
+    """Ultimate Oscillator kernel with 3 rolling sum periods."""
+    n = len(bp)
+    uo = np.full(n, np.nan)
+    if n < slow:
+        return uo
+
+    # Rolling sums for each period
+    for i in range(slow - 1, n):
+        bp_fast = 0.0
+        tr_fast = 0.0
+        for j in range(i - fast + 1, i + 1):
+            bp_fast += bp[j]
+            tr_fast += tr[j]
+
+        bp_med = 0.0
+        tr_med = 0.0
+        for j in range(i - medium + 1, i + 1):
+            bp_med += bp[j]
+            tr_med += tr[j]
+
+        bp_slow = 0.0
+        tr_slow = 0.0
+        for j in range(i - slow + 1, i + 1):
+            bp_slow += bp[j]
+            tr_slow += tr[j]
+
+        if tr_fast > 1e-10 and tr_med > 1e-10 and tr_slow > 1e-10:
+            avg_fast = bp_fast / tr_fast
+            avg_med = bp_med / tr_med
+            avg_slow = bp_slow / tr_slow
+            raw = fw * avg_fast + mw * avg_med + sw * avg_slow
+            uo[i] = 100.0 * raw / (fw + mw + sw)
+
+    return uo
+
+
+@njit(cache=True)
+def bollinger_kernel(
+    close: np.ndarray,
+    period: int,
+    std_dev: float,
+) -> tuple:
+    """Bollinger Bands: SMA ± std_dev * rolling_std."""
+    n = len(close)
+    upper = np.full(n, np.nan)
+    middle = np.full(n, np.nan)
+    lower = np.full(n, np.nan)
+    bw = np.full(n, np.nan)
+    bp = np.full(n, np.nan)
+
+    for i in range(period - 1, n):
+        s = 0.0
+        for j in range(i - period + 1, i + 1):
+            s += close[j]
+        sma = s / period
+
+        ss = 0.0
+        for j in range(i - period + 1, i + 1):
+            d = close[j] - sma
+            ss += d * d
+        std = np.sqrt(ss / (period - 1))
+
+        middle[i] = sma
+        upper[i] = sma + std_dev * std
+        lower[i] = sma - std_dev * std
+
+        band_range = upper[i] - lower[i]
+        if band_range > 1e-10:
+            bw[i] = band_range / sma * 100.0
+            bp[i] = (close[i] - lower[i]) / band_range
+
+    return upper, middle, lower, bw, bp
+
+
+@njit(cache=True)
+def keltner_kernel(
+    close: np.ndarray,
+    range_vals: np.ndarray,
+    period: int,
+    mult: float,
+) -> tuple:
+    """Keltner Channels: EMA(close) ± mult * EMA(range)."""
+    n = len(close)
+    upper = np.full(n, np.nan)
+    middle = np.full(n, np.nan)
+    lower = np.full(n, np.nan)
+
+    if n < period:
+        return upper, middle, lower
+
+    alpha = 2.0 / (period + 1)
+
+    # SMA init for both EMAs
+    sma_c = 0.0
+    sma_r = 0.0
+    for j in range(period):
+        sma_c += close[j]
+        sma_r += range_vals[j]
+    ema_c = sma_c / period
+    ema_r = sma_r / period
+
+    middle[period - 1] = ema_c
+    upper[period - 1] = ema_c + mult * ema_r
+    lower[period - 1] = ema_c - mult * ema_r
+
+    for i in range(period, n):
+        ema_c = alpha * close[i] + (1 - alpha) * ema_c
+        ema_r = alpha * range_vals[i] + (1 - alpha) * ema_r
+        middle[i] = ema_c
+        upper[i] = ema_c + mult * ema_r
+        lower[i] = ema_c - mult * ema_r
+
+    return upper, middle, lower
+
+
+@njit(cache=True)
+def psar_kernel(
+    high: np.ndarray,
+    low: np.ndarray,
+    af_step: float,
+    af_max: float,
+) -> tuple:
+    """Parabolic SAR kernel."""
+    n = len(high)
+    psar = np.full(n, np.nan)
+    direction = np.full(n, np.nan)  # 1=long, -1=short
+
+    if n < 2:
+        return psar, direction
+
+    # Initialize: start long
+    is_long = True
+    af = af_step
+    ep = high[0]
+    sar = low[0]
+
+    psar[0] = sar
+    direction[0] = 1.0
+
+    for i in range(1, n):
+        prev_sar = sar
+
+        # Update SAR
+        sar = prev_sar + af * (ep - prev_sar)
+
+        if is_long:
+            # SAR can't be above prior two lows
+            if i >= 2:
+                sar = min(sar, low[i - 1], low[i - 2])
+            else:
+                sar = min(sar, low[i - 1])
+
+            if low[i] < sar:
+                # Reverse to short
+                is_long = False
+                sar = ep
+                ep = low[i]
+                af = af_step
+            else:
+                if high[i] > ep:
+                    ep = high[i]
+                    af = min(af + af_step, af_max)
+        else:
+            # SAR can't be below prior two highs
+            if i >= 2:
+                sar = max(sar, high[i - 1], high[i - 2])
+            else:
+                sar = max(sar, high[i - 1])
+
+            if high[i] > sar:
+                # Reverse to long
+                is_long = True
+                sar = ep
+                ep = high[i]
+                af = af_step
+            else:
+                if low[i] < ep:
+                    ep = low[i]
+                    af = min(af + af_step, af_max)
+
+        psar[i] = sar
+        direction[i] = 1.0 if is_long else -1.0
+
+    return psar, direction
+
+
+@njit(cache=True)
+def supertrend_kernel(
+    high: np.ndarray,
+    low: np.ndarray,
+    close: np.ndarray,
+    period: int,
+    multiplier: float,
+) -> tuple:
+    """Supertrend kernel: ATR-based trend following."""
+    n = len(high)
+    supertrend = np.full(n, np.nan)
+    direction = np.full(n, np.nan)
+
+    if n < period:
+        return supertrend, direction
+
+    # Compute TR
+    tr = np.empty(n)
+    tr[0] = high[0] - low[0]
+    for i in range(1, n):
+        hl = high[i] - low[i]
+        hc = abs(high[i] - close[i - 1])
+        lc = abs(low[i] - close[i - 1])
+        tr[i] = max(hl, max(hc, lc))
+
+    # ATR via RMA
+    atr = np.full(n, np.nan)
+    s = 0.0
+    for j in range(period):
+        s += tr[j]
+    atr[period - 1] = s / period
+    alpha = 1.0 / period
+    for i in range(period, n):
+        atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+
+    # Supertrend
+    upper_band = np.empty(n)
+    lower_band = np.empty(n)
+
+    for i in range(n):
+        hl2 = (high[i] + low[i]) / 2.0
+        if np.isnan(atr[i]):
+            upper_band[i] = hl2
+            lower_band[i] = hl2
+        else:
+            upper_band[i] = hl2 + multiplier * atr[i]
+            lower_band[i] = hl2 - multiplier * atr[i]
+
+    # Direction tracking
+    dir_val = 1  # 1=up (bullish), -1=down (bearish)
+
+    start = period - 1
+    supertrend[start] = upper_band[start]
+    direction[start] = 1.0
+
+    for i in range(start + 1, n):
+        # Smooth bands
+        if lower_band[i] > lower_band[i - 1] or close[i - 1] < lower_band[i - 1]:
+            pass  # keep new lower_band
+        else:
+            lower_band[i] = lower_band[i - 1]
+
+        if upper_band[i] < upper_band[i - 1] or close[i - 1] > upper_band[i - 1]:
+            pass  # keep new upper_band
+        else:
+            upper_band[i] = upper_band[i - 1]
+
+        if dir_val == 1:
+            if close[i] < lower_band[i]:
+                dir_val = -1
+        else:
+            if close[i] > upper_band[i]:
+                dir_val = 1
+
+        if dir_val == 1:
+            supertrend[i] = lower_band[i]
+        else:
+            supertrend[i] = upper_band[i]
+
+        direction[i] = float(dir_val)
+
+    return supertrend, direction
+
+
+@njit(cache=True)
+def ichimoku_midprice(
+    high: np.ndarray,
+    low: np.ndarray,
+    period: int,
+) -> np.ndarray:
+    """Rolling (max + min) / 2 for Ichimoku lines."""
+    n = len(high)
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        hi = high[i]
+        lo = low[i]
+        for j in range(i - period + 1, i):
+            if high[j] > hi:
+                hi = high[j]
+            if low[j] < lo:
+                lo = low[j]
+        out[i] = (hi + lo) / 2.0
+    return out
+
+
+@njit(cache=True)
+def mass_index_kernel(
+    hl_range: np.ndarray,
+    fast: int,
+    slow: int,
+) -> np.ndarray:
+    """Mass Index: sum of EMA(HL) / EMA(EMA(HL)) over slow window."""
+    n = len(hl_range)
+    massi = np.full(n, np.nan)
+
+    alpha = 2.0 / (fast + 1)
+
+    ema1 = np.empty(n)
+    ema2 = np.empty(n)
+    ema1[0] = hl_range[0]
+    ema2[0] = hl_range[0]
+
+    for i in range(1, n):
+        ema1[i] = alpha * hl_range[i] + (1 - alpha) * ema1[i - 1]
+        ema2[i] = alpha * ema1[i] + (1 - alpha) * ema2[i - 1]
+
+    ratio = np.empty(n)
+    for i in range(n):
+        denom = ema2[i]
+        if abs(denom) > 1e-10:
+            ratio[i] = ema1[i] / denom
+        else:
+            ratio[i] = 1.0
+
+    for i in range(slow - 1, n):
+        s = 0.0
+        for j in range(i - slow + 1, i + 1):
+            s += ratio[j]
+        massi[i] = s
+
+    return massi
+
+
+@njit(cache=True)
+def ssf_kernel(
+    source: np.ndarray,
+    period: int,
+    poles: int,
+) -> np.ndarray:
+    """Ehlers Super Smoother Filter (2-pole or 3-pole)."""
+    n = len(source)
+    out = np.full(n, np.nan)
+
+    if poles == 2:
+        a1 = np.exp(-1.414 * np.pi / period)
+        b1 = 2.0 * a1 * np.cos(1.414 * np.pi / period)
+        c2 = b1
+        c3 = -a1 * a1
+        c1 = 1.0 - c2 - c3
+
+        if n >= 3:
+            out[0] = source[0]
+            out[1] = source[1]
+            for i in range(2, n):
+                out[i] = c1 * (source[i] + source[i - 1]) / 2.0 + c2 * out[i - 1] + c3 * out[i - 2]
+    else:
+        # 3-pole
+        a1 = np.exp(-np.pi / period)
+        b1 = 2.0 * a1 * np.cos(1.738 * np.pi / period)
+        c1_coeff = a1 * a1
+        c3 = -c1_coeff * a1
+        c2 = c1_coeff + b1
+        c1_val = 1.0 - c2 - c3 - (-b1 * c1_coeff)
+        c2_actual = b1 + c1_coeff
+        c3_actual = -c1_coeff * (1.0 + b1)
+        c4 = c1_coeff * c1_coeff
+        c0 = 1.0 - c2_actual - c3_actual - c4
+
+        if n >= 4:
+            out[0] = source[0]
+            out[1] = source[1]
+            out[2] = source[2]
+            for i in range(3, n):
+                out[i] = (
+                    c0 * (source[i] + source[i - 1]) / 2.0
+                    + c2_actual * out[i - 1]
+                    + c3_actual * out[i - 2]
+                    + c4 * out[i - 3]
+                )
+
+    return out
+
+
+@njit(cache=True)
+def ulcer_index_kernel(
+    close: np.ndarray,
+    period: int,
+) -> np.ndarray:
+    """Ulcer Index: sqrt(mean(pct_drawdown^2)) over rolling window."""
+    n = len(close)
+    ui = np.full(n, np.nan)
+
+    for i in range(period - 1, n):
+        # Find rolling highest and compute drawdowns
+        highest = close[i - period + 1]
+        ss_dd = 0.0
+        for j in range(i - period + 1, i + 1):
+            if close[j] > highest:
+                highest = close[j]
+            pct_dd = 100.0 * (close[j] - highest) / highest
+            ss_dd += pct_dd * pct_dd
+        ui[i] = np.sqrt(ss_dd / period)
+
+    return ui
+
+
+@njit(cache=True)
+def rvi_kernel(
+    close: np.ndarray,
+    period: int,
+    std_period: int,
+) -> np.ndarray:
+    """RVI: directional volatility using rolling std + EMA."""
+    n = len(close)
+    rvi = np.full(n, np.nan)
+
+    # Rolling std
+    std_arr = np.full(n, np.nan)
+    for i in range(std_period - 1, n):
+        s = 0.0
+        for j in range(i - std_period + 1, i + 1):
+            s += close[j]
+        mean_val = s / std_period
+        ss = 0.0
+        for j in range(i - std_period + 1, i + 1):
+            d = close[j] - mean_val
+            ss += d * d
+        std_arr[i] = np.sqrt(ss / (std_period - 1))
+
+    # Directional classification
+    diff = np.empty(n)
+    diff[0] = 0.0
+    for i in range(1, n):
+        diff[i] = close[i] - close[i - 1]
+
+    up_std = np.empty(n)
+    dn_std = np.empty(n)
+    for i in range(n):
+        sv = std_arr[i] if not np.isnan(std_arr[i]) else 0.0
+        if diff[i] > 0:
+            up_std[i] = sv
+            dn_std[i] = 0.0
+        else:
+            up_std[i] = 0.0
+            dn_std[i] = sv
+
+    # EMA with SMA init
+    alpha = 2.0 / (period + 1)
+    init_idx = std_period + period - 2
+
+    if n <= init_idx:
+        return rvi
+
+    start_std = std_period - 1
+    end_init = start_std + period
+    if end_init > n:
+        end_init = n
+
+    up_sum = 0.0
+    dn_sum = 0.0
+    cnt = 0
+    for j in range(start_std, end_init):
+        up_sum += up_std[j]
+        dn_sum += dn_std[j]
+        cnt += 1
+
+    up_ema = up_sum / cnt
+    dn_ema = dn_sum / cnt
+
+    total = up_ema + dn_ema
+    if total > 1e-10:
+        rvi[init_idx] = 100.0 * up_ema / total
+
+    for i in range(init_idx + 1, n):
+        up_ema = alpha * up_std[i] + (1 - alpha) * up_ema
+        dn_ema = alpha * dn_std[i] + (1 - alpha) * dn_ema
+        total = up_ema + dn_ema
+        if total > 1e-10:
+            rvi[i] = 100.0 * up_ema / total
+
+    return rvi
+
+
+@njit(cache=True)
+def historical_vol_kernel(
+    close: np.ndarray,
+    period: int,
+    annualize: int,
+) -> np.ndarray:
+    """Historical volatility: std(log_returns) * sqrt(annualize)."""
+    n = len(close)
+    hv = np.full(n, np.nan)
+
+    # Log returns
+    log_ret = np.empty(n)
+    log_ret[0] = 0.0
+    for i in range(1, n):
+        if close[i - 1] > 0:
+            log_ret[i] = np.log(close[i] / close[i - 1])
+        else:
+            log_ret[i] = 0.0
+
+    ann_factor = np.sqrt(float(annualize))
+
+    for i in range(period - 1, n):
+        s = 0.0
+        for j in range(i - period + 1, i + 1):
+            s += log_ret[j]
+        mean_val = s / period
+        ss = 0.0
+        for j in range(i - period + 1, i + 1):
+            d = log_ret[j] - mean_val
+            ss += d * d
+        hv[i] = np.sqrt(ss / (period - 1)) * ann_factor
+
+    return hv

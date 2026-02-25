@@ -9,6 +9,11 @@ import polars as pl
 
 from signalflow import sf_component
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_kernels import (
+    velocity_kernel as _velocity_kernel,
+    sma_nb as _sma_nb,
+    rolling_mean_nan as _rolling_mean_nan,
+)
 
 
 @dataclass
@@ -39,30 +44,26 @@ class AccelerationMom(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_accel_{lag}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
+        values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Velocity: log-return over lag
+        # Velocity: log-return over lag (vectorized)
         velocity = np.full(n, np.nan)
-        for i in range(self.lag, n):
-            if values[i - self.lag] > 0 and values[i] > 0:
-                velocity[i] = np.log(values[i] / values[i - self.lag])
+        safe = (values[self.lag:] > 0) & (values[:-self.lag] > 0)
+        velocity[self.lag:] = np.where(safe, np.log(values[self.lag:] / values[:-self.lag]), np.nan)
 
-        # Acceleration: change in velocity
+        # Acceleration: change in velocity (vectorized)
         accel = np.full(n, np.nan)
-        for i in range(2 * self.lag, n):
-            if not np.isnan(velocity[i]) and not np.isnan(velocity[i - self.lag]):
-                accel[i] = velocity[i] - velocity[i - self.lag]
+        valid_mask = ~np.isnan(velocity[self.lag:]) & ~np.isnan(velocity[:-self.lag])
+        accel[2 * self.lag:] = np.where(
+            valid_mask[self.lag:],
+            velocity[2 * self.lag:] - velocity[self.lag:n - self.lag],
+            np.nan,
+        )
 
         # Optional smoothing via SMA
         if self.smooth > 1:
-            raw = accel.copy()
-            accel = np.full(n, np.nan)
-            for i in range(2 * self.lag + self.smooth - 1, n):
-                window = raw[i - self.smooth + 1 : i + 1]
-                valid = window[~np.isnan(window)]
-                if len(valid) == self.smooth:
-                    accel[i] = np.mean(valid)
+            accel = _rolling_mean_nan(accel, self.smooth)
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -122,36 +123,30 @@ class JerkMom(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_jerk_{lag}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
+        values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Velocity
+        # Velocity (vectorized)
         velocity = np.full(n, np.nan)
-        for i in range(self.lag, n):
-            if values[i - self.lag] > 0 and values[i] > 0:
-                velocity[i] = np.log(values[i] / values[i - self.lag])
+        safe = (values[self.lag:] > 0) & (values[:-self.lag] > 0)
+        velocity[self.lag:] = np.where(safe, np.log(values[self.lag:] / values[:-self.lag]), np.nan)
 
-        # Acceleration
+        # Acceleration (vectorized)
         accel = np.full(n, np.nan)
+        vm = ~np.isnan(velocity)
         for i in range(2 * self.lag, n):
-            if not np.isnan(velocity[i]) and not np.isnan(velocity[i - self.lag]):
+            if vm[i] and vm[i - self.lag]:
                 accel[i] = velocity[i] - velocity[i - self.lag]
 
-        # Jerk
+        # Jerk (vectorized)
         jerk = np.full(n, np.nan)
+        am = ~np.isnan(accel)
         for i in range(3 * self.lag, n):
-            if not np.isnan(accel[i]) and not np.isnan(accel[i - self.lag]):
+            if am[i] and am[i - self.lag]:
                 jerk[i] = accel[i] - accel[i - self.lag]
 
-        # Optional smoothing
         if self.smooth > 1:
-            raw = jerk.copy()
-            jerk = np.full(n, np.nan)
-            for i in range(3 * self.lag + self.smooth - 1, n):
-                window = raw[i - self.smooth + 1 : i + 1]
-                valid = window[~np.isnan(window)]
-                if len(valid) == self.smooth:
-                    jerk[i] = np.mean(valid)
+            jerk = _rolling_mean_nan(jerk, self.smooth)
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -214,36 +209,18 @@ class AngularMomentumMom(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_angmom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
-        n = len(values)
+        values = df[self.source_col].to_numpy().astype(np.float64)
 
-        # MA equilibrium
-        ma = np.full(n, np.nan)
-        for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
-
-        # Displacement
+        ma = _sma_nb(values, self.ma_period)
         log_values = np.log(np.maximum(values, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         displacement = log_values - log_ma
 
-        # Velocity
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if values[i - 1] > 0 and values[i] > 0:
-                velocity[i] = np.log(values[i] / values[i - 1])
+        velocity = _velocity_kernel(values)
+        velocity[0] = np.nan
 
-        # Angular momentum = displacement x velocity
         L_raw = displacement * velocity
-
-        # Smooth
-        L = np.full(n, np.nan)
-        start = max(self.ma_period, self.period)
-        for i in range(start, n):
-            window = L_raw[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                L[i] = np.mean(valid)
+        L = _rolling_mean_nan(L_raw, self.period)
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -300,38 +277,25 @@ class TorqueMom(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_torque_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
+        values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # MA
-        ma = np.full(n, np.nan)
-        for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
-
-        # Displacement & velocity
+        ma = _sma_nb(values, self.ma_period)
         log_values = np.log(np.maximum(values, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         displacement = log_values - log_ma
 
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if values[i - 1] > 0 and values[i] > 0:
-                velocity[i] = np.log(values[i] / values[i - 1])
+        velocity = _velocity_kernel(values)
+        velocity[0] = np.nan
 
-        # Angular momentum smoothed
         L_raw = displacement * velocity
-        L = np.full(n, np.nan)
-        start = max(self.ma_period, self.period)
-        for i in range(start, n):
-            window = L_raw[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                L[i] = np.mean(valid)
+        L = _rolling_mean_nan(L_raw, self.period)
 
-        # Torque = dL/dt
+        # Torque = dL/dt (vectorized with lag)
         torque = np.full(n, np.nan)
-        for i in range(start + self.torque_lag, n):
-            if not np.isnan(L[i]) and not np.isnan(L[i - self.torque_lag]):
+        valid_L = ~np.isnan(L)
+        for i in range(self.torque_lag, n):
+            if valid_L[i] and valid_L[i - self.torque_lag]:
                 torque[i] = (L[i] - L[i - self.torque_lag]) / self.torque_lag
 
         if self.normalized:
