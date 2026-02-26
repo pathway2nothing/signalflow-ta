@@ -7,12 +7,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="stat/variance")
+@feature("stat/variance")
 class VarianceStat(Feature):
     """Rolling Variance.
 
@@ -48,7 +48,7 @@ class VarianceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/std")
+@feature("stat/std")
 class StdStat(Feature):
     """Rolling Standard Deviation.
 
@@ -84,7 +84,7 @@ class StdStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/mad")
+@feature("stat/mad")
 class MadStat(Feature):
     """Rolling Mean Absolute Deviation.
 
@@ -125,7 +125,7 @@ class MadStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/zscore")
+@feature("stat/zscore")
 class ZscoreStat(Feature):
     """Rolling Z-Score.
 
@@ -163,7 +163,7 @@ class ZscoreStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/cv")
+@feature("stat/cv")
 class CvStat(Feature):
     """Rolling Coefficient of Variation.
 
@@ -201,7 +201,7 @@ class CvStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/range")
+@feature("stat/range")
 class RangeStat(Feature):
     """Rolling Range.
 
@@ -239,7 +239,7 @@ class RangeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/iqr")
+@feature("stat/iqr")
 class IqrStat(Feature):
     """Rolling Interquartile Range.
 
@@ -276,7 +276,7 @@ class IqrStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/aad")
+@feature("stat/aad")
 class AadStat(Feature):
     """Rolling Average Absolute Deviation from Median.
 
@@ -317,7 +317,7 @@ class AadStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/robust_zscore")
+@feature("stat/robust_zscore")
 class RobustZscoreStat(Feature):
     """Rolling Robust Z-Score (using median and MAD).
 

@@ -21,7 +21,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 # ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ def _dct_ii(x: np.ndarray) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="stat/spectral_flux")
+@feature("stat/spectral_flux")
 class SpectralFluxStat(Feature):
     """Rolling Spectral Flux (Scheirer & Slaney, 1997).
 
@@ -223,7 +223,7 @@ class SpectralFluxStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/zero_crossing_rate")
+@feature("stat/zero_crossing_rate")
 class ZeroCrossingRateStat(Feature):
     """Rolling Zero-Crossing Rate (Kedem, 1986).
 
@@ -305,7 +305,7 @@ class ZeroCrossingRateStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_rolloff")
+@feature("stat/spectral_rolloff")
 class SpectralRolloffStat(Feature):
     """Rolling Spectral Rolloff (Peeters, 2004).
 
@@ -401,7 +401,7 @@ class SpectralRolloffStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_flatness")
+@feature("stat/spectral_flatness")
 class SpectralFlatnessStat(Feature):
     """Rolling Spectral Flatness / Wiener Entropy (Dubnov, 2004).
 
@@ -496,7 +496,7 @@ class SpectralFlatnessStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/power_cepstrum")
+@feature("stat/power_cepstrum")
 class PowerCepstrumStat(Feature):
     """Rolling Power Cepstrum (Bogert, Healy & Tukey, 1963).
 
@@ -610,7 +610,7 @@ class PowerCepstrumStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_bandwidth")
+@feature("stat/spectral_bandwidth")
 class SpectralBandwidthStat(Feature):
     """Rolling Spectral Bandwidth (Peeters, 2004).
 
@@ -702,7 +702,7 @@ class SpectralBandwidthStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_slope")
+@feature("stat/spectral_slope")
 class SpectralSlopeStat(Feature):
     """Rolling Spectral Slope (Peeters, 2004).
 
@@ -787,7 +787,7 @@ class SpectralSlopeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_kurtosis")
+@feature("stat/spectral_kurtosis")
 class SpectralKurtosisStat(Feature):
     """Rolling Spectral Kurtosis (Peeters, 2004).
 
@@ -878,7 +878,7 @@ class SpectralKurtosisStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_contrast")
+@feature("stat/spectral_contrast")
 class SpectralContrastStat(Feature):
     """Rolling Spectral Contrast (Jiang et al., 2002).
 
@@ -991,7 +991,7 @@ class SpectralContrastStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/mfcc_band_energy")
+@feature("stat/mfcc_band_energy")
 class MFCCBandEnergyStat(Feature):
     """Rolling MFCC Band Energy (Davis & Mermelstein, 1980).
 

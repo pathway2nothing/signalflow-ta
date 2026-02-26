@@ -6,13 +6,13 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import rma_sma_init, ema_sma_init, sma_nb
 
 
 @dataclass
-@sf_component(name="volatility/true_range")
+@feature("volatility/true_range")
 class TrueRangeVol(Feature):
     """True Range.
 
@@ -76,7 +76,7 @@ class TrueRangeVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/atr")
+@feature("volatility/atr")
 class AtrVol(Feature):
     """Average True Range (ATR).
 
@@ -156,7 +156,7 @@ class AtrVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/natr")
+@feature("volatility/natr")
 class NatrVol(Feature):
     """Normalized Average True Range (NATR).
 

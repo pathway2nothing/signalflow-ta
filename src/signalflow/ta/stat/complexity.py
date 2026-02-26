@@ -20,7 +20,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 # ---------------------------------------------------------------------------
@@ -289,7 +289,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
 
 
 @dataclass
-@sf_component(name="stat/permutation_entropy")
+@feature("stat/permutation_entropy")
 class PermutationEntropyStat(Feature):
     """Rolling Permutation Entropy (Bandt & Pompe, 2002).
 
@@ -381,7 +381,7 @@ class PermutationEntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/sample_entropy")
+@feature("stat/sample_entropy")
 class SampleEntropyStat(Feature):
     """Rolling Sample Entropy (Richman & Moorman, 2000).
 
@@ -479,7 +479,7 @@ class SampleEntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/lempel_ziv")
+@feature("stat/lempel_ziv")
 class LempelZivStat(Feature):
     """Rolling Lempel-Ziv Complexity (Lempel & Ziv, 1976).
 
@@ -566,7 +566,7 @@ class LempelZivStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/fisher_information")
+@feature("stat/fisher_information")
 class FisherInformationStat(Feature):
     """Rolling Fisher Information (Frieden, 2004).
 
@@ -657,7 +657,7 @@ class FisherInformationStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/dfa")
+@feature("stat/dfa")
 class DfaExponentStat(Feature):
     """Rolling DFA Exponent - Detrended Fluctuation Analysis (Peng et al., 1994).
 

@@ -6,7 +6,7 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     psar_kernel as _psar_kernel,
@@ -20,7 +20,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="trend/psar")
+@feature("trend/psar")
 class PsarTrend(Feature):
     """Parabolic SAR (Stop and Reverse).
 
@@ -98,7 +98,7 @@ class PsarTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/supertrend")
+@feature("trend/supertrend")
 class SupertrendTrend(Feature):
     """Supertrend Indicator.
 
@@ -176,7 +176,7 @@ class SupertrendTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/chandelier")
+@feature("trend/chandelier")
 class ChandelierTrend(Feature):
     """Chandelier Exit.
 
@@ -263,7 +263,7 @@ class ChandelierTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/hilo")
+@feature("trend/hilo")
 class HiloTrend(Feature):
     """Gann HiLo Activator.
 
@@ -363,7 +363,7 @@ class HiloTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/cksp")
+@feature("trend/cksp")
 class CkspTrend(Feature):
     """Chande Kroll Stop.
 

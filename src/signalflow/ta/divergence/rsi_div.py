@@ -10,12 +10,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.ta.divergence.base import DivergenceBase
 from signalflow.ta.momentum import RsiMom
 
 
-@sf_component(name="divergence/rsi")
+@feature("divergence/rsi")
 @dataclass
 class RsiDivergence(DivergenceBase):
     """

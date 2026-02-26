@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 from sklearn.ensemble import IsolationForest
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import RsiMom
@@ -17,7 +17,7 @@ from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@sf_component(name="ta/isolation_forest_1")
+@detector("ta/isolation_forest_1")
 class IsolationForestDetector1(SignalDetector):
     """Isolation Forest anomaly detector using log returns.
 
@@ -185,7 +185,7 @@ class IsolationForestDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/isolation_forest_2")
+@detector("ta/isolation_forest_2")
 class IsolationForestDetector2(SignalDetector):
     """Isolation Forest anomaly detector using RSI.
 
@@ -357,7 +357,7 @@ class IsolationForestDetector2(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/isolation_forest_3")
+@detector("ta/isolation_forest_3")
 class IsolationForestDetector3(SignalDetector):
     """Cross-sectional Isolation Forest detector.
 

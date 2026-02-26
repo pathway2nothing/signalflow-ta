@@ -8,7 +8,7 @@ import numpy as np
 import polars as pl
 from scipy.signal import hilbert
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -32,7 +32,7 @@ def _detrend_and_hilbert(values: np.ndarray, period: int, idx: int) -> tuple[flo
 
 
 @dataclass
-@sf_component(name="stat/inst_amplitude")
+@feature("stat/inst_amplitude")
 class InstAmplitudeStat(Feature):
     """Instantaneous Amplitude via Hilbert Transform.
 
@@ -97,7 +97,7 @@ class InstAmplitudeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/inst_phase")
+@feature("stat/inst_phase")
 class InstPhaseStat(Feature):
     """Instantaneous Phase via Hilbert Transform.
 
@@ -152,7 +152,7 @@ class InstPhaseStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/inst_frequency")
+@feature("stat/inst_frequency")
 class InstFrequencyStat(Feature):
     """Instantaneous Frequency via Hilbert Transform.
 
@@ -230,7 +230,7 @@ class InstFrequencyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/phase_acceleration")
+@feature("stat/phase_acceleration")
 class PhaseAccelerationStat(Feature):
     """Phase Acceleration (second derivative of phase).
 
@@ -309,7 +309,7 @@ class PhaseAccelerationStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/constructive_interference")
+@feature("stat/constructive_interference")
 class ConstructiveInterferenceStat(Feature):
     """Constructive Interference - phase-aligned amplitude boost.
 
@@ -417,7 +417,7 @@ class ConstructiveInterferenceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/beat_frequency")
+@feature("stat/beat_frequency")
 class BeatFrequencyStat(Feature):
     """Beat Frequency - difference between two cycle frequencies.
 
@@ -518,7 +518,7 @@ class BeatFrequencyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/standing_wave_ratio")
+@feature("stat/standing_wave_ratio")
 class StandingWaveRatioStat(Feature):
     """Standing Wave Ratio (SWR) - max/min amplitude ratio.
 
@@ -597,7 +597,7 @@ class StandingWaveRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_centroid")
+@feature("stat/spectral_centroid")
 class SpectralCentroidStat(Feature):
     """Spectral Centroid - center of mass of frequency spectrum.
 
@@ -683,7 +683,7 @@ class SpectralCentroidStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_entropy")
+@feature("stat/spectral_entropy")
 class SpectralEntropyStat(Feature):
     """Spectral Entropy - disorder of frequency distribution.
 

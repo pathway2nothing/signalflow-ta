@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -15,7 +15,7 @@ from signalflow.ta._numba_kernels import cmo_kernel as _cmo_kernel
 
 
 @dataclass
-@sf_component(name="momentum/rsi")
+@feature("momentum/rsi")
 class RsiMom(Feature):
     """Relative Strength Index (RSI) with reproducible initialization.
 
@@ -88,7 +88,7 @@ class RsiMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/roc")
+@feature("momentum/roc")
 class RocMom(Feature):
     """Rate of Change (ROC).
 
@@ -153,7 +153,7 @@ class RocMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/mom")
+@feature("momentum/mom")
 class MomMom(Feature):
     """Momentum (MOM).
 
@@ -217,7 +217,7 @@ class MomMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/cmo")
+@feature("momentum/cmo")
 class CmoMom(Feature):
     """Chande Momentum Oscillator (CMO).
 

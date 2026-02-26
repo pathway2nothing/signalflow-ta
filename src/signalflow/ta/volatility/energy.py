@@ -7,7 +7,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     velocity_kernel as _velocity_kernel,
@@ -17,7 +17,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="volatility/kinetic_energy")
+@feature("volatility/kinetic_energy")
 class KineticEnergyVol(Feature):
     """Kinetic Energy of price movement.
 
@@ -78,7 +78,7 @@ class KineticEnergyVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/potential_energy")
+@feature("volatility/potential_energy")
 class PotentialEnergyVol(Feature):
     """Potential Energy - displacement from equilibrium (moving average).
 
@@ -143,7 +143,7 @@ class PotentialEnergyVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/total_energy")
+@feature("volatility/total_energy")
 class TotalEnergyVol(Feature):
     """Total Mechanical Energy (E = KE + PE).
 
@@ -214,7 +214,7 @@ class TotalEnergyVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/energy_flow")
+@feature("volatility/energy_flow")
 class EnergyFlowVol(Feature):
     """Energy Flow Rate (Power of the system).
 
@@ -290,7 +290,7 @@ class EnergyFlowVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/elastic_strain")
+@feature("volatility/elastic_strain")
 class ElasticStrainVol(Feature):
     """Elastic Strain - relative displacement from equilibrium.
 
@@ -351,7 +351,7 @@ class ElasticStrainVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/temperature")
+@feature("volatility/temperature")
 class TemperatureVol(Feature):
     """Market Temperature - kinetic energy per degree of freedom.
 
@@ -416,7 +416,7 @@ class TemperatureVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/heat_capacity")
+@feature("volatility/heat_capacity")
 class HeatCapacityVol(Feature):
     """Heat Capacity - resistance of market to temperature change.
 
@@ -498,7 +498,7 @@ class HeatCapacityVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/free_energy")
+@feature("volatility/free_energy")
 class FreeEnergyVol(Feature):
     """Helmholtz Free Energy (F = E - TxS).
 

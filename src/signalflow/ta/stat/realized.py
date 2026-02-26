@@ -7,12 +7,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="stat/realized_vol")
+@feature("stat/realized_vol")
 class RealizedVolStat(Feature):
     """Rolling Realized Volatility (Close-to-Close).
 
@@ -60,7 +60,7 @@ class RealizedVolStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/parkinson_vol")
+@feature("stat/parkinson_vol")
 class ParkinsonVolStat(Feature):
     """Rolling Parkinson Volatility.
 
@@ -109,7 +109,7 @@ class ParkinsonVolStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/garman_klass_vol")
+@feature("stat/garman_klass_vol")
 class GarmanKlassVolStat(Feature):
     """Rolling Garman-Klass Volatility.
 
@@ -164,7 +164,7 @@ class GarmanKlassVolStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/rogers_satchell_vol")
+@feature("stat/rogers_satchell_vol")
 class RogersSatchellVolStat(Feature):
     """Rolling Rogers-Satchell Volatility.
 
@@ -217,7 +217,7 @@ class RogersSatchellVolStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/yang_zhang_vol")
+@feature("stat/yang_zhang_vol")
 class YangZhangVolStat(Feature):
     """Rolling Yang-Zhang Volatility.
 

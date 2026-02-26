@@ -6,12 +6,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="volume/mfi")
+@feature("volume/mfi")
 class MfiVolume(Feature):
     """Money Flow Index (MFI).
 
@@ -85,7 +85,7 @@ class MfiVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/cmf")
+@feature("volume/cmf")
 class CmfVolume(Feature):
     """Chaikin Money Flow (CMF).
 
@@ -166,7 +166,7 @@ class CmfVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/efi")
+@feature("volume/efi")
 class EfiVolume(Feature):
     """Elder's Force Index (EFI).
 
@@ -245,7 +245,7 @@ class EfiVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/eom")
+@feature("volume/eom")
 class EomVolume(Feature):
     """Ease of Movement (EMV/EOM).
 
@@ -330,7 +330,7 @@ class EomVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/kvo")
+@feature("volume/kvo")
 class KvoVolume(Feature):
     """Klinger Volume Oscillator (KVO).
 
@@ -459,7 +459,7 @@ class KvoVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/vwap")
+@feature("volume/vwap")
 class VwapVolume(Feature):
     """Volume Weighted Average Price (VWAP).
 
@@ -530,7 +530,7 @@ class VwapVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/vwap_bands")
+@feature("volume/vwap_bands")
 class VwapBandsVolume(Feature):
     """VWAP with Standard Deviation Bands.
 

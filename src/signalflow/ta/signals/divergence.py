@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import MacdMom, RsiMom
@@ -184,7 +184,7 @@ def _detect_multi_pair(
 
 
 @dataclass
-@sf_component(name="ta/divergence_1")
+@detector("ta/divergence_1")
 class DivergenceDetector1(SignalDetector):
     """RSI divergence detector.
 
@@ -266,7 +266,7 @@ class DivergenceDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/divergence_2")
+@detector("ta/divergence_2")
 class DivergenceDetector2(SignalDetector):
     """RSI divergence detector with offset subsampling.
 
@@ -367,7 +367,7 @@ class DivergenceDetector2(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/divergence_3")
+@detector("ta/divergence_3")
 class DivergenceDetector3(SignalDetector):
     """MACD divergence detector.
 

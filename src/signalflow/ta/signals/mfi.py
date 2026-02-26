@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
@@ -14,7 +14,7 @@ from signalflow.ta.volume import MfiVolume
 
 
 @dataclass
-@sf_component(name="ta/mfi_1")
+@detector("ta/mfi_1")
 class MfiDetector1(SignalDetector):
     """Money Flow Index extreme zone detector.
 
@@ -149,7 +149,7 @@ class MfiDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/mfi_2")
+@detector("ta/mfi_2")
 class MfiDetector2(SignalDetector):
     """Money Flow Index with z-score and reversal detection.
 

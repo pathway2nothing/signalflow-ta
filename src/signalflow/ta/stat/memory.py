@@ -7,12 +7,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="stat/hurst")
+@feature("stat/hurst")
 class HurstStat(Feature):
     """Rolling Hurst Exponent.
 
@@ -85,7 +85,7 @@ class HurstStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/autocorr")
+@feature("stat/autocorr")
 class AutocorrStat(Feature):
     """Rolling Autocorrelation.
 
@@ -136,7 +136,7 @@ class AutocorrStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/variance_ratio")
+@feature("stat/variance_ratio")
 class VarianceRatioStat(Feature):
     """Rolling Variance Ratio.
 
@@ -197,7 +197,7 @@ class VarianceRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/diffusion_coeff")
+@feature("stat/diffusion_coeff")
 class DiffusionCoeffStat(Feature):
     """Rolling Diffusion Coefficient.
 
@@ -268,7 +268,7 @@ class DiffusionCoeffStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/anomalous_diffusion")
+@feature("stat/anomalous_diffusion")
 class AnomalousDiffusionStat(Feature):
     """Anomalous Diffusion Exponent (alpha).
 
@@ -352,7 +352,7 @@ class AnomalousDiffusionStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/msd_ratio")
+@feature("stat/msd_ratio")
 class MsdRatioStat(Feature):
     """Mean Squared Displacement Ratio.
 
@@ -432,7 +432,7 @@ class MsdRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spring_constant")
+@feature("stat/spring_constant")
 class SpringConstantStat(Feature):
     """Rolling Spring Constant (k) - Mean Reversion Strength.
 
@@ -528,7 +528,7 @@ class SpringConstantStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/damping_ratio")
+@feature("stat/damping_ratio")
 class DampingRatioStat(Feature):
     """Rolling Damping Ratio (ζ) - Oscillation Decay Characterization.
 
@@ -629,7 +629,7 @@ class DampingRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/natural_frequency")
+@feature("stat/natural_frequency")
 class NaturalFrequencyStat(Feature):
     """Rolling Natural Frequency (ω₀) via zero-crossing rate.
 
@@ -717,7 +717,7 @@ class NaturalFrequencyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/plastic_strain")
+@feature("stat/plastic_strain")
 class PlasticStrainStat(Feature):
     """Plastic Strain Ratio - fraction of non-reversible deformation.
 
@@ -805,7 +805,7 @@ class PlasticStrainStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/escape_velocity")
+@feature("stat/escape_velocity")
 class EscapeVelocityStat(Feature):
     """Escape Velocity - velocity needed to break free from MA attraction.
 
@@ -909,7 +909,7 @@ class EscapeVelocityStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/correlation_length")
+@feature("stat/correlation_length")
 class CorrelationLengthStat(Feature):
     """Correlation Length - distance to first autocorrelation zero-crossing.
 

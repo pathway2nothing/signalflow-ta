@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 from numba import njit
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -30,7 +30,7 @@ def rolling_sum_numpy(arr: np.ndarray, window: int) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="volume/obv")
+@feature("volume/obv")
 class ObvVolume(Feature):
     """On Balance Volume (OBV) - Windowed version for reproducibility.
 
@@ -109,7 +109,7 @@ class ObvVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/ad")
+@feature("volume/ad")
 class AdVolume(Feature):
     """Accumulation/Distribution Line (A/D) - Windowed version.
 
@@ -192,7 +192,7 @@ class AdVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/pvt")
+@feature("volume/pvt")
 class PvtVolume(Feature):
     """Price-Volume Trend (PVT) - Windowed version.
 
@@ -267,7 +267,7 @@ class PvtVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/nvi")
+@feature("volume/nvi")
 class NviVolume(Feature):
     """Negative Volume Index (NVI) - Windowed version.
 
@@ -345,7 +345,7 @@ class NviVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/pvi")
+@feature("volume/pvi")
 class PviVolume(Feature):
     """Positive Volume Index (PVI) - Windowed version.
 

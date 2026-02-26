@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import MacdMom, RsiMom
@@ -16,7 +16,7 @@ from signalflow.ta.volatility import KeltnerVol
 
 
 @dataclass
-@sf_component(name="ta/keltner_channel_1")
+@detector("ta/keltner_channel_1")
 class KeltnerChannelDetector1(SignalDetector):
     """Keltner Channel detector with RSI z-score condition.
 
@@ -192,7 +192,7 @@ class KeltnerChannelDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/keltner_channel_2")
+@detector("ta/keltner_channel_2")
 class KeltnerChannelDetector2(SignalDetector):
     """Keltner Channel detector with MACD and RSI conditions.
 

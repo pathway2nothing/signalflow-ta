@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
@@ -15,7 +15,7 @@ from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@sf_component(name="ta/cci_anomaly_1")
+@detector("ta/cci_anomaly_1")
 class CciAnomalyDetector1(SignalDetector):
     """CCI statistical anomaly detector.
 

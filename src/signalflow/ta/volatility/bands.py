@@ -6,7 +6,7 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     rolling_max as _rolling_max,
@@ -20,7 +20,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="volatility/bollinger")
+@feature("volatility/bollinger")
 class BollingerVol(Feature):
     """Bollinger Bands.
 
@@ -133,7 +133,7 @@ class BollingerVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/keltner")
+@feature("volatility/keltner")
 class KeltnerVol(Feature):
     """Keltner Channels.
 
@@ -248,7 +248,7 @@ class KeltnerVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/donchian")
+@feature("volatility/donchian")
 class DonchianVol(Feature):
     """Donchian Channels.
 
@@ -334,7 +334,7 @@ class DonchianVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/accbands")
+@feature("volatility/accbands")
 class AccBandsVol(Feature):
     """Acceleration Bands.
 

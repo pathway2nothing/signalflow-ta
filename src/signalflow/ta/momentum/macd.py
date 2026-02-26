@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -42,7 +42,7 @@ def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="momentum/macd")
+@feature("momentum/macd")
 class MacdMom(Feature):
     """Moving Average Convergence Divergence (MACD).
 
@@ -149,7 +149,7 @@ class MacdMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/ppo")
+@feature("momentum/ppo")
 class PpoMom(Feature):
     """Percentage Price Oscillator (PPO).
 
@@ -247,7 +247,7 @@ class PpoMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/tsi")
+@feature("momentum/tsi")
 class TsiMom(Feature):
     """True Strength Index (TSI).
 
@@ -354,7 +354,7 @@ class TsiMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/trix")
+@feature("momentum/trix")
 class TrixMom(Feature):
     """Triple Exponential Average (TRIX).
 

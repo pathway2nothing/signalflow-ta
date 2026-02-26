@@ -6,7 +6,7 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     sma_nb as _sma_nb,
@@ -19,7 +19,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="trend/ichimoku")
+@feature("trend/ichimoku")
 class IchimokuTrend(Feature):
     """Ichimoku Kinko Hyo (Ichimoku Cloud).
 
@@ -120,7 +120,7 @@ class IchimokuTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/dpo")
+@feature("trend/dpo")
 class DpoTrend(Feature):
     """Detrended Price Oscillator.
 
@@ -193,7 +193,7 @@ class DpoTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/qstick")
+@feature("trend/qstick")
 class QstickTrend(Feature):
     """Q Stick.
 
@@ -266,7 +266,7 @@ class QstickTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/ttm")
+@feature("trend/ttm")
 class TtmTrend(Feature):
     """TTM Trend (John Carter).
 
@@ -336,7 +336,7 @@ class TtmTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/atr_trailing")
+@feature("trend/atr_trailing")
 class AtrTrailingTrend(Feature):
     """ATR Trailing Stop.
 

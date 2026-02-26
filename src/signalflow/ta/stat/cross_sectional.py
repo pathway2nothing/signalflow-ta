@@ -15,12 +15,12 @@ from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import GlobalFeature
 
 
 @dataclass
-@sf_component(name="stat/cross_sectional")
+@feature("stat/cross_sectional")
 class CrossSectionalStat(GlobalFeature):
     """Universal cross-sectional statistics for any column.
 

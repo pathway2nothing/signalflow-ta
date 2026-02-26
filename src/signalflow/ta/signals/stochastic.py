@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import StochMom
@@ -14,7 +14,7 @@ from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@sf_component(name="ta/stochastic_1")
+@detector("ta/stochastic_1")
 class StochasticDetector1(SignalDetector):
     """Stochastic oscillator crossover detector.
 
@@ -172,7 +172,7 @@ class StochasticDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/stochastic_2")
+@detector("ta/stochastic_2")
 class StochasticDetector2(SignalDetector):
     """Stochastic oscillator extreme zone detector with z-score.
 

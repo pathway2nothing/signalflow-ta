@@ -19,7 +19,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ def _relative_information_gain(x: np.ndarray, sub_window: int, bins: int) -> flo
 
 
 @dataclass
-@sf_component(name="stat/kl_divergence")
+@feature("stat/kl_divergence")
 class KLDivergenceStat(Feature):
     """Rolling KL Divergence (Kullback & Leibler, 1951).
 
@@ -334,7 +334,7 @@ class KLDivergenceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/js_divergence")
+@feature("stat/js_divergence")
 class JSDivergenceStat(Feature):
     """Rolling Jensen-Shannon Divergence (Lin, 1991).
 
@@ -456,7 +456,7 @@ class JSDivergenceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/renyi_entropy")
+@feature("stat/renyi_entropy")
 class RenyiEntropyStat(Feature):
     """Rolling Rényi Entropy (Rényi, 1961).
 
@@ -560,7 +560,7 @@ class RenyiEntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/auto_mutual_info")
+@feature("stat/auto_mutual_info")
 class AutoMutualInfoStat(Feature):
     """Rolling Auto-Mutual Information (Fraser & Swinney, 1986).
 
@@ -658,7 +658,7 @@ class AutoMutualInfoStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/info_gain")
+@feature("stat/info_gain")
 class RelativeInfoGainStat(Feature):
     """Rolling Relative Information Gain (Schreiber, 2000).
 

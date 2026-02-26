@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import RsiMom
@@ -15,7 +15,7 @@ from signalflow.ta.trend import AdxTrend
 
 
 @dataclass
-@sf_component(name="ta/adx_regime_1")
+@detector("ta/adx_regime_1")
 class AdxRegimeDetector1(SignalDetector):
     """ADX trend regime detector with DI crossover.
 
@@ -161,7 +161,7 @@ class AdxRegimeDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/adx_regime_2")
+@detector("ta/adx_regime_2")
 class AdxRegimeDetector2(SignalDetector):
     """ADX regime detector combining trend/range with RSI.
 

@@ -7,7 +7,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     velocity_kernel as _velocity_kernel,
@@ -17,7 +17,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="momentum/acceleration")
+@feature("momentum/acceleration")
 class AccelerationMom(Feature):
     """Price Acceleration (second derivative).
 
@@ -94,7 +94,7 @@ class AccelerationMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/jerk")
+@feature("momentum/jerk")
 class JerkMom(Feature):
     """Price Jerk (third derivative).
 
@@ -177,7 +177,7 @@ class JerkMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/angular_momentum")
+@feature("momentum/angular_momentum")
 class AngularMomentumMom(Feature):
     """Angular Momentum (L = displacement x velocity).
 
@@ -251,7 +251,7 @@ class AngularMomentumMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/torque")
+@feature("momentum/torque")
 class TorqueMom(Feature):
     """Torque (τ = dL/dt) - rate of change of angular momentum.
 

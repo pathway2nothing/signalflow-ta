@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
@@ -74,7 +74,7 @@ def _adaptive_kalman_filter(
 
 
 @dataclass
-@sf_component(name="ta/kalman_filter_1")
+@detector("ta/kalman_filter_1")
 class KalmanFilterDetector1(SignalDetector):
     """Adaptive Kalman Filter-based signal detector.
 

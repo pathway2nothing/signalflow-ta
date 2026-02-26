@@ -7,12 +7,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="stat/correlation")
+@feature("stat/correlation")
 class CorrelationStat(Feature):
     """Rolling Pearson Correlation between two columns.
 
@@ -74,7 +74,7 @@ class CorrelationStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/beta")
+@feature("stat/beta")
 class BetaStat(Feature):
     """Rolling Beta (regression slope) against benchmark.
 
@@ -132,7 +132,7 @@ class BetaStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/rsquared")
+@feature("stat/rsquared")
 class RSquaredStat(Feature):
     """Rolling R-Squared (coefficient of determination).
 
@@ -187,7 +187,7 @@ class RSquaredStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/linreg_slope")
+@feature("stat/linreg_slope")
 class LinRegSlopeStat(Feature):
     """Rolling Linear Regression Slope.
 
@@ -235,7 +235,7 @@ class LinRegSlopeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/linreg_intercept")
+@feature("stat/linreg_intercept")
 class LinRegInterceptStat(Feature):
     """Rolling Linear Regression Intercept.
 
@@ -278,7 +278,7 @@ class LinRegInterceptStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/linreg_residual")
+@feature("stat/linreg_residual")
 class LinRegResidualStat(Feature):
     """Rolling Linear Regression Residual.
 

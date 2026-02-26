@@ -20,7 +20,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 # ---------------------------------------------------------------------------
@@ -318,7 +318,7 @@ def _prediction_error_decomp(returns: np.ndarray, forecast_horizon: int) -> floa
 
 
 @dataclass
-@sf_component(name="stat/kalman_innovation")
+@feature("stat/kalman_innovation")
 class KalmanInnovationStat(Feature):
     """Rolling Kalman Innovation Statistic (Harvey, 1989).
 
@@ -416,7 +416,7 @@ class KalmanInnovationStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/ar_coefficient")
+@feature("stat/ar_coefficient")
 class ARCoefficientStat(Feature):
     """Rolling AR Coefficient — System Identification (Ljung, 1999).
 
@@ -506,7 +506,7 @@ class ARCoefficientStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/lyapunov_exponent")
+@feature("stat/lyapunov_exponent")
 class LyapunovExponentStat(Feature):
     """Rolling Maximum Lyapunov Exponent (Rosenstein et al., 1993).
 
@@ -610,7 +610,7 @@ class LyapunovExponentStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/pid_error")
+@feature("stat/pid_error")
 class PIDErrorStat(Feature):
     """Rolling PID Error Signal (Astrom & Murray, 2008).
 
@@ -717,7 +717,7 @@ class PIDErrorStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/prediction_error_decomp")
+@feature("stat/prediction_error_decomp")
 class PredictionErrorDecompositionStat(Feature):
     """Rolling Prediction Error Decomposition (Geman et al., 1992).
 

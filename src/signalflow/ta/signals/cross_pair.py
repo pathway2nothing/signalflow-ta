@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import SignalCategory, Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
@@ -14,7 +14,7 @@ from signalflow.ta.volatility import BollingerVol
 
 
 @dataclass
-@sf_component(name="ta/cross_pair_1")
+@detector("ta/cross_pair_1")
 class CrossPairDetector1(SignalDetector):
     """Cross-pair correlation detector with Bollinger Bands.
 

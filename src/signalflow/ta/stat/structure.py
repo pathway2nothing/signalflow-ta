@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 from numba import njit
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -56,7 +56,7 @@ def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray
 
 
 @dataclass
-@sf_component(name="stat/reverse_points")
+@feature("stat/reverse_points")
 class ReversePointsStat(Feature):
     """Rolling count of price direction reversals.
 
@@ -127,7 +127,7 @@ def _count_consecutive_zeros(values: np.ndarray) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="stat/time_since_spike")
+@feature("stat/time_since_spike")
 class TimeSinceSpikeStat(Feature):
     """Time (bars) since last spike event.
 
@@ -164,7 +164,7 @@ class TimeSinceSpikeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/volatility_spike")
+@feature("stat/volatility_spike")
 class VolatilitySpikeStat(Feature):
     """Volatility spike detection using z-score.
 
@@ -218,7 +218,7 @@ class VolatilitySpikeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/volatility_spike_diff")
+@feature("stat/volatility_spike_diff")
 class VolatilitySpikeDiffStat(Feature):
     """Volatility spike difference between two periods.
 
@@ -283,7 +283,7 @@ class VolatilitySpikeDiffStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/volume_spike")
+@feature("stat/volume_spike")
 class VolumeSpikeStat(Feature):
     """Volume spike detection using z-score.
 
@@ -332,7 +332,7 @@ class VolumeSpikeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/volume_spike_diff")
+@feature("stat/volume_spike_diff")
 class VolumeSpikeDiffStat(Feature):
     """Volume spike difference between two periods.
 
@@ -390,7 +390,7 @@ class VolumeSpikeDiffStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/rolling_min")
+@feature("stat/rolling_min")
 class RollingMinStat(Feature):
     """Rolling minimum value.
 
@@ -419,7 +419,7 @@ class RollingMinStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/rolling_max")
+@feature("stat/rolling_max")
 class RollingMaxStat(Feature):
     """Rolling maximum value.
 

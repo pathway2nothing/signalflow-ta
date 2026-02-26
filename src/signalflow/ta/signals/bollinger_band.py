@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
@@ -14,7 +14,7 @@ from signalflow.ta.volatility import BollingerVol
 
 
 @dataclass
-@sf_component(name="ta/bollinger_band_1")
+@detector("ta/bollinger_band_1")
 class BollingerBandDetector1(SignalDetector):
     """Bollinger Band breakout detector.
 

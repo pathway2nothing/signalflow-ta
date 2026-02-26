@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 from numba import njit
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -93,7 +93,7 @@ def _distance_to_trend_point(trend_indicator: np.ndarray) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="trend/alligator_regime")
+@feature("trend/alligator_regime")
 class WilliamsAlligatorRegime(Feature):
     """Williams Alligator trend regime detector.
 
@@ -194,7 +194,7 @@ class WilliamsAlligatorRegime(Feature):
 
 
 @dataclass
-@sf_component(name="trend/two_ma_regime")
+@feature("trend/two_ma_regime")
 class TwoMaRegime(Feature):
     """Two Moving Averages trend regime detector.
 
@@ -252,7 +252,7 @@ class TwoMaRegime(Feature):
 
 
 @dataclass
-@sf_component(name="trend/sma_direction")
+@feature("trend/sma_direction")
 class SmaDirection(Feature):
     """SMA direction indicator.
 
@@ -307,7 +307,7 @@ class SmaDirection(Feature):
 
 
 @dataclass
-@sf_component(name="trend/sma_diff_direction")
+@feature("trend/sma_diff_direction")
 class SmaDiffDirection(Feature):
     """SMA difference direction indicator.
 
@@ -402,7 +402,7 @@ def _rolling_linreg_numba(close: np.ndarray, window: int) -> tuple[np.ndarray, n
 
 
 @dataclass
-@sf_component(name="trend/linreg_direction")
+@feature("trend/linreg_direction")
 class LinRegDirection(Feature):
     """Linear regression slope direction indicator.
 
@@ -448,7 +448,7 @@ class LinRegDirection(Feature):
 
 
 @dataclass
-@sf_component(name="trend/linreg_diff_direction")
+@feature("trend/linreg_diff_direction")
 class LinRegDiffDirection(Feature):
     """Linear regression difference direction indicator.
 
@@ -495,7 +495,7 @@ class LinRegDiffDirection(Feature):
 
 
 @dataclass
-@sf_component(name="trend/linreg_price_diff")
+@feature("trend/linreg_price_diff")
 class LinRegPriceDiff(Feature):
     """Linear regression price difference indicator.
 

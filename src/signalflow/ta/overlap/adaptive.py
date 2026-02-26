@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 from numba import njit
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     ema_sma_init as _ema_sma_init,
@@ -20,7 +20,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="smooth/kama")
+@feature("smooth/kama")
 class KamaSmooth(Feature):
     """Kaufman's Adaptive Moving Average.
 
@@ -89,7 +89,7 @@ class KamaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/alma")
+@feature("smooth/alma")
 class AlmaSmooth(Feature):
     """Arnaud Legoux Moving Average.
 
@@ -160,7 +160,7 @@ class AlmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/jma")
+@feature("smooth/jma")
 class JmaSmooth(Feature):
     """Jurik Moving Average.
 
@@ -216,7 +216,7 @@ class JmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/vidya")
+@feature("smooth/vidya")
 class VidyaSmooth(Feature):
     """Variable Index Dynamic Average.
 
@@ -277,7 +277,7 @@ class VidyaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/t3")
+@feature("smooth/t3")
 class T3Smooth(Feature):
     """Tillson T3 Moving Average.
 
@@ -348,7 +348,7 @@ class T3Smooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/zlma")
+@feature("smooth/zlma")
 class ZlmaSmooth(Feature):
     """Zero Lag Moving Average.
 
@@ -414,7 +414,7 @@ class ZlmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/mcginley")
+@feature("smooth/mcginley")
 class McGinleySmooth(Feature):
     """McGinley Dynamic Indicator.
 
@@ -470,7 +470,7 @@ class McGinleySmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/frama")
+@feature("smooth/frama")
 class FramaSmooth(Feature):
     """Fractal Adaptive Moving Average.
 
@@ -590,7 +590,7 @@ def _kalman_filter_series(
 
 
 @dataclass
-@sf_component(name="smooth/kalman")
+@feature("smooth/kalman")
 class KalmanSmooth(Feature):
     """Adaptive Kalman Filter smoothing.
 

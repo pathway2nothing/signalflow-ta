@@ -6,12 +6,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="volatility/gap")
+@feature("volatility/gap")
 class GapVol(Feature):
     """Gap Analysis.
 

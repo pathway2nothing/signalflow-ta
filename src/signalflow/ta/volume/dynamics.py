@@ -7,12 +7,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="volume/market_force")
+@feature("volume/market_force")
 class MarketForceVolume(Feature):
     """Market Force (F = m x a).
 
@@ -95,7 +95,7 @@ class MarketForceVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/impulse")
+@feature("volume/impulse")
 class ImpulseVolume(Feature):
     """Market Impulse (J = Σ F x Δt).
 
@@ -177,7 +177,7 @@ class ImpulseVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/market_momentum")
+@feature("volume/market_momentum")
 class MarketMomentumVolume(Feature):
     """Market Momentum (p = m x v).
 
@@ -256,7 +256,7 @@ class MarketMomentumVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/market_power")
+@feature("volume/market_power")
 class MarketPowerVolume(Feature):
     """Market Power (P = F x v).
 
@@ -342,7 +342,7 @@ class MarketPowerVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/market_capacitance")
+@feature("volume/market_capacitance")
 class MarketCapacitanceVolume(Feature):
     """Market Capacitance - volume absorbed per unit price change.
 
@@ -407,7 +407,7 @@ class MarketCapacitanceVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/gravitational_pull")
+@feature("volume/gravitational_pull")
 class GravitationalPullVolume(Feature):
     """Gravitational Pull - volume-weighted attraction to recent price levels.
 

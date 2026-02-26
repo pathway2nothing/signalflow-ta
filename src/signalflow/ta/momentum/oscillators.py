@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -20,7 +20,7 @@ from signalflow.ta._numba_kernels import uo_kernel as _uo_kernel
 
 
 @dataclass
-@sf_component(name="momentum/stoch")
+@feature("momentum/stoch")
 class StochMom(Feature):
     """Stochastic Oscillator.
 
@@ -83,7 +83,7 @@ class StochMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/stochrsi")
+@feature("momentum/stochrsi")
 class StochRsiMom(Feature):
     """Stochastic RSI with reproducible initialization.
 
@@ -179,7 +179,7 @@ class StochRsiMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/willr")
+@feature("momentum/willr")
 class WillrMom(Feature):
     """Williams %R.
 
@@ -236,7 +236,7 @@ class WillrMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/cci")
+@feature("momentum/cci")
 class CciMom(Feature):
     """Commodity Channel Index (CCI).
 
@@ -303,7 +303,7 @@ class CciMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/uo")
+@feature("momentum/uo")
 class UoMom(Feature):
     """Ultimate Oscillator (UO).
 
@@ -369,7 +369,7 @@ class UoMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/ao")
+@feature("momentum/ao")
 class AoMom(Feature):
     """Awesome Oscillator (AO).
 

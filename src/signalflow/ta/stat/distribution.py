@@ -9,12 +9,12 @@ import polars as pl
 from scipy.stats import kurtosis as sp_kurtosis
 from scipy.stats import skew as sp_skew
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="stat/median")
+@feature("stat/median")
 class MedianStat(Feature):
     """Rolling Median.
 
@@ -50,7 +50,7 @@ class MedianStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/quantile")
+@feature("stat/quantile")
 class QuantileStat(Feature):
     """Rolling Quantile.
 
@@ -92,7 +92,7 @@ class QuantileStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/pctrank")
+@feature("stat/pctrank")
 class PctRankStat(Feature):
     """Rolling Percentile Rank.
 
@@ -135,7 +135,7 @@ class PctRankStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/minmax")
+@feature("stat/minmax")
 class MinMaxStat(Feature):
     """Rolling Min-Max Normalization.
 
@@ -173,7 +173,7 @@ class MinMaxStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/skew")
+@feature("stat/skew")
 class SkewStat(Feature):
     """Rolling Skewness.
 
@@ -218,7 +218,7 @@ class SkewStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/kurtosis")
+@feature("stat/kurtosis")
 class KurtosisStat(Feature):
     """Rolling Excess Kurtosis.
 
@@ -263,7 +263,7 @@ class KurtosisStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/entropy")
+@feature("stat/entropy")
 class EntropyStat(Feature):
     """Rolling Shannon Entropy.
 
@@ -319,7 +319,7 @@ class EntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/jarque_bera")
+@feature("stat/jarque_bera")
 class JarqueBeraStat(Feature):
     """Rolling Jarque-Bera Test Statistic.
 
@@ -374,7 +374,7 @@ class JarqueBeraStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/mode_distance")
+@feature("stat/mode_distance")
 class ModeDistanceStat(Feature):
     """Rolling Distance from Mode (most frequent value region).
 
@@ -422,7 +422,7 @@ class ModeDistanceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/above_mean_ratio")
+@feature("stat/above_mean_ratio")
 class AboveMeanRatioStat(Feature):
     """Rolling Ratio of Values Above Mean.
 
@@ -464,7 +464,7 @@ class AboveMeanRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/entropy_rate")
+@feature("stat/entropy_rate")
 class EntropyRateStat(Feature):
     """Rolling Entropy Rate - speed of information change.
 

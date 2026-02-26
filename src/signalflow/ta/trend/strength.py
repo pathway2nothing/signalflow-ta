@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     adx_kernel as _adx_kernel,
@@ -21,7 +21,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="trend/adx")
+@feature("trend/adx")
 class AdxTrend(Feature):
     """Average Directional Index (ADX).
 
@@ -114,7 +114,7 @@ class AdxTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/aroon")
+@feature("trend/aroon")
 class AroonTrend(Feature):
     """Aroon Indicator.
 
@@ -195,7 +195,7 @@ class AroonTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/vortex")
+@feature("trend/vortex")
 class VortexTrend(Feature):
     """Vortex Indicator.
 
@@ -290,7 +290,7 @@ class VortexTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/vhf")
+@feature("trend/vhf")
 class VhfTrend(Feature):
     """Vertical Horizontal Filter (VHF).
 
@@ -363,7 +363,7 @@ class VhfTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/chop")
+@feature("trend/chop")
 class ChopTrend(Feature):
     """Choppiness Index (CHOP).
 
@@ -441,7 +441,7 @@ class ChopTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/viscosity")
+@feature("trend/viscosity")
 class ViscosityTrend(Feature):
     """Market Viscosity - resistance to velocity change.
 
@@ -515,7 +515,7 @@ class ViscosityTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/reynolds")
+@feature("trend/reynolds")
 class ReynoldsTrend(Feature):
     """Market Reynolds Number - laminar vs turbulent regime.
 
@@ -587,7 +587,7 @@ class ReynoldsTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/rotational_inertia")
+@feature("trend/rotational_inertia")
 class RotationalInertiaTrend(Feature):
     """Rotational Inertia (Moment of Inertia) - resistance to trend change.
 
@@ -655,7 +655,7 @@ class RotationalInertiaTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/market_impedance")
+@feature("trend/market_impedance")
 class MarketImpedanceTrend(Feature):
     """Market Impedance - opposition to price flow (Z = V/I analogy).
 
@@ -723,7 +723,7 @@ class MarketImpedanceTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/rc_time_constant")
+@feature("trend/rc_time_constant")
 class RCTimeConstantTrend(Feature):
     """RC Time Constant - market response time.
 
@@ -797,7 +797,7 @@ class RCTimeConstantTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/snr")
+@feature("trend/snr")
 class SNRTrend(Feature):
     """Signal-to-Noise Ratio - trend clarity.
 
@@ -868,7 +868,7 @@ class SNRTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/order_parameter")
+@feature("trend/order_parameter")
 class OrderParameterTrend(Feature):
     """Order Parameter - degree of collective alignment.
 
@@ -924,7 +924,7 @@ class OrderParameterTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/susceptibility")
+@feature("trend/susceptibility")
 class SusceptibilityTrend(Feature):
     """Market Susceptibility - sensitivity to perturbation.
 

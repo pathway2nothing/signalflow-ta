@@ -5,12 +5,12 @@ from typing import ClassVar
 
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature import Feature
 
 
 @dataclass
-@sf_component(name="perf/log_ret")
+@feature("perf/log_ret")
 class LogReturn(Feature):
     """Logarithmic returns.
 
@@ -61,7 +61,7 @@ class LogReturn(Feature):
 
 
 @dataclass
-@sf_component(name="perf/pct_ret")
+@feature("perf/pct_ret")
 class PctReturn(Feature):
     """Simple (arithmetic) returns.
 

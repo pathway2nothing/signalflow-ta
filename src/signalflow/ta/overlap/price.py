@@ -5,12 +5,12 @@ from typing import ClassVar
 
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="price/hl2")
+@feature("price/hl2")
 class Hl2Price(Feature):
     """High-Low Midpoint.
 
@@ -34,7 +34,7 @@ class Hl2Price(Feature):
 
 
 @dataclass
-@sf_component(name="price/hlc3")
+@feature("price/hlc3")
 class Hlc3Price(Feature):
     """Typical Price.
 
@@ -53,7 +53,7 @@ class Hlc3Price(Feature):
 
 
 @dataclass
-@sf_component(name="price/ohlc4")
+@feature("price/ohlc4")
 class Ohlc4Price(Feature):
     """OHLC Average.
 
@@ -72,7 +72,7 @@ class Ohlc4Price(Feature):
 
 
 @dataclass
-@sf_component(name="price/wcp")
+@feature("price/wcp")
 class WcpPrice(Feature):
     """Weighted Close Price.
 
@@ -91,7 +91,7 @@ class WcpPrice(Feature):
 
 
 @dataclass
-@sf_component(name="price/typical")
+@feature("price/typical")
 class TypicalPrice(Feature):
     """Typical Price with configurable weights.
 
@@ -129,7 +129,7 @@ class TypicalPrice(Feature):
 
 
 @dataclass
-@sf_component(name="price/midpoint")
+@feature("price/midpoint")
 class MidpointPrice(Feature):
     """Rolling Midpoint.
 
@@ -159,7 +159,7 @@ class MidpointPrice(Feature):
 
 
 @dataclass
-@sf_component(name="price/midprice")
+@feature("price/midprice")
 class MidpricePrice(Feature):
     """Rolling Midprice (High-Low based).
 
@@ -187,7 +187,7 @@ class MidpricePrice(Feature):
 
 
 @dataclass
-@sf_component(name="price/log_price")
+@feature("price/log_price")
 class LogPrice(Feature):
     """Log-transformed price.
 
@@ -211,7 +211,7 @@ class LogPrice(Feature):
 
 
 @dataclass
-@sf_component(name="price/pct_from_high")
+@feature("price/pct_from_high")
 class PctFromHighPrice(Feature):
     """Percentage distance from rolling high.
 
@@ -242,7 +242,7 @@ class PctFromHighPrice(Feature):
 
 
 @dataclass
-@sf_component(name="price/pct_from_low")
+@feature("price/pct_from_low")
 class PctFromLowPrice(Feature):
     """Percentage distance from rolling low.
 

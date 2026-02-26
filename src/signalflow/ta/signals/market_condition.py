@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import SignalCategory, Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
@@ -15,7 +15,7 @@ from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@sf_component(name="ta/market_condition_1")
+@detector("ta/market_condition_1")
 class MarketConditionDetector1(SignalDetector):
     """Market condition detector using RSI and global volatility.
 
@@ -178,7 +178,7 @@ class MarketConditionDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/market_condition_2")
+@detector("ta/market_condition_2")
 class MarketConditionDetector2(SignalDetector):
     """Market condition detector with RSI comparison to market RSI.
 
@@ -329,7 +329,7 @@ class MarketConditionDetector2(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/market_condition_3")
+@detector("ta/market_condition_3")
 class MarketConditionDetector3(SignalDetector):
     """Advanced market condition detector with z-score and rolling min.
 

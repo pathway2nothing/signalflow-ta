@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import detector
 from signalflow.core import Signals, SignalType
 from signalflow.detector import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
@@ -84,7 +84,7 @@ def _adaptive_hampel_filter(
 
 
 @dataclass
-@sf_component(name="ta/hampel_filter_1")
+@detector("ta/hampel_filter_1")
 class HampelFilterDetector1(SignalDetector):
     """Hampel filter-based anomaly detector.
 
@@ -225,7 +225,7 @@ class HampelFilterDetector1(SignalDetector):
 
 
 @dataclass
-@sf_component(name="ta/hampel_filter_2")
+@detector("ta/hampel_filter_2")
 class HampelFilterDetector2(SignalDetector):
     """Adaptive Hampel filter-based anomaly detector.
 

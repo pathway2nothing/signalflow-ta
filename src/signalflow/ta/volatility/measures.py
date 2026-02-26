@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     rma_sma_init as _rma_sma_init,
@@ -18,7 +18,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="volatility/mass_index")
+@feature("volatility/mass_index")
 class MassIndexVol(Feature):
     """Mass Index.
 
@@ -86,7 +86,7 @@ class MassIndexVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/ulcer_index")
+@feature("volatility/ulcer_index")
 class UlcerIndexVol(Feature):
     """Ulcer Index.
 
@@ -151,7 +151,7 @@ class UlcerIndexVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/rvi")
+@feature("volatility/rvi")
 class RviVol(Feature):
     """Relative Volatility Index (RVI).
 
@@ -208,7 +208,7 @@ class RviVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/historical_vol")
+@feature("volatility/historical_vol")
 class HistoricalVol(Feature):
     """Historical Volatility (Close-to-Close).
 
@@ -273,7 +273,7 @@ class HistoricalVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/atr_percent")
+@feature("volatility/atr_percent")
 class AtrPercentVol(Feature):
     """ATR as Percentage of Price.
 

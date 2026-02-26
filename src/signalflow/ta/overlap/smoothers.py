@@ -8,7 +8,7 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     wma_kernel as _wma_kernel,
@@ -17,7 +17,7 @@ from signalflow.ta._numba_kernels import (
 
 
 @dataclass
-@sf_component(name="smooth/sma")
+@feature("smooth/sma")
 class SmaSmooth(Feature):
     """Simple Moving Average.
 
@@ -69,7 +69,7 @@ class SmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/ema")
+@feature("smooth/ema")
 class EmaSmooth(Feature):
     """Exponential Moving Average.
 
@@ -122,7 +122,7 @@ class EmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/wma")
+@feature("smooth/wma")
 class WmaSmooth(Feature):
     """Weighted Moving Average.
 
@@ -175,7 +175,7 @@ class WmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/rma")
+@feature("smooth/rma")
 class RmaSmooth(Feature):
     """Wilder's Smoothed Moving Average (RMA).
 
@@ -223,7 +223,7 @@ class RmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/dema")
+@feature("smooth/dema")
 class DemaSmooth(Feature):
     """Double Exponential Moving Average.
 
@@ -277,7 +277,7 @@ class DemaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/tema")
+@feature("smooth/tema")
 class TemaSmooth(Feature):
     """Triple Exponential Moving Average.
 
@@ -332,7 +332,7 @@ class TemaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/hma")
+@feature("smooth/hma")
 class HmaSmooth(Feature):
     """Hull Moving Average.
 
@@ -392,7 +392,7 @@ class HmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/trima")
+@feature("smooth/trima")
 class TrimaSmooth(Feature):
     """Triangular Moving Average.
 
@@ -448,7 +448,7 @@ class TrimaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/swma")
+@feature("smooth/swma")
 class SwmaSmooth(Feature):
     """Symmetric Weighted Moving Average.
 
@@ -514,7 +514,7 @@ class SwmaSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/ssf")
+@feature("smooth/ssf")
 class SsfSmooth(Feature):
     """Ehler's Super Smoother Filter.
 
@@ -572,7 +572,7 @@ class SsfSmooth(Feature):
 
 
 @dataclass
-@sf_component(name="smooth/fft")
+@feature("smooth/fft")
 class FftSmooth(Feature):
     """FFT Low-Pass Smoother.
 
