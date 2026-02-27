@@ -8,10 +8,8 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
-
-
-from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 from signalflow.ta._numba_kernels import cmo_kernel as _cmo_kernel
+from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 
 
 @dataclass
@@ -238,7 +236,7 @@ class CmoMom(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0

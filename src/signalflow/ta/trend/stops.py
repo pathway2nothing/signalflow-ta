@@ -9,13 +9,25 @@ import polars as pl
 from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
-    psar_kernel as _psar_kernel,
-    supertrend_kernel as _supertrend_kernel,
-    sma_nb as _sma_nb,
     ema_sma_init as _ema_sma_init,
+)
+from signalflow.ta._numba_kernels import (
+    psar_kernel as _psar_kernel,
+)
+from signalflow.ta._numba_kernels import (
     rma_sma_init as _rma_sma_init,
+)
+from signalflow.ta._numba_kernels import (
     rolling_max as _rolling_max,
+)
+from signalflow.ta._numba_kernels import (
     rolling_min as _rolling_min,
+)
+from signalflow.ta._numba_kernels import (
+    sma_nb as _sma_nb,
+)
+from signalflow.ta._numba_kernels import (
+    supertrend_kernel as _supertrend_kernel,
 )
 
 
@@ -52,7 +64,7 @@ class PsarTrend(Feature):
         high = df["high"].to_numpy().astype(np.float64)
         low = df["low"].to_numpy().astype(np.float64)
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         psar, direction = _psar_kernel(high, low, self.af_step, self.af_max)
 
@@ -128,7 +140,7 @@ class SupertrendTrend(Feature):
         high = df["high"].to_numpy().astype(np.float64)
         low = df["low"].to_numpy().astype(np.float64)
         close = df["close"].to_numpy().astype(np.float64)
-        n = len(close)
+        _n = len(close)
 
         supertrend, direction = _supertrend_kernel(high, low, close, self.period, self.multiplier)
 
@@ -394,7 +406,7 @@ class CkspTrend(Feature):
         high = df["high"].to_numpy().astype(np.float64)
         low = df["low"].to_numpy().astype(np.float64)
         close = df["close"].to_numpy().astype(np.float64)
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]

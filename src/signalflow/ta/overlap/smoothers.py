@@ -11,8 +11,10 @@ import polars as pl
 from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
-    wma_kernel as _wma_kernel,
     ssf_kernel as _ssf_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    wma_kernel as _wma_kernel,
 )
 
 

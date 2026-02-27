@@ -10,13 +10,27 @@ from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     adx_kernel as _adx_kernel,
+)
+from signalflow.ta._numba_kernels import (
     aroon_kernel as _aroon_kernel,
-    rolling_sum as _rolling_sum,
+)
+from signalflow.ta._numba_kernels import (
     rolling_max as _rolling_max,
-    rolling_min as _rolling_min,
-    velocity_kernel as _velocity_kernel,
+)
+from signalflow.ta._numba_kernels import (
     rolling_mean_nan as _rolling_mean_nan,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_min as _rolling_min,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_sum as _rolling_sum,
+)
+from signalflow.ta._numba_kernels import (
     sma_nb as _sma_nb,
+)
+from signalflow.ta._numba_kernels import (
+    velocity_kernel as _velocity_kernel,
 )
 
 

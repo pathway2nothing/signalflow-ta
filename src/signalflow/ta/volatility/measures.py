@@ -9,11 +9,19 @@ import polars as pl
 from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
-    rma_sma_init as _rma_sma_init,
-    mass_index_kernel as _mass_index_kernel,
-    ulcer_index_kernel as _ulcer_index_kernel,
-    rvi_kernel as _rvi_kernel,
     historical_vol_kernel as _historical_vol_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    mass_index_kernel as _mass_index_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    rma_sma_init as _rma_sma_init,
+)
+from signalflow.ta._numba_kernels import (
+    rvi_kernel as _rvi_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    ulcer_index_kernel as _ulcer_index_kernel,
 )
 
 
@@ -298,7 +306,7 @@ class AtrPercentVol(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]

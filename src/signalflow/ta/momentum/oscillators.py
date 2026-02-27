@@ -8,14 +8,12 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
-
-
-from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
-from signalflow.ta._numba_kernels import stoch_kernel as _stoch_kernel
-from signalflow.ta._numba_kernels import sma_nb as _sma_nb
-from signalflow.ta._numba_kernels import rolling_min as _rolling_min
-from signalflow.ta._numba_kernels import rolling_max as _rolling_max
 from signalflow.ta._numba_kernels import cci_kernel as _cci_kernel
+from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
+from signalflow.ta._numba_kernels import rolling_max as _rolling_max
+from signalflow.ta._numba_kernels import rolling_min as _rolling_min
+from signalflow.ta._numba_kernels import sma_nb as _sma_nb
+from signalflow.ta._numba_kernels import stoch_kernel as _stoch_kernel
 from signalflow.ta._numba_kernels import uo_kernel as _uo_kernel
 
 
@@ -262,7 +260,7 @@ class CciMom(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         tp = ((high + low + close) / 3).astype(np.float64)
 
@@ -329,7 +327,7 @@ class UoMom(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]

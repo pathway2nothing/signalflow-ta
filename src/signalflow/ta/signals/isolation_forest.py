@@ -7,8 +7,7 @@ import numpy as np
 import polars as pl
 from sklearn.ensemble import IsolationForest
 
-from signalflow.core import detector
-from signalflow.core import Signals, SignalType
+from signalflow.core import Signals, SignalType, detector
 from signalflow.detector import SignalDetector
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.performance import LogReturn

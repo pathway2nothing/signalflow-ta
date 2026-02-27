@@ -9,12 +9,22 @@ import polars as pl
 from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
-    sma_nb as _sma_nb,
     ema_sma_init as _ema_sma_init,
-    rma_sma_init as _rma_sma_init,
-    rolling_max as _rolling_max,
-    rolling_min as _rolling_min,
+)
+from signalflow.ta._numba_kernels import (
     ichimoku_midprice as _ichimoku_midprice,
+)
+from signalflow.ta._numba_kernels import (
+    rma_sma_init as _rma_sma_init,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_max as _rolling_max,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_min as _rolling_min,
+)
+from signalflow.ta._numba_kernels import (
+    sma_nb as _sma_nb,
 )
 
 
@@ -226,10 +236,7 @@ class QstickTrend(Feature):
 
         diff = close - open_price
 
-        if self.ma_type == "ema":
-            qstick = _ema_sma_init(diff, self.period)
-        else:
-            qstick = _sma_nb(diff, self.period)
+        qstick = _ema_sma_init(diff, self.period) if self.ma_type == "ema" else _sma_nb(diff, self.period)
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
@@ -293,7 +300,7 @@ class TtmTrend(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         hl2 = (high + low).astype(np.float64) / 2
         avg_hl2 = _sma_nb(hl2, self.period)

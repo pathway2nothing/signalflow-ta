@@ -6,8 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import detector
-from signalflow.core import Signals, SignalType
+from signalflow.core import Signals, SignalType, detector
 from signalflow.detector import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import RsiMom

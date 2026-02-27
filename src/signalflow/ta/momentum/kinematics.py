@@ -10,9 +10,13 @@ import polars as pl
 from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
-    velocity_kernel as _velocity_kernel,
-    sma_nb as _sma_nb,
     rolling_mean_nan as _rolling_mean_nan,
+)
+from signalflow.ta._numba_kernels import (
+    sma_nb as _sma_nb,
+)
+from signalflow.ta._numba_kernels import (
+    velocity_kernel as _velocity_kernel,
 )
 
 

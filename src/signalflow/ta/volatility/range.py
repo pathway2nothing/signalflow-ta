@@ -8,7 +8,7 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
-from signalflow.ta._numba_kernels import rma_sma_init, ema_sma_init, sma_nb
+from signalflow.ta._numba_kernels import ema_sma_init, rma_sma_init, sma_nb
 
 
 @dataclass
@@ -105,7 +105,7 @@ class AtrVol(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
@@ -183,7 +183,7 @@ class NatrVol(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]

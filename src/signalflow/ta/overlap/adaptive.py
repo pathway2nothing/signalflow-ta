@@ -11,11 +11,21 @@ from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
     ema_sma_init as _ema_sma_init,
-    jma_kernel as _jma_kernel,
-    kama_kernel as _kama_kernel,
-    vidya_kernel as _vidya_kernel,
-    mcginley_kernel as _mcginley_kernel,
+)
+from signalflow.ta._numba_kernels import (
     frama_kernel as _frama_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    jma_kernel as _jma_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    kama_kernel as _kama_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    mcginley_kernel as _mcginley_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    vidya_kernel as _vidya_kernel,
 )
 
 

@@ -9,13 +9,19 @@ import polars as pl
 from signalflow.core import feature
 from signalflow.feature.base import Feature
 from signalflow.ta._numba_kernels import (
-    rolling_max as _rolling_max,
-    rolling_min as _rolling_min,
-    sma_nb as _sma_nb,
     ema_sma_init as _ema_sma_init,
-    rma_sma_init as _rma_sma_init,
-    bollinger_kernel as _bollinger_kernel,
+)
+from signalflow.ta._numba_kernels import (
     keltner_kernel as _keltner_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_max as _rolling_max,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_min as _rolling_min,
+)
+from signalflow.ta._numba_kernels import (
+    sma_nb as _sma_nb,
 )
 
 
@@ -71,10 +77,7 @@ class BollingerVol(Feature):
         factor = np.sqrt((self.period - 1) / self.period)
         std = std_raw * factor
 
-        if self.ma_type == "ema":
-            middle = _ema_sma_init(close, self.period)
-        else:
-            middle = _sma_nb(close, self.period)
+        middle = _ema_sma_init(close, self.period) if self.ma_type == "ema" else _sma_nb(close, self.period)
 
         upper = middle + self.std_dev * std
         lower = middle - self.std_dev * std
@@ -171,7 +174,7 @@ class KeltnerVol(Feature):
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         if self.use_true_range:
             prev_close = np.roll(close, 1)

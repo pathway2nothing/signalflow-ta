@@ -371,14 +371,8 @@ def jma_kernel(
 
         pow2 = r_volty ** pow1
         kv = bet ** np.sqrt(pow2)
-        if del1 > 0.0:
-            uBand = price
-        else:
-            uBand = price - kv * del1
-        if del2 < 0.0:
-            lBand = price
-        else:
-            lBand = price - kv * del2
+        uBand = price if del1 > 0.0 else price - kv * del1
+        lBand = price if del2 < 0.0 else price - kv * del2
 
         power = r_volty ** pow1
         alpha = beta ** power
@@ -457,10 +451,7 @@ def vidya_kernel(
             neg_sum += neg[j]
 
         total = pos_sum + neg_sum
-        if total > 0.0:
-            cmo = (pos_sum - neg_sum) / total
-        else:
-            cmo = 0.0
+        cmo = (pos_sum - neg_sum) / total if total > 0.0 else 0.0
         abs_cmo = abs(cmo)
         vidya[i] = alpha * abs_cmo * source[i] + (1.0 - alpha * abs_cmo) * vidya[i - 1]
 
@@ -531,10 +522,7 @@ def frama_kernel(
                 min3 = source[j]
         n3 = (max3 - min3) / period
 
-        if n1 + n2 > 0.0 and n3 > 0.0:
-            d = (np.log(n1 + n2) - np.log(n3)) / np.log(2.0)
-        else:
-            d = 1.0
+        d = (np.log(n1 + n2) - np.log(n3)) / np.log(2.0) if n1 + n2 > 0.0 and n3 > 0.0 else 1.0
 
         alpha = np.exp(-4.6 * (d - 1.0))
         if alpha < 0.01:
@@ -904,10 +892,7 @@ def psar_kernel(
 
         if is_long:
             # SAR can't be above prior two lows
-            if i >= 2:
-                sar = min(sar, low[i - 1], low[i - 2])
-            else:
-                sar = min(sar, low[i - 1])
+            sar = min(sar, low[i - 1], low[i - 2]) if i >= 2 else min(sar, low[i - 1])
 
             if low[i] < sar:
                 # Reverse to short
@@ -921,10 +906,7 @@ def psar_kernel(
                     af = min(af + af_step, af_max)
         else:
             # SAR can't be below prior two highs
-            if i >= 2:
-                sar = max(sar, high[i - 1], high[i - 2])
-            else:
-                sar = max(sar, high[i - 1])
+            sar = max(sar, high[i - 1], high[i - 2]) if i >= 2 else max(sar, high[i - 1])
 
             if high[i] > sar:
                 # Reverse to long
@@ -1115,7 +1097,7 @@ def ssf_kernel(
         c1_coeff = a1 * a1
         c3 = -c1_coeff * a1
         c2 = c1_coeff + b1
-        c1_val = 1.0 - c2 - c3 - (-b1 * c1_coeff)
+        _c1_val = 1.0 - c2 - c3 - (-b1 * c1_coeff)
         c2_actual = b1 + c1_coeff
         c3_actual = -c1_coeff * (1.0 + b1)
         c4 = c1_coeff * c1_coeff

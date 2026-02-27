@@ -155,7 +155,7 @@ class TestKernelCorrectness:
         pdm = np.where((up > dn) & (up > 0), up, 0).astype(np.float64)
         ndm = np.where((dn > up) & (dn > 0), dn, 0).astype(np.float64)
 
-        adx, dmp, dmn = adx_kernel(tr, pdm, ndm, 14)
+        adx, _dmp, _dmn = adx_kernel(tr, pdm, ndm, 14)
 
         # ADX values should be bounded [0, 100]
         valid_adx = adx[~np.isnan(adx)]
@@ -170,7 +170,7 @@ class TestKernelCorrectness:
         low = medium_ohlcv["low"].to_numpy().astype(np.float64)
         close = medium_ohlcv["close"].to_numpy().astype(np.float64)
 
-        stoch_k, stoch_d = stoch_kernel(high, low, close, 14, 3, 3)
+        stoch_k, _stoch_d = stoch_kernel(high, low, close, 14, 3, 3)
 
         valid_k = stoch_k[~np.isnan(stoch_k)]
         assert len(valid_k) > 0
@@ -218,7 +218,7 @@ class TestKernelCorrectness:
         high = medium_ohlcv["high"].to_numpy().astype(np.float64)
         low = medium_ohlcv["low"].to_numpy().astype(np.float64)
 
-        psar, direction = psar_kernel(high, low, 0.02, 0.2)
+        _psar, direction = psar_kernel(high, low, 0.02, 0.2)
 
         # Direction should be +1 or -1
         valid_dir = direction[~np.isnan(direction)]
@@ -231,7 +231,7 @@ class TestKernelCorrectness:
         low = medium_ohlcv["low"].to_numpy().astype(np.float64)
         close = medium_ohlcv["close"].to_numpy().astype(np.float64)
 
-        st, direction = supertrend_kernel(high, low, close, 10, 3.0)
+        _st, direction = supertrend_kernel(high, low, close, 10, 3.0)
 
         valid_dir = direction[~np.isnan(direction)]
         assert set(np.unique(valid_dir)).issubset({-1.0, 1.0})
