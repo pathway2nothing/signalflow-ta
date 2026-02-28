@@ -387,6 +387,7 @@ class TemperatureVol(Feature):
         log_ret[0] = np.nan  # mark first as invalid
 
         from signalflow.ta._numba_kernels import rolling_std as _rolling_std
+
         std_vals = _rolling_std(log_ret, self.period)
         # var(ddof=1) = std^2, temperature = var * period
         temp = std_vals**2 * self.period
@@ -452,6 +453,7 @@ class HeatCapacityVol(Feature):
         log_ret[0] = np.nan
 
         from signalflow.ta._numba_kernels import rolling_std as _rolling_std
+
         std_vals = _rolling_std(log_ret, self.period)
         temp = std_vals**2 * self.period
 

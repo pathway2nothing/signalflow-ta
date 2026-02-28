@@ -778,7 +778,7 @@ class RCTimeConstantTrend(Feature):
 
         tau = np.full(n, np.nan)
         start = self.period - 1
-        price_change = np.abs(close[start:] - close[:n - start])
+        price_change = np.abs(close[start:] - close[: n - start])
         valid = price_change > 1e-10
         tau[start:][valid] = range_sum[start:][valid] / price_change[valid]
 

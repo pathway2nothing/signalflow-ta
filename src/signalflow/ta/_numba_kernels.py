@@ -364,23 +364,23 @@ def jma_kernel(
         avg_volty = 0.0
         for j in range(avg_idx, i + 1):
             avg_volty += v_sum[j]
-        avg_volty /= (i - avg_idx + 1)
+        avg_volty /= i - avg_idx + 1
 
         d_volty = volty[i] / avg_volty if avg_volty > 0.0 else 0.0
         r_volty = max(1.0, min(length1 ** (1.0 / pow1), d_volty))
 
-        pow2 = r_volty ** pow1
+        pow2 = r_volty**pow1
         kv = bet ** np.sqrt(pow2)
         uBand = price if del1 > 0.0 else price - kv * del1
         lBand = price if del2 < 0.0 else price - kv * del2
 
-        power = r_volty ** pow1
-        alpha = beta ** power
+        power = r_volty**pow1
+        alpha = beta**power
 
         ma1 = (1.0 - alpha) * price + alpha * ma1
         det0 = (price - ma1) * (1.0 - beta) + beta * det0
         ma2 = ma1 + pr * det0
-        det1 = (ma2 - jma[i - 1]) * (1.0 - alpha) ** 2 + alpha ** 2 * det1
+        det1 = (ma2 - jma[i - 1]) * (1.0 - alpha) ** 2 + alpha**2 * det1
         jma[i] = jma[i - 1] + det1
 
     for i in range(period - 1):
@@ -472,7 +472,7 @@ def mcginley_kernel(
     for i in range(1, n):
         if md[i - 1] != 0.0:
             ratio = source[i] / md[i - 1]
-            denom = k * period * (ratio ** 4)
+            denom = k * period * (ratio**4)
             md[i] = md[i - 1] + (source[i] - md[i - 1]) / denom
         else:
             md[i] = source[i]

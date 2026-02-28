@@ -53,15 +53,15 @@ class AccelerationMom(Feature):
 
         # Velocity: log-return over lag (vectorized)
         velocity = np.full(n, np.nan)
-        safe = (values[self.lag:] > 0) & (values[:-self.lag] > 0)
-        velocity[self.lag:] = np.where(safe, np.log(values[self.lag:] / values[:-self.lag]), np.nan)
+        safe = (values[self.lag :] > 0) & (values[: -self.lag] > 0)
+        velocity[self.lag :] = np.where(safe, np.log(values[self.lag :] / values[: -self.lag]), np.nan)
 
         # Acceleration: change in velocity (vectorized)
         accel = np.full(n, np.nan)
-        valid_mask = ~np.isnan(velocity[self.lag:]) & ~np.isnan(velocity[:-self.lag])
-        accel[2 * self.lag:] = np.where(
-            valid_mask[self.lag:],
-            velocity[2 * self.lag:] - velocity[self.lag:n - self.lag],
+        valid_mask = ~np.isnan(velocity[self.lag :]) & ~np.isnan(velocity[: -self.lag])
+        accel[2 * self.lag :] = np.where(
+            valid_mask[self.lag :],
+            velocity[2 * self.lag :] - velocity[self.lag : n - self.lag],
             np.nan,
         )
 
@@ -132,8 +132,8 @@ class JerkMom(Feature):
 
         # Velocity (vectorized)
         velocity = np.full(n, np.nan)
-        safe = (values[self.lag:] > 0) & (values[:-self.lag] > 0)
-        velocity[self.lag:] = np.where(safe, np.log(values[self.lag:] / values[:-self.lag]), np.nan)
+        safe = (values[self.lag :] > 0) & (values[: -self.lag] > 0)
+        velocity[self.lag :] = np.where(safe, np.log(values[self.lag :] / values[: -self.lag]), np.nan)
 
         # Acceleration (vectorized)
         accel = np.full(n, np.nan)

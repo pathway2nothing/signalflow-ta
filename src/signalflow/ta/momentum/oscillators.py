@@ -45,9 +45,7 @@ class StochMom(Feature):
         low = df["low"].to_numpy().astype(np.float64)
         close = df["close"].to_numpy().astype(np.float64)
 
-        stoch_k, stoch_d = _stoch_kernel(
-            high, low, close, self.k_period, self.smooth_k, self.d_period
-        )
+        stoch_k, stoch_d = _stoch_kernel(high, low, close, self.k_period, self.smooth_k, self.d_period)
 
         # Normalization: [0, 100] → [0, 1] for both outputs
         if self.normalized:
@@ -336,9 +334,14 @@ class UoMom(Feature):
         tr = (np.maximum(high, prev_close) - np.minimum(low, prev_close)).astype(np.float64)
 
         uo = _uo_kernel(
-            bp, tr,
-            self.fast, self.medium, self.slow,
-            self.fast_weight, self.medium_weight, self.slow_weight,
+            bp,
+            tr,
+            self.fast,
+            self.medium,
+            self.slow,
+            self.fast_weight,
+            self.medium_weight,
+            self.slow_weight,
         )
 
         # Normalization: [0, 100] → [0, 1]
