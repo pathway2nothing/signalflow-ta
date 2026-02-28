@@ -68,7 +68,7 @@ class AdxTrend(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["adx_{period}", "dmp_{period}", "dmn_{period}"]
+    outputs: ClassVar[list[str]] = ["adx_{period}", "dmp_{period}", "dmn_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -162,7 +162,7 @@ class AroonTrend(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low"]
-    outputs: ClassVar[list[dict]] = ["aroon_up_{period}", "aroon_dn_{period}", "aroon_osc_{period}"]
+    outputs: ClassVar[list[str]] = ["aroon_up_{period}", "aroon_dn_{period}", "aroon_osc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -235,7 +235,7 @@ class VortexTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["vi_plus_{period}", "vi_minus_{period}"]
+    outputs: ClassVar[list[str]] = ["vi_plus_{period}", "vi_minus_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -326,7 +326,7 @@ class VhfTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["vhf_{period}"]
+    outputs: ClassVar[list[str]] = ["vhf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -405,7 +405,7 @@ class ChopTrend(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["chop_{period}"]
+    outputs: ClassVar[list[str]] = ["chop_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -423,7 +423,7 @@ class ChopTrend(Feature):
         ll = _rolling_min(low, self.period)
         tr_sum = _rolling_sum(tr, self.period)
 
-        chop = np.full(n, np.nan)
+        chop: np.ndarray = np.full(n, np.nan)
         log_period = np.log10(self.period)
         diff = hh - ll
         valid = diff > 0
@@ -480,7 +480,7 @@ class ViscosityTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["viscosity_{period}"]
+    outputs: ClassVar[list[str]] = ["viscosity_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -553,7 +553,7 @@ class ReynoldsTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["reynolds_{period}"]
+    outputs: ClassVar[list[str]] = ["reynolds_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -623,7 +623,7 @@ class RotationalInertiaTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["rot_inertia_{period}"]
+    outputs: ClassVar[list[str]] = ["rot_inertia_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -692,7 +692,7 @@ class MarketImpedanceTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "volume"]
-    outputs: ClassVar[list[dict]] = ["impedance_{period}"]
+    outputs: ClassVar[list[str]] = ["impedance_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -765,7 +765,7 @@ class RCTimeConstantTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["rc_tau_{period}"]
+    outputs: ClassVar[list[str]] = ["rc_tau_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -834,7 +834,7 @@ class SNRTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["snr_{period}"]
+    outputs: ClassVar[list[str]] = ["snr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -905,7 +905,7 @@ class OrderParameterTrend(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["order_param_{period}"]
+    outputs: ClassVar[list[str]] = ["order_param_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -963,7 +963,7 @@ class SusceptibilityTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["susceptibility_{period}"]
+    outputs: ClassVar[list[str]] = ["susceptibility_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)

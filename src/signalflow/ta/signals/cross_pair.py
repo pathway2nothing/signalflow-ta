@@ -176,7 +176,7 @@ class CrossPairDetector1(SignalDetector):
         short_signal = (close > features[f"bb_upper_{self.bb_period}"].to_numpy()) & ~correlation_signal
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(long_signal, SignalType.RISE.value, signal_type)

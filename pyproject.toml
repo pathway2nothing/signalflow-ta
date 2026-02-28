@@ -35,3 +35,24 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["signalflow"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+warn_return_any = true
+strict_equality = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+  "numba",
+  "numba.*",
+  "scipy",
+  "scipy.*",
+  "sklearn",
+  "sklearn.*",
+]
+ignore_missing_imports = true
+follow_untyped_imports = true

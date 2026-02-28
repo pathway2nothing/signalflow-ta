@@ -361,10 +361,10 @@ class KalmanInnovationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_kalman_innov_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kalman_innov_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 30:
             raise ValueError(f"period must be >= 30 for Kalman filter convergence, got {self.period}")
         if self.process_noise <= 0 or self.process_noise > 10.0:
@@ -455,10 +455,10 @@ class ARCoefficientStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_ar_coeff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_ar_coeff_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.ar_order < 1 or self.ar_order > 5:
             raise ValueError(f"ar_order must be in [1, 5], got {self.ar_order}")
         min_period = self.ar_order * 10 + 10
@@ -554,10 +554,10 @@ class LyapunovExponentStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_lyapunov_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_lyapunov_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 50:
             raise ValueError(f"period must be >= 50 for reliable Lyapunov estimation, got {self.period}")
         if self.embed_dim < 2 or self.embed_dim > 7:
@@ -658,10 +658,10 @@ class PIDErrorStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_pid_error_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pid_error_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 20:
             raise ValueError(f"period must be >= 20, got {self.period}")
         if self.kp < 0 or self.ki < 0 or self.kd < 0:
@@ -761,10 +761,10 @@ class PredictionErrorDecompositionStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_pred_err_decomp_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pred_err_decomp_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 30:
             raise ValueError(f"period must be >= 30, got {self.period}")
         if self.forecast_horizon < 1 or self.forecast_horizon > 5:

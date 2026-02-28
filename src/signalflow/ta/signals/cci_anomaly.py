@@ -114,7 +114,7 @@ class CciAnomalyDetector1(SignalDetector):
             signal_expr = pl.when(short_cond).then(pl.lit(SignalType.FALL.value))
         else:
             signal_expr = (
-                pl.when(long_cond)
+                pl.when(long_cond)  # type: ignore[assignment]
                 .then(pl.lit(SignalType.RISE.value))
                 .when(short_cond)
                 .then(pl.lit(SignalType.FALL.value))

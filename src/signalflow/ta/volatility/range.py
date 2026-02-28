@@ -99,7 +99,7 @@ class AtrVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["atr_{period}"]
+    outputs: ClassVar[list[str]] = ["atr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -177,7 +177,7 @@ class NatrVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["natr_{period}"]
+    outputs: ClassVar[list[str]] = ["natr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

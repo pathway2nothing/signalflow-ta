@@ -126,7 +126,7 @@ class MarketConditionDetector1(SignalDetector):
         vol_condition = (market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)
 
         # Build signal type array
-        signal_type = np.full(len(df), SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(len(df), SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             long_signal = rsi_oversold & vol_condition
@@ -278,7 +278,7 @@ class MarketConditionDetector2(SignalDetector):
             (market_vol + market_vol_std) > self.sum_vol_threshold
         )
 
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             long_signal = rsi_below_threshold & rsi_below_market & vol_condition
@@ -456,7 +456,7 @@ class MarketConditionDetector3(SignalDetector):
         at_min = close <= rolling_min
         final_signal = main_signal & at_min
 
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(final_signal, SignalType.RISE.value, signal_type)

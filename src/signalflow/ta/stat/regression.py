@@ -30,17 +30,10 @@ class CorrelationStat(Feature):
     target_col: str = "volume"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}", "{target_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_{target_col}_corr_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}", "{target_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_{target_col}_corr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        out_col = f"{self.source_col}_{self.target_col}_corr_{self.period}"
-
-        return df.with_columns(
-            pl.corr(self.source_col, self.target_col).rolling(window_size=self.period).alias(out_col)
-        )
-
-    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:  # noqa: F811
         x = df[self.source_col].to_numpy()
         y = df[self.target_col].to_numpy()
         n = len(x)
@@ -92,8 +85,8 @@ class BetaStat(Feature):
     benchmark_col: str = "benchmark"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}", "{benchmark_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_beta_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}", "{benchmark_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_beta_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         x = df[self.benchmark_col].to_numpy()
@@ -148,8 +141,8 @@ class RSquaredStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_r2_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_r2_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -204,8 +197,8 @@ class LinRegSlopeStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_slope_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_slope_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -247,8 +240,8 @@ class LinRegInterceptStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_intercept_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_intercept_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -295,8 +288,8 @@ class LinRegResidualStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_residual_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_residual_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

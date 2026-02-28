@@ -115,7 +115,8 @@ def _dct_ii(x: np.ndarray) -> np.ndarray:
     n_len = len(x)
     n = np.arange(n_len)
     k = np.arange(n_len).reshape(-1, 1)
-    return 2.0 * (x * np.cos(np.pi * k * (2 * n + 1) / (2 * n_len))).sum(axis=1)
+    result: np.ndarray = 2.0 * (x * np.cos(np.pi * k * (2 * n + 1) / (2 * n_len))).sum(axis=1)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -157,8 +158,8 @@ class SpectralFluxStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_sflux_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sflux_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -255,8 +256,8 @@ class ZeroCrossingRateStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_zcr_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_zcr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -339,10 +340,10 @@ class SpectralRolloffStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_srolloff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_srolloff_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not (0.0 < self.rolloff_pct < 1.0):
             raise ValueError(f"rolloff_pct must be in (0, 1), got {self.rolloff_pct}")
 
@@ -437,8 +438,8 @@ class SpectralFlatnessStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_sflat_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sflat_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -537,10 +538,10 @@ class PowerCepstrumStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_cepstrum_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_cepstrum_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.min_quefrency < 1:
             raise ValueError(f"min_quefrency must be >= 1, got {self.min_quefrency}")
         if self.min_quefrency >= self.period // 2:
@@ -649,8 +650,8 @@ class SpectralBandwidthStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_sbw_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sbw_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -734,8 +735,8 @@ class SpectralSlopeStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_sslope_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sslope_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -821,8 +822,8 @@ class SpectralKurtosisStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_skurt_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_skurt_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -920,10 +921,10 @@ class SpectralContrastStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_scontrast_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_scontrast_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.n_bands < 1:
             raise ValueError(f"n_bands must be >= 1, got {self.n_bands}")
         if not (0.0 < self.alpha <= 0.5):
@@ -1032,10 +1033,10 @@ class MFCCBandEnergyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_mfccbe_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_mfccbe_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.n_filters < 2:
             raise ValueError(f"n_filters must be >= 2, got {self.n_filters}")
         if self.n_coeffs >= self.n_filters:

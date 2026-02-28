@@ -112,9 +112,9 @@ def _sample_entropy(x: np.ndarray, m: int, r: float) -> float:
 
     if a_count == 0:
         # Convention: return large value (no m+1 matches found)
-        return np.log(b_count)
+        return float(np.log(b_count))
 
-    return -np.log(a_count / b_count)
+    return float(-np.log(a_count / b_count))
 
 
 def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
@@ -158,7 +158,7 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
     if n < 2:
         return np.nan
     norm = n / np.log2(n)
-    return complexity / norm
+    return float(complexity / norm)
 
 
 def _fisher_information(x: np.ndarray, bins: int) -> float:
@@ -191,7 +191,7 @@ def _fisher_information(x: np.ndarray, bins: int) -> float:
             dp = hist[i + 1] - hist[i]
             fi += (dp**2) / p
 
-    return fi / dx
+    return float(fi / dx)
 
 
 def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -> float:
@@ -280,7 +280,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
         return np.nan
 
     alpha = (n_pts * sxy - sx * sy) / denom
-    return alpha
+    return float(alpha)
 
 
 # ---------------------------------------------------------------------------
@@ -331,10 +331,10 @@ class PermutationEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_perm_entropy_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_perm_entropy_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.m < 2 or self.m > 7:
             raise ValueError(f"m must be in [2, 7], got {self.m}")
         if self.period < self.m + 10:
@@ -421,10 +421,10 @@ class SampleEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_sampen_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sampen_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.m < 1 or self.m > 4:
             raise ValueError(f"m must be in [1, 4], got {self.m}")
         if self.period < 30:
@@ -514,10 +514,10 @@ class LempelZivStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_lzc_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_lzc_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 20:
             raise ValueError(f"period must be >= 20 for reliable LZC, got {self.period}")
 
@@ -607,10 +607,10 @@ class FisherInformationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_fisher_info_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_fisher_info_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 2:
@@ -702,10 +702,10 @@ class DfaExponentStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_dfa_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_dfa_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 50:
             raise ValueError(f"period must be >= 50 for reliable DFA, got {self.period}")
         if self.min_box < 3:

@@ -515,6 +515,7 @@ class DivergenceBase(Feature):
                 else:
                     indicator_min = indicator_max = 0
             else:
+                assert indicator_range is not None
                 indicator_min, indicator_max = indicator_range
 
             if indicator_max > indicator_min and not np.isnan(ind_value):
@@ -532,7 +533,7 @@ class DivergenceBase(Feature):
 
         return np.clip(strength, 0, 100)
 
-    def _find_closest_pivot(self, target_idx: int, pivot_indices: np.ndarray, tolerance: int) -> int:
+    def _find_closest_pivot(self, target_idx: int, pivot_indices: np.ndarray, tolerance: int) -> int | None:
         """
         Find the pivot index closest to target within tolerance.
 
@@ -557,7 +558,7 @@ class DivergenceBase(Feature):
         min_dist_idx = np.argmin(distances)
 
         if distances[min_dist_idx] <= tolerance:
-            return pivot_indices[min_dist_idx]
+            return int(pivot_indices[min_dist_idx])
 
         return None
 

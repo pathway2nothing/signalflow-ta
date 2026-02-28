@@ -68,7 +68,7 @@ class MacdMom(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["macd_{fast}_{slow}", "macd_signal_{signal}", "macd_hist_{fast}_{slow}"]
+    outputs: ClassVar[list[str]] = ["macd_{fast}_{slow}", "macd_signal_{signal}", "macd_hist_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -171,7 +171,7 @@ class PpoMom(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["ppo_{fast}_{slow}", "ppo_signal_{signal}", "ppo_hist_{fast}_{slow}"]
+    outputs: ClassVar[list[str]] = ["ppo_{fast}_{slow}", "ppo_signal_{signal}", "ppo_hist_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -270,7 +270,7 @@ class TsiMom(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["tsi_{fast}_{slow}", "tsi_signal_{signal}"]
+    outputs: ClassVar[list[str]] = ["tsi_{fast}_{slow}", "tsi_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -377,7 +377,7 @@ class TrixMom(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["trix_{period}", "trix_signal_{signal}"]
+    outputs: ClassVar[list[str]] = ["trix_{period}", "trix_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()

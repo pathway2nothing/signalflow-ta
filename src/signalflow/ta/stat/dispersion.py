@@ -25,8 +25,8 @@ class VarianceStat(Feature):
     period: int = 30
     ddof: int = 1
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_var_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_var_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(
@@ -61,8 +61,8 @@ class StdStat(Feature):
     period: int = 30
     ddof: int = 1
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_std_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_std_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(
@@ -98,8 +98,8 @@ class MadStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_mad_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_mad_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -140,8 +140,8 @@ class ZscoreStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_zscore_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_zscore_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -178,8 +178,8 @@ class CvStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_cv_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_cv_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -215,8 +215,8 @@ class RangeStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_range_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_range_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -253,8 +253,8 @@ class IqrStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_iqr_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_iqr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -290,8 +290,8 @@ class AadStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_aad_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_aad_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -332,8 +332,8 @@ class RobustZscoreStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_robz_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_robz_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

@@ -199,7 +199,7 @@ class KalmanFilterDetector1(SignalDetector):
             long_signal = long_signal & uptrend
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(long_signal, SignalType.RISE.value, signal_type)

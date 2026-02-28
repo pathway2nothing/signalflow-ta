@@ -38,7 +38,7 @@ class StochMom(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["stoch_k_{k_period}", "stoch_d_{k_period}"]
+    outputs: ClassVar[list[str]] = ["stoch_k_{k_period}", "stoch_d_{k_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -101,7 +101,7 @@ class StochRsiMom(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["stochrsi_k_{rsi_period}", "stochrsi_d_{rsi_period}"]
+    outputs: ClassVar[list[str]] = ["stochrsi_k_{rsi_period}", "stochrsi_d_{rsi_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -194,7 +194,7 @@ class WillrMom(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["willr_{period}"]
+    outputs: ClassVar[list[str]] = ["willr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -254,7 +254,7 @@ class CciMom(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["cci_{period}"]
+    outputs: ClassVar[list[str]] = ["cci_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -321,7 +321,7 @@ class UoMom(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["uo_{fast}_{medium}_{slow}"]
+    outputs: ClassVar[list[str]] = ["uo_{fast}_{medium}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -387,7 +387,7 @@ class AoMom(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low"]
-    outputs: ClassVar[list[dict]] = ["ao_{fast}_{slow}"]
+    outputs: ClassVar[list[str]] = ["ao_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)

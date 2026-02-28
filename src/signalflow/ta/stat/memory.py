@@ -35,10 +35,10 @@ class HurstStat(Feature):
     source_col: str = "close"
     period: int = 100
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_hurst_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_hurst_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 20:
             raise ValueError(f"period must be >= 20 for reliable Hurst estimate, got {self.period}")
 
@@ -59,7 +59,8 @@ class HurstStat(Feature):
         rs = r / std
 
         if rs > 0:
-            return np.log(rs) / np.log(n)
+            hurst_val: float = float(np.log(rs) / np.log(n))
+            return hurst_val
         return np.nan
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -105,8 +106,8 @@ class AutocorrStat(Feature):
     period: int = 30
     lag: int = 1
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_acf{lag}_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_acf{lag}_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -156,8 +157,8 @@ class VarianceRatioStat(Feature):
     period: int = 50
     k: int = 5
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_vr{k}_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_vr{k}_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -220,8 +221,8 @@ class DiffusionCoeffStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_diffcoeff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_diffcoeff_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -293,10 +294,10 @@ class AnomalousDiffusionStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_adiff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_adiff_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.tau_long <= self.tau_short:
             raise ValueError(f"tau_long ({self.tau_long}) must be > tau_short ({self.tau_short})")
 
@@ -375,8 +376,8 @@ class MsdRatioStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_msdr_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_msdr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -457,8 +458,8 @@ class SpringConstantStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_spring_k_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_spring_k_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -555,8 +556,8 @@ class DampingRatioStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_damping_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_damping_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -654,8 +655,8 @@ class NaturalFrequencyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_natfreq_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_natfreq_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -740,8 +741,8 @@ class PlasticStrainStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_plastic_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_plastic_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -830,8 +831,8 @@ class EscapeVelocityStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_vesc_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_vesc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -930,8 +931,8 @@ class CorrelationLengthStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_corrlen_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_corrlen_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

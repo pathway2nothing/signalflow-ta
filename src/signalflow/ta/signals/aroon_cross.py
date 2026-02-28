@@ -103,7 +103,7 @@ class AroonCrossDetector1(SignalDetector):
         bear_cross = (aroon_up < aroon_dn) & (aroon_up_prev >= aroon_dn_prev)
 
         # Build signal type array
-        signal_type = np.full(len(features), SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(len(features), SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(bull_cross, SignalType.RISE.value, signal_type)

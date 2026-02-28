@@ -54,8 +54,8 @@ class KamaSmooth(Feature):
     slow: int = 30
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_kama_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kama_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -119,8 +119,8 @@ class AlmaSmooth(Feature):
     sigma: float = 6.0
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_alma_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_alma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -190,8 +190,8 @@ class JmaSmooth(Feature):
     phase: float = 0  # -100 to 100
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_jma_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_jma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -245,8 +245,8 @@ class VidyaSmooth(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_vidya_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_vidya_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -308,8 +308,8 @@ class T3Smooth(Feature):
     vfactor: float = 0.7
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_t3_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_t3_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -379,8 +379,8 @@ class ZlmaSmooth(Feature):
     ma_type: Literal["ema", "sma"] = "ema"
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_zlma_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_zlma_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -444,8 +444,8 @@ class McGinleySmooth(Feature):
     k: float = 0.6
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_mcg_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_mcg_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -500,10 +500,10 @@ class FramaSmooth(Feature):
     period: int = 16
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_frama_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_frama_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period % 2 != 0:
             raise ValueError("FRAMA period must be even")
 
@@ -624,8 +624,8 @@ class KalmanSmooth(Feature):
     measurement_noise: float = 0.1
     normalized: bool = False
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_kalman_{window}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kalman_{window}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)

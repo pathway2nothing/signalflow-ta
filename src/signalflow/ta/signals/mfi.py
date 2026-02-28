@@ -99,7 +99,7 @@ class MfiDetector1(SignalDetector):
         overbought = mfi > self.overbought_threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(oversold, SignalType.RISE.value, signal_type)
@@ -234,7 +234,7 @@ class MfiDetector2(SignalDetector):
         short_signal = (zscore > self.zscore_threshold) & (mfi > self.overbought_threshold) & mfi_falling
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(long_signal, SignalType.RISE.value, signal_type)

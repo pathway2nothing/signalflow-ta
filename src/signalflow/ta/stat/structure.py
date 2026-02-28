@@ -72,8 +72,8 @@ class ReversePointsStat(Feature):
     source_col: str = "close"
     window: int = 20
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_reverse_points_{window}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_reverse_points_{window}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -142,8 +142,8 @@ class TimeSinceSpikeStat(Feature):
 
     source_col: str = "spike"
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["time_since_{source_col}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["time_since_{source_col}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         spike_values = df[self.source_col].to_numpy().astype(np.float64)
@@ -179,8 +179,8 @@ class VolatilitySpikeStat(Feature):
     period: int = 60
     threshold: float = 1.0
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_volat_spike_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_volat_spike_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -231,8 +231,8 @@ class VolatilitySpikeDiffStat(Feature):
     second_period: int = 240
     threshold: float = 0.5
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_volat_spike_diff_{first_period}_{second_period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_volat_spike_diff_{first_period}_{second_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -294,7 +294,7 @@ class VolumeSpikeStat(Feature):
     threshold: float = 1.0
 
     requires: ClassVar[list[str]] = ["volume"]
-    outputs: ClassVar[list[dict]] = ["volume_spike_{period}"]
+    outputs: ClassVar[list[str]] = ["volume_spike_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         volume = df["volume"].to_numpy()
@@ -344,7 +344,7 @@ class VolumeSpikeDiffStat(Feature):
     threshold: float = 0.5
 
     requires: ClassVar[list[str]] = ["volume"]
-    outputs: ClassVar[list[dict]] = ["volume_spike_diff_{first_period}_{second_period}"]
+    outputs: ClassVar[list[str]] = ["volume_spike_diff_{first_period}_{second_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         volume = df["volume"].to_numpy()
@@ -400,8 +400,8 @@ class RollingMinStat(Feature):
     source_col: str = "close"
     period: int = 14
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_min_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_min_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col_name = f"{self.source_col}_min_{self.period}"
@@ -429,8 +429,8 @@ class RollingMaxStat(Feature):
     source_col: str = "close"
     period: int = 14
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_max_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_max_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col_name = f"{self.source_col}_max_{self.period}"

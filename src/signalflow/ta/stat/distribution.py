@@ -27,8 +27,8 @@ class MedianStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_median_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_median_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(
@@ -64,10 +64,10 @@ class QuantileStat(Feature):
     period: int = 30
     q: float = 0.5
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_q{q}_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_q{q}_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not 0 < self.q < 1:
             raise ValueError(f"q must be in (0, 1), got {self.q}")
 
@@ -107,8 +107,8 @@ class PctRankStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_pctrank_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pctrank_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -150,8 +150,8 @@ class MinMaxStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_minmax_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_minmax_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -190,8 +190,8 @@ class SkewStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_skew_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_skew_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -235,8 +235,8 @@ class KurtosisStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_kurt_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kurt_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -282,8 +282,8 @@ class EntropyStat(Feature):
     period: int = 10
     base: float = 2.0
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_entropy_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_entropy_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -336,8 +336,8 @@ class JarqueBeraStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_jb_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_jb_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -388,8 +388,8 @@ class ModeDistanceStat(Feature):
     period: int = 30
     n_bins: int = 10
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_mode_dist_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_mode_dist_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -437,8 +437,8 @@ class AboveMeanRatioStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_above_mean_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_above_mean_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -488,8 +488,8 @@ class EntropyRateStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_entropy_rate_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_entropy_rate_{period}"]
 
     def _compute_entropy(self, window: np.ndarray) -> float:
         """Compute Shannon entropy for a window."""
@@ -498,7 +498,8 @@ class EntropyRateStat(Feature):
             return np.nan
         p = window / window_sum
         p = p[p > 0]
-        return -np.sum(p * np.log(p) / np.log(self.base))
+        entropy_val: float = float(-np.sum(p * np.log(p) / np.log(self.base)))
+        return entropy_val
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()

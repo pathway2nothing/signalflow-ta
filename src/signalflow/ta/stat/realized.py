@@ -30,7 +30,7 @@ class RealizedVolStat(Feature):
     trading_periods: int = 252
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["realized_vol_{period}"]
+    outputs: ClassVar[list[str]] = ["realized_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -78,7 +78,7 @@ class ParkinsonVolStat(Feature):
     trading_periods: int = 252
 
     requires: ClassVar[list[str]] = ["high", "low"]
-    outputs: ClassVar[list[dict]] = ["parkinson_vol_{period}"]
+    outputs: ClassVar[list[str]] = ["parkinson_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -126,7 +126,7 @@ class GarmanKlassVolStat(Feature):
     trading_periods: int = 252
 
     requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["gk_vol_{period}"]
+    outputs: ClassVar[list[str]] = ["gk_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         o = df["open"].to_numpy()
@@ -180,7 +180,7 @@ class RogersSatchellVolStat(Feature):
     trading_periods: int = 252
 
     requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["rs_vol_{period}"]
+    outputs: ClassVar[list[str]] = ["rs_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         o = df["open"].to_numpy()
@@ -234,7 +234,7 @@ class YangZhangVolStat(Feature):
     trading_periods: int = 252
 
     requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["yz_vol_{period}"]
+    outputs: ClassVar[list[str]] = ["yz_vol_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         o = df["open"].to_numpy()

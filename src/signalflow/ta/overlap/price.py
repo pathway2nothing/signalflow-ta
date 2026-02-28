@@ -141,8 +141,8 @@ class MidpointPrice(Feature):
     period: int = 14
     source_col: str = "close"
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_midpoint_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_midpoint_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -171,7 +171,7 @@ class MidpricePrice(Feature):
     period: int = 14
 
     requires: ClassVar[list[str]] = ["high", "low"]
-    outputs: ClassVar[list[dict]] = ["midprice_{period}"]
+    outputs: ClassVar[list[str]] = ["midprice_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         hh = pl.col("high").rolling_max(window_size=self.period)
@@ -199,8 +199,8 @@ class LogPrice(Feature):
 
     source_col: str = "close"
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_log"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_log"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(pl.col(self.source_col).log().alias(f"{self.source_col}_log"))
@@ -223,8 +223,8 @@ class PctFromHighPrice(Feature):
     source_col: str = "close"
     period: int = 20
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_pct_from_high_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pct_from_high_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -254,8 +254,8 @@ class PctFromLowPrice(Feature):
     source_col: str = "close"
     period: int = 20
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_pct_from_low_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pct_from_low_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
@@ -271,45 +271,5 @@ class PctFromLowPrice(Feature):
 
     @property
     def warmup(self) -> int:
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
-        """Minimum bars needed for stable, reproducible output."""
-        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
-
-    @property
-    def warmup(self) -> int:  # noqa: F811
         """Minimum bars needed for stable, reproducible output."""
         return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5

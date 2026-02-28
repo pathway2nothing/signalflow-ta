@@ -67,7 +67,7 @@ class CrossSectionalStat(GlobalFeature):
         "diff",
     }
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         unknown = set(self.stats) - self._SUPPORTED_STATS
         if unknown:
             raise ValueError(f"Unknown stats: {unknown}. Supported: {sorted(self._SUPPORTED_STATS)}")

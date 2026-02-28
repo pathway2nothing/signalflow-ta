@@ -103,7 +103,7 @@ class BollingerBandDetector1(SignalDetector):
         above_upper = close > bb_upper
 
         # Build signal type array
-        signal_type = np.full(len(features), SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(len(features), SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(below_lower, SignalType.RISE.value, signal_type)

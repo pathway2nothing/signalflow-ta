@@ -101,10 +101,9 @@ class AutoFeatureNormalizer:
             for m in methods:
                 exprs.append(self._expr_for_method(col, m).alias(f"{col}__{m}"))
 
-        base_cols = [self.ts_col, self.pair_col]
         if self.keep_original:
             return df.with_columns(exprs)
-        return df.select(base_cols + exprs)
+        return df.select([pl.col(self.ts_col), pl.col(self.pair_col), *exprs])
 
     def save(self, path: str, artifact: dict[str, Any] | None = None) -> None:
         art = artifact or self.artifact
@@ -116,7 +115,8 @@ class AutoFeatureNormalizer:
     @staticmethod
     def load(path: str) -> dict[str, Any]:
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            result: dict[str, Any] = json.load(f)
+            return result
 
     def _decide_plan_for_col(self, s: dict[str, Any]) -> dict[str, Any]:
         """
@@ -162,8 +162,13 @@ class AutoFeatureNormalizer:
             if method and method not in methods:
                 methods.insert(0, method)
 
-        seen = set()
-        methods = [m for m in methods if not (m in seen or seen.add(m))]
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for m in methods:
+            if m not in seen:
+                seen.add(m)
+                deduped.append(m)
+        methods = deduped
         return {"methods": methods}
 
     def _expr_for_method(self, col: str, method: str) -> pl.Expr:
@@ -177,37 +182,37 @@ class AutoFeatureNormalizer:
         if method == "rolling_winsor":
             lo = x.rolling_quantile(
                 quantile=self.winsor_low_q,
-                window_size=self.window,
-                min_periods=self.warmup,
                 interpolation="nearest",
+                window_size=self.window,
+                min_samples=self.warmup,
             ).over(self.pair_col)
             hi = x.rolling_quantile(
                 quantile=self.winsor_high_q,
-                window_size=self.window,
-                min_periods=self.warmup,
                 interpolation="nearest",
+                window_size=self.window,
+                min_samples=self.warmup,
             ).over(self.pair_col)
             return x.clip(lo, hi)
 
         if method == "rolling_robust":
-            med = x.rolling_median(self.window, min_periods=self.warmup).over(self.pair_col)
-            q1 = x.rolling_quantile(0.25, self.window, min_periods=self.warmup, interpolation="nearest").over(
-                self.pair_col
-            )
-            q3 = x.rolling_quantile(0.75, self.window, min_periods=self.warmup, interpolation="nearest").over(
-                self.pair_col
-            )
+            med = x.rolling_median(self.window, min_samples=self.warmup).over(self.pair_col)
+            q1 = x.rolling_quantile(
+                quantile=0.25, interpolation="nearest", window_size=self.window, min_samples=self.warmup
+            ).over(self.pair_col)
+            q3 = x.rolling_quantile(
+                quantile=0.75, interpolation="nearest", window_size=self.window, min_samples=self.warmup
+            ).over(self.pair_col)
             iqr = q3 - q1
             return (x - med) / (iqr.abs() + pl.lit(self.eps))
 
         if method == "rolling_z":
-            mu = x.rolling_mean(self.window, min_periods=self.warmup).over(self.pair_col)
-            sd = x.rolling_std(self.window, min_periods=self.warmup, ddof=1).over(self.pair_col)
+            mu = x.rolling_mean(self.window, min_samples=self.warmup).over(self.pair_col)
+            sd = x.rolling_std(self.window, min_samples=self.warmup, ddof=1).over(self.pair_col)
             return (x - mu) / (sd.abs() + pl.lit(self.eps))
 
         if method == "rolling_rank":
-            mn = x.rolling_min(self.window, min_periods=self.warmup).over(self.pair_col)
-            mx = x.rolling_max(self.window, min_periods=self.warmup).over(self.pair_col)
+            mn = x.rolling_min(self.window, min_samples=self.warmup).over(self.pair_col)
+            mx = x.rolling_max(self.window, min_samples=self.warmup).over(self.pair_col)
             return (x - mn) / ((mx - mn).abs() + pl.lit(self.eps))
 
         raise ValueError(f"Unknown method: {method}")

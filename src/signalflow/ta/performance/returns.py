@@ -37,9 +37,9 @@ class LogReturn(Feature):
     source: str = "close"
     period: int = 1
 
-    def __post_init__(self):
-        self.requires = [self.source]
-        self.outputs = [f"logret_{self.period}_{self.source}"]
+    def __post_init__(self) -> None:
+        self.requires = [self.source]  # type: ignore[misc]
+        self.outputs = [f"logret_{self.period}_{self.source}"]  # type: ignore[misc]
 
         if self.period < 1:
             raise ValueError("period must be >= 1")
@@ -79,9 +79,9 @@ class PctReturn(Feature):
     source: str = "close"
     period: int = 1
 
-    def __post_init__(self):
-        self.requires = [self.source]
-        self.outputs = [f"pct_ret_{self.period}_{self.source}"]
+    def __post_init__(self) -> None:
+        self.requires = [self.source]  # type: ignore[misc]
+        self.outputs = [f"pct_ret_{self.period}_{self.source}"]  # type: ignore[misc]
 
         if self.period < 1:
             raise ValueError("period must be >= 1")

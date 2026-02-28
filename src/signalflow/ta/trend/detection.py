@@ -154,7 +154,7 @@ class DpoTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["dpo_{period}"]
+    outputs: ClassVar[list[str]] = ["dpo_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -228,7 +228,7 @@ class QstickTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["open", "close"]
-    outputs: ClassVar[list[dict]] = ["qstick_{period}"]
+    outputs: ClassVar[list[str]] = ["qstick_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         open_price = df["open"].to_numpy().astype(np.float64)
@@ -294,7 +294,7 @@ class TtmTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["ttm_trend_{period}"]
+    outputs: ClassVar[list[str]] = ["ttm_trend_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

@@ -120,7 +120,7 @@ class StochasticDetector1(SignalDetector):
         in_overbought = stoch_k > self.overbought_threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             long_signal = k_crosses_above_d & in_oversold
@@ -259,7 +259,7 @@ class StochasticDetector2(SignalDetector):
         overbought_extreme = (zscore > self.zscore_threshold) & (stoch_k > self.overbought_threshold)
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(oversold_extreme, SignalType.RISE.value, signal_type)

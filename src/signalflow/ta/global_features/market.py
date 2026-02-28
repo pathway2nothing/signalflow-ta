@@ -237,4 +237,5 @@ def compute_global_features(df: pl.DataFrame, features: list[GlobalFeature]) -> 
         feat_df = feat.compute(df)
         result = feat_df if result is None else result.join(feat_df, on=ts_col, how="outer")
 
+    assert result is not None
     return result.sort(ts_col)

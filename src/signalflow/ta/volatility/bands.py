@@ -168,7 +168,7 @@ class KeltnerVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["kc_upper_{period}", "kc_basis_{period}", "kc_lower_{period}"]
+    outputs: ClassVar[list[str]] = ["kc_upper_{period}", "kc_basis_{period}", "kc_lower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -280,7 +280,7 @@ class DonchianVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low"]
-    outputs: ClassVar[list[dict]] = ["dc_upper_{period}", "dc_middle_{period}", "dc_lower_{period}"]
+    outputs: ClassVar[list[str]] = ["dc_upper_{period}", "dc_middle_{period}", "dc_lower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -369,7 +369,7 @@ class AccBandsVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["accb_upper_{period}", "accb_middle_{period}", "accb_lower_{period}"]
+    outputs: ClassVar[list[str]] = ["accb_upper_{period}", "accb_middle_{period}", "accb_lower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

@@ -50,7 +50,7 @@ class MassIndexVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low"]
-    outputs: ClassVar[list[dict]] = ["massi_{fast}_{slow}"]
+    outputs: ClassVar[list[str]] = ["massi_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -117,7 +117,7 @@ class UlcerIndexVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["ulcer_{period}"]
+    outputs: ClassVar[list[str]] = ["ulcer_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -183,7 +183,7 @@ class RviVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["rvi_{period}"]
+    outputs: ClassVar[list[str]] = ["rvi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -239,7 +239,7 @@ class HistoricalVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["hv_{period}"]
+    outputs: ClassVar[list[str]] = ["hv_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -300,7 +300,7 @@ class AtrPercentVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["atr_pct_{period}"]
+    outputs: ClassVar[list[str]] = ["atr_pct_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

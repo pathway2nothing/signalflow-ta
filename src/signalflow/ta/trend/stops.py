@@ -134,7 +134,7 @@ class SupertrendTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["supertrend_{period}", "supertrend_dir_{period}"]
+    outputs: ClassVar[list[str]] = ["supertrend_{period}", "supertrend_dir_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
@@ -212,7 +212,7 @@ class ChandelierTrend(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
-    outputs: ClassVar[list[dict]] = ["chandelier_long_{period}", "chandelier_short_{period}"]
+    outputs: ClassVar[list[str]] = ["chandelier_long_{period}", "chandelier_short_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)

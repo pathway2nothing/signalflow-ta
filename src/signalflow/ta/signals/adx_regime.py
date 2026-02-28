@@ -109,7 +109,7 @@ class AdxRegimeDetector1(SignalDetector):
         strong_trend = adx > self.adx_threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             long_signal = plus_crosses_above & strong_trend
@@ -252,7 +252,7 @@ class AdxRegimeDetector2(SignalDetector):
         rsi_overbought = rsi > self.rsi_overbought
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             # Trend: follow uptrend, Range: buy oversold

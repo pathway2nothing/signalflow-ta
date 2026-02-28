@@ -62,7 +62,7 @@ class GapVol(Feature):
         # If Gap Up: (Open - Low) / GapVal
         # If Gap Down: (High - Open) / abs(GapVal)
         # 100% means fully filled (and possibly more).
-        gap_fill_pct = np.zeros(n)
+        gap_fill_pct: np.ndarray = np.zeros(n)
 
         is_up = gap_val > 0
         is_down = gap_val < 0

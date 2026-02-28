@@ -34,7 +34,7 @@ class MfiVolume(Feature):
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
-    outputs: ClassVar[list[dict]] = ["mfi_{period}"]
+    outputs: ClassVar[list[str]] = ["mfi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -49,7 +49,7 @@ class MfiVolume(Feature):
         pos_mf = np.where(tp_diff > 0, rmf, 0)
         neg_mf = np.where(tp_diff < 0, rmf, 0)
 
-        mfi = np.full(n, np.nan)
+        mfi: np.ndarray = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
             pos_sum = np.sum(pos_mf[i - self.period + 1 : i + 1])
@@ -109,7 +109,7 @@ class CmfVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
-    outputs: ClassVar[list[dict]] = ["cmf_{period}"]
+    outputs: ClassVar[list[str]] = ["cmf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -190,7 +190,7 @@ class EfiVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["efi_{period}"]
+    outputs: ClassVar[list[str]] = ["efi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -271,7 +271,7 @@ class EomVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "volume"]
-    outputs: ClassVar[list[dict]] = ["eom_{period}"]
+    outputs: ClassVar[list[str]] = ["eom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -363,7 +363,7 @@ class KvoVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
-    outputs: ClassVar[list[dict]] = ["kvo_{fast}_{slow}", "kvo_signal_{signal}"]
+    outputs: ClassVar[list[str]] = ["kvo_{fast}_{slow}", "kvo_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -553,7 +553,7 @@ class VwapBandsVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
-    outputs: ClassVar[list[dict]] = ["vwap", "vwap_upper_{period}", "vwap_lower_{period}"]
+    outputs: ClassVar[list[str]] = ["vwap", "vwap_upper_{period}", "vwap_lower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

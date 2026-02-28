@@ -5,7 +5,7 @@ Functions for finding local extrema (highs and lows) in time series data.
 """
 
 import numpy as np
-from scipy.signal import argrelextrema
+from scipy.signal import argrelextrema  # type: ignore[attr-defined]
 
 
 def find_pivots_scipy(series: np.ndarray, order: int = 5, min_distance: int = 1) -> tuple[np.ndarray, np.ndarray]:
@@ -96,8 +96,8 @@ def find_pivots_window(series: np.ndarray, window: int = 5, min_distance: int = 
         Indices of local minima
     """
     n = len(series)
-    highs = []
-    lows = []
+    highs_list: list[int] = []
+    lows_list: list[int] = []
 
     # Start from window*2 to have enough bars before and after the pivot candidate
     # At bar i, we check if bar (i - window) was a pivot
@@ -112,14 +112,14 @@ def find_pivots_window(series: np.ndarray, window: int = 5, min_distance: int = 
 
         # Check if local maximum
         if current > np.max(left_window) and current >= np.max(right_window):
-            highs.append(pivot_idx)
+            highs_list.append(pivot_idx)
 
         # Check if local minimum
         if current < np.min(left_window) and current <= np.min(right_window):
-            lows.append(pivot_idx)
+            lows_list.append(pivot_idx)
 
-    highs = np.array(highs, dtype=np.int64)
-    lows = np.array(lows, dtype=np.int64)
+    highs = np.array(highs_list, dtype=np.int64)
+    lows = np.array(lows_list, dtype=np.int64)
 
     # Filter by minimum distance
     if min_distance > 1:
@@ -180,7 +180,7 @@ def calculate_slope(values: np.ndarray, indices: np.ndarray) -> np.ndarray:
 
     dy = np.diff(values)
     dx = np.diff(indices)
-    slopes = dy / dx
+    slopes: np.ndarray = dy / dx
 
     return slopes
 
@@ -192,7 +192,7 @@ def find_divergence_pairs(
     indicator_indices: np.ndarray,
     lookback: int = 100,
     tolerance: int = 5,
-) -> list:
+) -> list[tuple[int, int, int]]:
     """
     Find pairs of pivots that might form divergences.
 

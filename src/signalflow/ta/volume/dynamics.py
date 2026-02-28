@@ -36,7 +36,7 @@ class MarketForceVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["mforce_{period}"]
+    outputs: ClassVar[list[str]] = ["mforce_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -118,7 +118,7 @@ class ImpulseVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["impulse_{period}"]
+    outputs: ClassVar[list[str]] = ["impulse_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -203,7 +203,7 @@ class MarketMomentumVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["mmom_{period}"]
+    outputs: ClassVar[list[str]] = ["mmom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -283,7 +283,7 @@ class MarketPowerVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["mpower_{period}"]
+    outputs: ClassVar[list[str]] = ["mpower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -364,7 +364,7 @@ class MarketCapacitanceVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["mcap_{period}"]
+    outputs: ClassVar[list[str]] = ["mcap_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -429,7 +429,7 @@ class GravitationalPullVolume(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close", "volume"]
-    outputs: ClassVar[list[dict]] = ["gpull_{period}"]
+    outputs: ClassVar[list[str]] = ["gpull_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()

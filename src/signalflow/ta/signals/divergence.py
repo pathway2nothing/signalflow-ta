@@ -154,7 +154,7 @@ def _build_signals_df(
 
 
 def _detect_multi_pair(
-    detector: "SignalDetector",
+    detector: Any,
     features: pl.DataFrame,
     context: dict[str, Any] | None,
 ) -> Signals:
@@ -179,7 +179,8 @@ def _detect_multi_pair(
                 ]
             )
         )
-    return detector._detect_single(features, context)
+    result: Signals = detector._detect_single(features, context)
+    return result
 
 
 @dataclass
@@ -244,7 +245,7 @@ class DivergenceDetector1(SignalDetector):
             extrema_window=self.extrema_window,
         )
 
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
         if self.direction in ("long", "both"):
             signal_type = np.where(bullish, SignalType.RISE.value, signal_type)
         if self.direction in ("short", "both"):
@@ -346,7 +347,7 @@ class DivergenceDetector2(SignalDetector):
         bullish[sub_idx[bull_sub]] = True
         bearish[sub_idx[bear_sub]] = True
 
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
         if self.direction in ("long", "both"):
             signal_type = np.where(bullish, SignalType.RISE.value, signal_type)
         if self.direction in ("short", "both"):
@@ -418,7 +419,7 @@ class DivergenceDetector3(SignalDetector):
             extrema_window=self.extrema_window,
         )
 
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
         if self.direction in ("long", "both"):
             signal_type = np.where(bullish, SignalType.RISE.value, signal_type)
         if self.direction in ("short", "both"):

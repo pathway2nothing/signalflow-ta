@@ -133,7 +133,7 @@ class KeltnerChannelDetector1(SignalDetector):
         rsi_overbought = rsi_zscore > -self.rsi_zscore_threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             long_signal = below_lower & rsi_oversold if self.use_rsi_condition else below_lower
@@ -325,7 +325,7 @@ class KeltnerChannelDetector2(SignalDetector):
         rsi_overbought = rsi_zscore > -self.rsi_zscore_threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             if self.use_macd_condition:

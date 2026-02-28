@@ -63,9 +63,11 @@ def normalize_zscore(values: np.ndarray, window: int, robust: bool = False) -> n
         - Returns NaN for insufficient data points
     """
     if robust:
-        return normalize_zscore_robust_nb(values.astype(np.float64), window)
+        result: np.ndarray = normalize_zscore_robust_nb(values.astype(np.float64), window)
+        return result
     else:
-        return normalize_zscore_nb(values.astype(np.float64), window)
+        result_std: np.ndarray = normalize_zscore_nb(values.astype(np.float64), window)
+        return result_std
 
 
 def get_norm_window(period: int, multiplier: float = 3.0, minimum: int = 60) -> int:
@@ -119,4 +121,5 @@ def normalize_ma_pct(source: np.ndarray, ma: np.ndarray) -> np.ndarray:
         - Adds epsilon (1e-10) to avoid division by zero
     """
     result = (source - ma) / (source + 1e-10)
-    return np.clip(result, -1, 1)
+    result_clipped: np.ndarray = np.clip(result, -1, 1)
+    return result_clipped

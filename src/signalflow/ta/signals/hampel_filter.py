@@ -175,7 +175,7 @@ class HampelFilterDetector1(SignalDetector):
         overbought = score > self.threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(oversold, SignalType.RISE.value, signal_type)
@@ -320,7 +320,7 @@ class HampelFilterDetector2(SignalDetector):
         overbought = score > self.threshold
 
         # Build signal type array
-        signal_type = np.full(n, SignalType.NONE.value)
+        signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
             signal_type = np.where(oversold, SignalType.RISE.value, signal_type)

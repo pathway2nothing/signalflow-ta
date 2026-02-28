@@ -46,7 +46,8 @@ def _histogram_pdf(x: np.ndarray, bins: int) -> np.ndarray:
     total = hist.sum()
     if total == 0:
         return np.full(bins, np.nan)
-    return hist / total
+    pdf: np.ndarray = hist / total
+    return pdf
 
 
 def _kl_divergence(p: np.ndarray, q: np.ndarray) -> float:
@@ -114,14 +115,14 @@ def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
     if abs(alpha - 1.0) < 1e-10:
         # Shannon entropy limit
         h = -float(np.sum(p_nz * np.log2(p_nz)))
-        return h / h_max
+        return float(h / h_max)
 
     sum_p_alpha = float(np.sum(p_nz**alpha))
     if sum_p_alpha <= 0:
         return np.nan
 
-    h = (1.0 / (1.0 - alpha)) * np.log2(sum_p_alpha)
-    return h / h_max
+    h_renyi = (1.0 / (1.0 - alpha)) * float(np.log2(sum_p_alpha))
+    return float(h_renyi / h_max)
 
 
 def _auto_mutual_information(x: np.ndarray, lag: int, bins: int) -> float:
@@ -258,10 +259,10 @@ class KLDivergenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_kl_div_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kl_div_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.short_period is None:
             self.short_period = self.period // 4
         if self.bins < 5:
@@ -279,6 +280,7 @@ class KLDivergenceStat(Feature):
 
         log_ret = _log_returns(values)
 
+        assert self.short_period is not None
         kl = np.full(n, np.nan)
         for i in range(self.period, n):
             baseline = log_ret[i - self.period + 1 : i + 1]
@@ -379,10 +381,10 @@ class JSDivergenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_js_div_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_js_div_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.short_period is None:
             self.short_period = self.period // 4
         if self.bins < 5:
@@ -400,6 +402,7 @@ class JSDivergenceStat(Feature):
 
         log_ret = _log_returns(values)
 
+        assert self.short_period is not None
         jsd = np.full(n, np.nan)
         for i in range(self.period, n):
             baseline = log_ret[i - self.period + 1 : i + 1]
@@ -508,10 +511,10 @@ class RenyiEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_renyi_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_renyi_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.alpha < 0:
             raise ValueError(f"alpha must be >= 0, got {self.alpha}")
         if self.bins < 5:
@@ -604,10 +607,10 @@ class AutoMutualInfoStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_ami_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_ami_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.lag < 1:
             raise ValueError(f"lag must be >= 1, got {self.lag}")
         if self.bins < 5:
@@ -696,10 +699,10 @@ class RelativeInfoGainStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires: ClassVar[list[dict]] = ["{source_col}"]
-    outputs: ClassVar[list[dict]] = ["{source_col}_info_gain_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_info_gain_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 4:

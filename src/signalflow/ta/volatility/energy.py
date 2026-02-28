@@ -43,7 +43,7 @@ class KineticEnergyVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["ke_{period}"]
+    outputs: ClassVar[list[str]] = ["ke_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -106,7 +106,7 @@ class PotentialEnergyVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["pe_{period}_{ma_period}"]
+    outputs: ClassVar[list[str]] = ["pe_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -172,7 +172,7 @@ class TotalEnergyVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["te_{period}_{ma_period}"]
+    outputs: ClassVar[list[str]] = ["te_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -240,7 +240,7 @@ class EnergyFlowVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["eflow_{period}_{ma_period}"]
+    outputs: ClassVar[list[str]] = ["eflow_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -317,7 +317,7 @@ class ElasticStrainVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["strain_{period}_{ma_period}"]
+    outputs: ClassVar[list[str]] = ["strain_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -378,7 +378,7 @@ class TemperatureVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["mtemp_{period}"]
+    outputs: ClassVar[list[str]] = ["mtemp_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -442,7 +442,7 @@ class HeatCapacityVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["heatcap_{period}"]
+    outputs: ClassVar[list[str]] = ["heatcap_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
@@ -524,7 +524,7 @@ class FreeEnergyVol(Feature):
     norm_period: int | None = None
 
     requires: ClassVar[list[str]] = ["close"]
-    outputs: ClassVar[list[dict]] = ["fenergy_{period}"]
+    outputs: ClassVar[list[str]] = ["fenergy_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
