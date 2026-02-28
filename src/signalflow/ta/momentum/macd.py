@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
@@ -42,7 +42,7 @@ def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="momentum/macd")
+@feature("momentum/macd")
 class MacdMom(Feature):
     """Moving Average Convergence Divergence (MACD).
 
@@ -67,8 +67,8 @@ class MacdMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["macd_{fast}_{slow}", "macd_signal_{signal}", "macd_hist_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["macd_{fast}_{slow}", "macd_signal_{signal}", "macd_hist_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -95,9 +95,7 @@ class MacdMom(Feature):
             signal_line[signal_start] = np.mean(macd[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
-                signal_line[i] = (
-                    alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
-                )
+                signal_line[i] = alpha_sig * macd[i] + (1 - alpha_sig) * signal_line[i - 1]
 
         histogram = macd - signal_line
 
@@ -106,7 +104,7 @@ class MacdMom(Feature):
 
         # Normalization: z-score for all 3 outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             macd = normalize_zscore(macd, window=norm_window)
@@ -151,7 +149,7 @@ class MacdMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/ppo")
+@feature("momentum/ppo")
 class PpoMom(Feature):
     """Percentage Price Oscillator (PPO).
 
@@ -172,8 +170,8 @@ class PpoMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["ppo_{fast}_{slow}", "ppo_signal_{signal}", "ppo_hist_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["ppo_{fast}_{slow}", "ppo_signal_{signal}", "ppo_hist_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -197,16 +195,14 @@ class PpoMom(Feature):
             signal_line[signal_start] = np.mean(ppo[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
-                signal_line[i] = (
-                    alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
-                )
+                signal_line[i] = alpha_sig * ppo[i] + (1 - alpha_sig) * signal_line[i - 1]
 
         histogram = ppo - signal_line
         ppo[:start_idx] = np.nan
 
         # Normalization: z-score for all 3 outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             ppo = normalize_zscore(ppo, window=norm_window)
@@ -251,7 +247,7 @@ class PpoMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/tsi")
+@feature("momentum/tsi")
 class TsiMom(Feature):
     """True Strength Index (TSI).
 
@@ -273,8 +269,8 @@ class TsiMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["tsi_{fast}_{slow}", "tsi_signal_{signal}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["tsi_{fast}_{slow}", "tsi_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -312,13 +308,11 @@ class TsiMom(Feature):
 
                 for i in range(signal_start + 1, n):
                     if not np.isnan(tsi[i]) and not np.isnan(tsi_signal[i - 1]):
-                        tsi_signal[i] = (
-                            alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
-                        )
+                        tsi_signal[i] = alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             tsi = normalize_zscore(tsi, window=norm_window)
@@ -360,7 +354,7 @@ class TsiMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/trix")
+@feature("momentum/trix")
 class TrixMom(Feature):
     """Triple Exponential Average (TRIX).
 
@@ -382,8 +376,8 @@ class TrixMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["trix_{period}", "trix_signal_{signal}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["trix_{period}", "trix_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -416,13 +410,11 @@ class TrixMom(Feature):
 
                 for i in range(signal_start + 1, n):
                     if not np.isnan(trix[i]) and not np.isnan(trix_signal[i - 1]):
-                        trix_signal[i] = (
-                            alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
-                        )
+                        trix_signal[i] = alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
 
         # Normalization: z-score for both outputs independently
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             trix = normalize_zscore(trix, window=norm_window)

@@ -19,9 +19,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -47,7 +46,8 @@ def _histogram_pdf(x: np.ndarray, bins: int) -> np.ndarray:
     total = hist.sum()
     if total == 0:
         return np.full(bins, np.nan)
-    return hist / total
+    pdf: np.ndarray = hist / total
+    return pdf
 
 
 def _kl_divergence(p: np.ndarray, q: np.ndarray) -> float:
@@ -81,9 +81,7 @@ def _jensen_shannon_divergence(p: np.ndarray, q: np.ndarray) -> float:
     p_s = p_s / p_s.sum()
     q_s = q_s / q_s.sum()
     m = 0.5 * (p_s + q_s)
-    return float(
-        0.5 * np.sum(p_s * np.log2(p_s / m)) + 0.5 * np.sum(q_s * np.log2(q_s / m))
-    )
+    return float(0.5 * np.sum(p_s * np.log2(p_s / m)) + 0.5 * np.sum(q_s * np.log2(q_s / m)))
 
 
 def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
@@ -117,14 +115,14 @@ def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
     if abs(alpha - 1.0) < 1e-10:
         # Shannon entropy limit
         h = -float(np.sum(p_nz * np.log2(p_nz)))
-        return h / h_max
+        return float(h / h_max)
 
     sum_p_alpha = float(np.sum(p_nz**alpha))
     if sum_p_alpha <= 0:
         return np.nan
 
-    h = (1.0 / (1.0 - alpha)) * np.log2(sum_p_alpha)
-    return h / h_max
+    h_renyi = (1.0 / (1.0 - alpha)) * float(np.log2(sum_p_alpha))
+    return float(h_renyi / h_max)
 
 
 def _auto_mutual_information(x: np.ndarray, lag: int, bins: int) -> float:
@@ -223,7 +221,7 @@ def _relative_information_gain(x: np.ndarray, sub_window: int, bins: int) -> flo
 
 
 @dataclass
-@sf_component(name="stat/kl_divergence")
+@feature("stat/kl_divergence")
 class KLDivergenceStat(Feature):
     """Rolling KL Divergence (Kullback & Leibler, 1951).
 
@@ -261,24 +259,20 @@ class KLDivergenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kl_div_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kl_div_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.short_period is None:
             self.short_period = self.period // 4
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.short_period * 2:
             raise ValueError(
-                f"period must be >= 2 * short_period, got period={self.period}, "
-                f"short_period={self.short_period}"
+                f"period must be >= 2 * short_period, got period={self.period}, short_period={self.short_period}"
             )
         if self.short_period < self.bins:
-            raise ValueError(
-                f"short_period must be >= bins, got short_period={self.short_period}, "
-                f"bins={self.bins}"
-            )
+            raise ValueError(f"short_period must be >= bins, got short_period={self.short_period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -286,6 +280,7 @@ class KLDivergenceStat(Feature):
 
         log_ret = _log_returns(values)
 
+        assert self.short_period is not None
         kl = np.full(n, np.nan)
         for i in range(self.period, n):
             baseline = log_ret[i - self.period + 1 : i + 1]
@@ -314,7 +309,7 @@ class KLDivergenceStat(Feature):
             kl[i] = _kl_divergence(p_recent, q_base)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             kl = normalize_zscore(kl, window=norm_window)
@@ -341,7 +336,7 @@ class KLDivergenceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/js_divergence")
+@feature("stat/js_divergence")
 class JSDivergenceStat(Feature):
     """Rolling Jensen-Shannon Divergence (Lin, 1991).
 
@@ -386,24 +381,20 @@ class JSDivergenceStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_js_div_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_js_div_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.short_period is None:
             self.short_period = self.period // 4
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.short_period * 2:
             raise ValueError(
-                f"period must be >= 2 * short_period, got period={self.period}, "
-                f"short_period={self.short_period}"
+                f"period must be >= 2 * short_period, got period={self.period}, short_period={self.short_period}"
             )
         if self.short_period < self.bins:
-            raise ValueError(
-                f"short_period must be >= bins, got short_period={self.short_period}, "
-                f"bins={self.bins}"
-            )
+            raise ValueError(f"short_period must be >= bins, got short_period={self.short_period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -411,6 +402,7 @@ class JSDivergenceStat(Feature):
 
         log_ret = _log_returns(values)
 
+        assert self.short_period is not None
         jsd = np.full(n, np.nan)
         for i in range(self.period, n):
             baseline = log_ret[i - self.period + 1 : i + 1]
@@ -440,7 +432,7 @@ class JSDivergenceStat(Feature):
             jsd[i] = _jensen_shannon_divergence(p_recent, q_base)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             jsd = normalize_zscore(jsd, window=norm_window)
@@ -467,7 +459,7 @@ class JSDivergenceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/renyi_entropy")
+@feature("stat/renyi_entropy")
 class RenyiEntropyStat(Feature):
     """Rolling Rényi Entropy (Rényi, 1961).
 
@@ -519,18 +511,16 @@ class RenyiEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_renyi_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_renyi_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.alpha < 0:
             raise ValueError(f"alpha must be >= 0, got {self.alpha}")
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 2:
-            raise ValueError(
-                f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}"
-            )
+            raise ValueError(f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -546,7 +536,7 @@ class RenyiEntropyStat(Feature):
                 renyi[i] = _renyi_entropy(valid, self.bins, self.alpha)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             renyi = normalize_zscore(renyi, window=norm_window)
@@ -573,7 +563,7 @@ class RenyiEntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/auto_mutual_info")
+@feature("stat/auto_mutual_info")
 class AutoMutualInfoStat(Feature):
     """Rolling Auto-Mutual Information (Fraser & Swinney, 1986).
 
@@ -617,18 +607,17 @@ class AutoMutualInfoStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_ami_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_ami_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.lag < 1:
             raise ValueError(f"lag must be >= 1, got {self.lag}")
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.lag + self.bins * 2:
             raise ValueError(
-                f"period must be >= lag + 2*bins, got period={self.period}, "
-                f"lag={self.lag}, bins={self.bins}"
+                f"period must be >= lag + 2*bins, got period={self.period}, lag={self.lag}, bins={self.bins}"
             )
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -645,7 +634,7 @@ class AutoMutualInfoStat(Feature):
                 ami[i] = _auto_mutual_information(valid, self.lag, self.bins)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ami = normalize_zscore(ami, window=norm_window)
@@ -672,7 +661,7 @@ class AutoMutualInfoStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/info_gain")
+@feature("stat/info_gain")
 class RelativeInfoGainStat(Feature):
     """Rolling Relative Information Gain (Schreiber, 2000).
 
@@ -710,16 +699,14 @@ class RelativeInfoGainStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_info_gain_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_info_gain_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 4:
-            raise ValueError(
-                f"period must be >= 4 * bins, got period={self.period}, bins={self.bins}"
-            )
+            raise ValueError(f"period must be >= 4 * bins, got period={self.period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -737,7 +724,7 @@ class RelativeInfoGainStat(Feature):
                 ig[i] = _relative_information_gain(valid, sub_window, self.bins)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ig = normalize_zscore(ig, window=norm_window)

@@ -4,24 +4,24 @@ from __future__ import annotations
 
 from signalflow.feature.base import Feature
 from signalflow.ta.momentum import (
-    RsiMom,
-    RocMom,
-    MomMom,
+    AccelerationMom,
+    AngularMomentumMom,
+    AoMom,
+    CciMom,
     CmoMom,
+    JerkMom,
+    MacdMom,
+    MomMom,
+    PpoMom,
+    RocMom,
+    RsiMom,
     StochMom,
     StochRsiMom,
-    WillrMom,
-    CciMom,
-    UoMom,
-    AoMom,
-    MacdMom,
-    PpoMom,
-    TsiMom,
-    TrixMom,
-    AccelerationMom,
-    JerkMom,
-    AngularMomentumMom,
     TorqueMom,
+    TrixMom,
+    TsiMom,
+    UoMom,
+    WillrMom,
 )
 
 

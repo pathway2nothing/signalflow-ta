@@ -15,14 +15,13 @@ References:
 
 from dataclasses import dataclass
 from math import factorial, log2
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -105,18 +104,17 @@ def _sample_entropy(x: np.ndarray, m: int, r: float) -> float:
             if np.max(np.abs(x[i : i + m] - x[j : j + m])) <= r:
                 b_count += 1
                 # Check (m+1)-length match
-                if i + m < n and j + m < n:
-                    if abs(x[i + m] - x[j + m]) <= r:
-                        a_count += 1
+                if i + m < n and j + m < n and abs(x[i + m] - x[j + m]) <= r:
+                    a_count += 1
 
     if b_count == 0:
         return np.nan
 
     if a_count == 0:
         # Convention: return large value (no m+1 matches found)
-        return np.log(b_count)
+        return float(np.log(b_count))
 
-    return -np.log(a_count / b_count)
+    return float(-np.log(a_count / b_count))
 
 
 def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
@@ -133,15 +131,15 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
 
     s = binary_seq.astype(int).tolist()
     complexity = 1
-    l = 1  # current prefix length
+    prefix_len = 1  # current prefix length
     k = 1  # current component length
     k_max = 1
 
-    while l + k <= n:
-        # Check if s[l:l+k] is in s[0:l+k-1]
-        sub = s[l : l + k]
+    while prefix_len + k <= n:
+        # Check if s[prefix_len:prefix_len+k] is in s[0:prefix_len+k-1]
+        sub = s[prefix_len : prefix_len + k]
         found = False
-        for start in range(l + k - k):
+        for start in range(prefix_len + k - k):
             if s[start : start + k] == sub:
                 found = True
                 break
@@ -152,7 +150,7 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
                 k_max = k
         else:
             complexity += 1
-            l += k_max if k_max > k else k
+            prefix_len += k_max if k_max > k else k
             k = 1
             k_max = 1
 
@@ -160,7 +158,7 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
     if n < 2:
         return np.nan
     norm = n / np.log2(n)
-    return complexity / norm
+    return float(complexity / norm)
 
 
 def _fisher_information(x: np.ndarray, bins: int) -> float:
@@ -193,7 +191,7 @@ def _fisher_information(x: np.ndarray, bins: int) -> float:
             dp = hist[i + 1] - hist[i]
             fi += (dp**2) / p
 
-    return fi / dx
+    return float(fi / dx)
 
 
 def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -> float:
@@ -222,9 +220,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
 
     # Generate box sizes (log-spaced)
     box_sizes = np.unique(
-        np.logspace(
-            np.log10(min_box), np.log10(max_box), num=min(15, max_box - min_box + 1)
-        ).astype(int)
+        np.logspace(np.log10(min_box), np.log10(max_box), num=min(15, max_box - min_box + 1)).astype(int)
     )
     box_sizes = box_sizes[(box_sizes >= min_box) & (box_sizes <= max_box)]
 
@@ -284,7 +280,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
         return np.nan
 
     alpha = (n_pts * sxy - sx * sy) / denom
-    return alpha
+    return float(alpha)
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +289,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
 
 
 @dataclass
-@sf_component(name="stat/permutation_entropy")
+@feature("stat/permutation_entropy")
 class PermutationEntropyStat(Feature):
     """Rolling Permutation Entropy (Bandt & Pompe, 2002).
 
@@ -335,16 +331,14 @@ class PermutationEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_perm_entropy_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_perm_entropy_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.m < 2 or self.m > 7:
             raise ValueError(f"m must be in [2, 7], got {self.m}")
         if self.period < self.m + 10:
-            raise ValueError(
-                f"period must be >= m + 10, got period={self.period}, m={self.m}"
-            )
+            raise ValueError(f"period must be >= m + 10, got period={self.period}, m={self.m}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -360,7 +354,7 @@ class PermutationEntropyStat(Feature):
                 pe[i] = _permutation_entropy(valid, self.m)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             pe = normalize_zscore(pe, window=norm_window)
@@ -387,7 +381,7 @@ class PermutationEntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/sample_entropy")
+@feature("stat/sample_entropy")
 class SampleEntropyStat(Feature):
     """Rolling Sample Entropy (Richman & Moorman, 2000).
 
@@ -427,16 +421,14 @@ class SampleEntropyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sampen_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sampen_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.m < 1 or self.m > 4:
             raise ValueError(f"m must be in [1, 4], got {self.m}")
         if self.period < 30:
-            raise ValueError(
-                f"period must be >= 30 for reliable SampEn, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 30 for reliable SampEn, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -460,7 +452,7 @@ class SampleEntropyStat(Feature):
             se[i] = _sample_entropy(valid, self.m, r)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             se = normalize_zscore(se, window=norm_window)
@@ -487,7 +479,7 @@ class SampleEntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/lempel_ziv")
+@feature("stat/lempel_ziv")
 class LempelZivStat(Feature):
     """Rolling Lempel-Ziv Complexity (Lempel & Ziv, 1976).
 
@@ -522,14 +514,12 @@ class LempelZivStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_lzc_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_lzc_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 20:
-            raise ValueError(
-                f"period must be >= 20 for reliable LZC, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 20 for reliable LZC, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -549,7 +539,7 @@ class LempelZivStat(Feature):
             lzc[i] = _lempel_ziv_complexity(binary)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             lzc = normalize_zscore(lzc, window=norm_window)
@@ -576,7 +566,7 @@ class LempelZivStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/fisher_information")
+@feature("stat/fisher_information")
 class FisherInformationStat(Feature):
     """Rolling Fisher Information (Frieden, 2004).
 
@@ -617,16 +607,14 @@ class FisherInformationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_fisher_info_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_fisher_info_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.bins < 5:
             raise ValueError(f"bins must be >= 5, got {self.bins}")
         if self.period < self.bins * 2:
-            raise ValueError(
-                f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}"
-            )
+            raise ValueError(f"period must be >= 2 * bins, got period={self.period}, bins={self.bins}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -642,7 +630,7 @@ class FisherInformationStat(Feature):
                 fi[i] = _fisher_information(valid, self.bins)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             fi = normalize_zscore(fi, window=norm_window)
@@ -669,7 +657,7 @@ class FisherInformationStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/dfa")
+@feature("stat/dfa")
 class DfaExponentStat(Feature):
     """Rolling DFA Exponent - Detrended Fluctuation Analysis (Peng et al., 1994).
 
@@ -714,14 +702,12 @@ class DfaExponentStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_dfa_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_dfa_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 50:
-            raise ValueError(
-                f"period must be >= 50 for reliable DFA, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 50 for reliable DFA, got {self.period}")
         if self.min_box < 3:
             raise ValueError(f"min_box must be >= 3, got {self.min_box}")
 
@@ -739,7 +725,7 @@ class DfaExponentStat(Feature):
                 dfa[i] = _dfa_exponent(valid, min_box=self.min_box)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             dfa = normalize_zscore(dfa, window=norm_window)

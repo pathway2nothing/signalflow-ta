@@ -6,43 +6,14 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-
-
-def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
-    """
-    Calculate RMA (Wilder's smoothing) with SMA initialization.
-
-    RMA uses alpha = 1/period (unlike EMA which uses 2/(period+1)).
-    Initialize with SMA for reproducibility.
-
-    Args:
-        values: Input array
-        period: RMA period
-
-    Returns:
-        RMA array with first (period-1) values as NaN
-    """
-    n = len(values)
-    alpha = 1 / period
-    rma = np.full(n, np.nan)
-
-    if n < period:
-        return rma
-
-    # Initialize with SMA of first `period` values
-    rma[period - 1] = np.mean(values[:period])
-
-    # Continue with Wilder's smoothing
-    for i in range(period, n):
-        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-
-    return rma
+from signalflow.ta._numba_kernels import cmo_kernel as _cmo_kernel
+from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 
 
 @dataclass
-@sf_component(name="momentum/rsi")
+@feature("momentum/rsi")
 class RsiMom(Feature):
     """Relative Strength Index (RSI) with reproducible initialization.
 
@@ -67,12 +38,12 @@ class RsiMom(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["rsi_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["rsi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
-        n = len(close)
+        len(close)
 
         # Price changes
         diff = np.diff(close, prepend=close[0])
@@ -115,7 +86,7 @@ class RsiMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/roc")
+@feature("momentum/roc")
 class RocMom(Feature):
     """Rate of Change (ROC).
 
@@ -132,8 +103,8 @@ class RocMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["roc_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["roc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -143,13 +114,11 @@ class RocMom(Feature):
 
         for i in range(self.period, n):
             if close[i - self.period] != 0:
-                roc[i] = (
-                    100 * (close[i] - close[i - self.period]) / close[i - self.period]
-                )
+                roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             roc = normalize_zscore(roc, window=norm_window)
@@ -182,7 +151,7 @@ class RocMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/mom")
+@feature("momentum/mom")
 class MomMom(Feature):
     """Momentum (MOM).
 
@@ -199,8 +168,8 @@ class MomMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["mom_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["mom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -213,7 +182,7 @@ class MomMom(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mom = normalize_zscore(mom, window=norm_window)
@@ -246,7 +215,7 @@ class MomMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/cmo")
+@feature("momentum/cmo")
 class CmoMom(Feature):
     """Chande Momentum Oscillator (CMO).
 
@@ -262,12 +231,12 @@ class CmoMom(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["cmo_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["cmo_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
@@ -275,15 +244,7 @@ class CmoMom(Feature):
         gains = np.where(diff > 0, diff, 0)
         losses = np.where(diff < 0, -diff, 0)
 
-        cmo = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            sum_gains = np.sum(gains[i - self.period + 1 : i + 1])
-            sum_losses = np.sum(losses[i - self.period + 1 : i + 1])
-
-            total = sum_gains + sum_losses
-            if total > 0:
-                cmo[i] = 100 * (sum_gains - sum_losses) / total
+        cmo = _cmo_kernel(gains, losses, self.period)
 
         # Normalization: [-100, 100] → [-1, 1]
         if self.normalized:

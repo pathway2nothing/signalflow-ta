@@ -4,16 +4,18 @@ MACD Divergence Detector
 Identifies regular and hidden divergences between price and MACD histogram.
 """
 
-import numpy as np
-import polars as pl
 from dataclasses import dataclass
 from typing import ClassVar
-from signalflow.core import sf_component
+
+import numpy as np
+import polars as pl
+
+from signalflow.core import feature
 from signalflow.ta.divergence.base import DivergenceBase
 from signalflow.ta.momentum import MacdMom
 
 
-@sf_component(name="divergence/macd")
+@feature("divergence/macd")
 @dataclass
 class MacdDivergence(DivergenceBase):
     """
@@ -114,8 +116,7 @@ class MacdDivergence(DivergenceBase):
     signal: int = 9
     """Signal line EMA period"""
 
-    requires = ["high", "low", "close"]
-
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = [
         "macd_{fast}_{slow}",
         "macd_signal_{signal}",
@@ -126,7 +127,6 @@ class MacdDivergence(DivergenceBase):
         "macd_div_hidden_bearish",
         "macd_div_strength",
     ]
-
     test_params: ClassVar[list[dict]] = [
         {"fast": 12, "slow": 26, "signal": 9, "pivot_window": 5},
         {"fast": 8, "slow": 17, "signal": 9, "pivot_window": 4},
@@ -152,38 +152,28 @@ class MacdDivergence(DivergenceBase):
         df = macd_indicator.compute_pair(df)
 
         # 2. Get column names
-        macd_col = f"macd_{self.fast}_{self.slow}"
-        signal_col = f"macd_signal_{self.signal}"
         hist_col = f"macd_hist_{self.fast}_{self.slow}"
 
         # 3. Extract numpy arrays
         close = df["close"].to_numpy()
         macd_hist = df[hist_col].to_numpy()
-        n = len(close)
+        len(close)
 
         # 4. Find pivots in price and MACD histogram
         price_highs_idx, price_lows_idx = self.find_pivots(close)
         hist_highs_idx, hist_lows_idx = self.find_pivots(macd_hist)
 
         # 5. Detect regular bullish divergence (Price LL, Histogram HL)
-        bullish_div = self.detect_regular_bullish_divergence(
-            close, price_lows_idx, macd_hist, hist_lows_idx
-        )
+        bullish_div = self.detect_regular_bullish_divergence(close, price_lows_idx, macd_hist, hist_lows_idx)
 
         # 6. Detect regular bearish divergence (Price HH, Histogram LH)
-        bearish_div = self.detect_regular_bearish_divergence(
-            close, price_highs_idx, macd_hist, hist_highs_idx
-        )
+        bearish_div = self.detect_regular_bearish_divergence(close, price_highs_idx, macd_hist, hist_highs_idx)
 
         # 7. Detect hidden bullish divergence (Price HL, Histogram LL)
-        hidden_bullish_div = self.detect_hidden_bullish_divergence(
-            close, price_lows_idx, macd_hist, hist_lows_idx
-        )
+        hidden_bullish_div = self.detect_hidden_bullish_divergence(close, price_lows_idx, macd_hist, hist_lows_idx)
 
         # 8. Detect hidden bearish divergence (Price LH, Histogram HH)
-        hidden_bearish_div = self.detect_hidden_bearish_divergence(
-            close, price_highs_idx, macd_hist, hist_highs_idx
-        )
+        hidden_bearish_div = self.detect_hidden_bearish_divergence(close, price_highs_idx, macd_hist, hist_highs_idx)
 
         # 9. Calculate divergence strength
         all_divs = bullish_div | bearish_div | hidden_bullish_div | hidden_bearish_div
@@ -253,12 +243,8 @@ class MacdDivergence(DivergenceBase):
         signal_line = df[signal_col].to_numpy()
 
         # Detect crossovers (look at previous bar for cross)
-        bullish_cross = (macd_line[1:] > signal_line[1:]) & (
-            macd_line[:-1] <= signal_line[:-1]
-        )
-        bearish_cross = (macd_line[1:] < signal_line[1:]) & (
-            macd_line[:-1] >= signal_line[:-1]
-        )
+        bullish_cross = (macd_line[1:] > signal_line[1:]) & (macd_line[:-1] <= signal_line[:-1])
+        bearish_cross = (macd_line[1:] < signal_line[1:]) & (macd_line[:-1] >= signal_line[:-1])
 
         # Pad with False at start to match length
         bullish_cross = np.concatenate([[False], bullish_cross])

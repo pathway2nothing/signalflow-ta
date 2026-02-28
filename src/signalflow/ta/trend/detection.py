@@ -1,18 +1,35 @@
 """Trend detection systems - identify trend presence and direction."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
+from signalflow.ta._numba_kernels import (
+    ema_sma_init as _ema_sma_init,
+)
+from signalflow.ta._numba_kernels import (
+    ichimoku_midprice as _ichimoku_midprice,
+)
+from signalflow.ta._numba_kernels import (
+    rma_sma_init as _rma_sma_init,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_max as _rolling_max,
+)
+from signalflow.ta._numba_kernels import (
+    rolling_min as _rolling_min,
+)
+from signalflow.ta._numba_kernels import (
+    sma_nb as _sma_nb,
+)
 
 
 @dataclass
-@sf_component(name="trend/ichimoku")
+@feature("trend/ichimoku")
 class IchimokuTrend(Feature):
     """Ichimoku Kinko Hyo (Ichimoku Cloud).
 
@@ -44,38 +61,28 @@ class IchimokuTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low"]
-    outputs = ["tenkan_sen", "kijun_sen", "senkou_a", "senkou_b"]
-
-    def _midprice(self, high: np.ndarray, low: np.ndarray, period: int) -> np.ndarray:
-        """Rolling (highest + lowest) / 2."""
-        n = len(high)
-        result = np.full(n, np.nan)
-        for i in range(period - 1, n):
-            hh = np.max(high[i - period + 1 : i + 1])
-            ll = np.min(low[i - period + 1 : i + 1])
-            result[i] = (hh + ll) / 2
-        return result
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[str]] = ["tenkan_sen", "kijun_sen", "senkou_a", "senkou_b"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
         n = len(high)
 
-        tenkan_sen = self._midprice(high, low, self.tenkan)
-        kijun_sen = self._midprice(high, low, self.kijun)
+        tenkan_sen = _ichimoku_midprice(high, low, self.tenkan)
+        kijun_sen = _ichimoku_midprice(high, low, self.kijun)
 
         span_a = (tenkan_sen + kijun_sen) / 2
         senkou_a = np.full(n, np.nan)
         senkou_a[self.kijun :] = span_a[: -self.kijun]
 
-        span_b = self._midprice(high, low, self.senkou)
+        span_b = _ichimoku_midprice(high, low, self.senkou)
         senkou_b = np.full(n, np.nan)
         senkou_b[self.kijun :] = span_b[: -self.kijun]
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.senkou)
             tenkan_sen = normalize_zscore(tenkan_sen, window=norm_window)
@@ -123,7 +130,7 @@ class IchimokuTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/dpo")
+@feature("trend/dpo")
 class DpoTrend(Feature):
     """Detrended Price Oscillator.
 
@@ -146,16 +153,14 @@ class DpoTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["dpo_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["dpo_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        sma = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            sma[i] = np.mean(close[i - self.period + 1 : i + 1])
+        sma = _sma_nb(close, self.period)
 
         shift = int(self.period / 2) + 1
         dpo = np.full(n, np.nan)
@@ -165,7 +170,7 @@ class DpoTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             dpo = normalize_zscore(dpo, window=norm_window)
@@ -198,7 +203,7 @@ class DpoTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/qstick")
+@feature("trend/qstick")
 class QstickTrend(Feature):
     """Q Stick.
 
@@ -222,29 +227,20 @@ class QstickTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["open", "close"]
-    outputs = ["qstick_{period}"]
+    requires: ClassVar[list[str]] = ["open", "close"]
+    outputs: ClassVar[list[str]] = ["qstick_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        open_price = df["open"].to_numpy()
-        close = df["close"].to_numpy()
-        n = len(close)
+        open_price = df["open"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
 
         diff = close - open_price
-        qstick = np.full(n, np.nan)
 
-        if self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
-            qstick[self.period - 1] = np.mean(diff[: self.period])
-            for i in range(self.period, n):
-                qstick[i] = alpha * diff[i] + (1 - alpha) * qstick[i - 1]
-        else:
-            for i in range(self.period - 1, n):
-                qstick[i] = np.mean(diff[i - self.period + 1 : i + 1])
+        qstick = _ema_sma_init(diff, self.period) if self.ma_type == "ema" else _sma_nb(diff, self.period)
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             qstick = normalize_zscore(qstick, window=norm_window)
@@ -277,7 +273,7 @@ class QstickTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/ttm")
+@feature("trend/ttm")
 class TtmTrend(Feature):
     """TTM Trend (John Carter).
 
@@ -297,26 +293,24 @@ class TtmTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["ttm_trend_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["ttm_trend_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
-        hl2 = (high + low) / 2
-        avg_hl2 = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            avg_hl2[i] = np.mean(hl2[i - self.period + 1 : i + 1])
+        hl2 = (high + low).astype(np.float64) / 2
+        avg_hl2 = _sma_nb(hl2, self.period)
 
         trend = np.where(close > avg_hl2, 1, -1).astype(float)
         trend[: self.period - 1] = np.nan
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             trend = normalize_zscore(trend, window=norm_window)
@@ -349,7 +343,7 @@ class TtmTrend(Feature):
 
 
 @dataclass
-@sf_component(name="trend/atr_trailing")
+@feature("trend/atr_trailing")
 class AtrTrailingTrend(Feature):
     """ATR Trailing Stop.
 
@@ -371,44 +365,34 @@ class AtrTrailingTrend(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = [
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = [
         "atr_trail_long_{period}",
         "atr_trail_short_{period}",
         "atr_trail_dir_{period}",
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        tr = np.maximum(
-            high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))
-            ),
-        )
+        prev_close = np.roll(close, 1)
+        prev_close[0] = close[0]
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        atr = np.full(n, np.nan)
-        atr[self.period - 1] = np.mean(tr[: self.period])
-        alpha = 1 / self.period
-        for i in range(self.period, n):
-            atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+        atr = _rma_sma_init(tr, self.period)
+        hc = _rolling_max(close, self.period)
+        lc = _rolling_min(close, self.period)
 
-        trail_long = np.full(n, np.nan)
-        trail_short = np.full(n, np.nan)
+        trail_long = hc - self.multiplier * atr
+        trail_short = lc + self.multiplier * atr
+
+        # Direction requires stateful logic
         direction = np.zeros(n)
-
         for i in range(self.period - 1, n):
-            hc = np.max(close[max(0, i - self.period + 1) : i + 1])
-            lc = np.min(close[max(0, i - self.period + 1) : i + 1])
-
-            trail_long[i] = hc - self.multiplier * atr[i]
-            trail_short[i] = lc + self.multiplier * atr[i]
-
             if close[i] > trail_short[i]:
                 direction[i] = 1
             elif close[i] < trail_long[i]:
@@ -418,7 +402,7 @@ class AtrTrailingTrend(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             trail_long = normalize_zscore(trail_long, window=norm_window)

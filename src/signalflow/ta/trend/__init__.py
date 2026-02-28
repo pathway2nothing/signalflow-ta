@@ -2,63 +2,81 @@
 
 Modules:
     strength - Trend strength measures (ADX, Aroon, Vortex, VHF, CHOP)
-    stops - Trailing stops and trend-following (PSAR, Supertrend, Chandelier, HiLo, CKSP)
+    stops - Trailing stops and trend-following (PSAR, Supertrend, Chandelier, HiLo)
     detection - Trend detection systems (Ichimoku, DPO, QStick)
+    regime - Trend regime detectors (Alligator, TwoMA, SMA/LinReg direction)
 """
 
+from signalflow.ta.trend.detection import (
+    DpoTrend,
+    IchimokuTrend,
+    QstickTrend,
+    TtmTrend,
+)
+from signalflow.ta.trend.regime import (
+    LinRegDiffDirection,
+    LinRegDirection,
+    LinRegPriceDiff,
+    SmaDiffDirection,
+    SmaDirection,
+    TwoMaRegime,
+    WilliamsAlligatorRegime,
+)
+from signalflow.ta.trend.stops import (
+    ChandelierTrend,
+    CkspTrend,
+    HiloTrend,
+    PsarTrend,
+    SupertrendTrend,
+)
 from signalflow.ta.trend.strength import (
     AdxTrend,
     AroonTrend,
-    VortexTrend,
-    VhfTrend,
     ChopTrend,
-    ViscosityTrend,
+    MarketImpedanceTrend,
+    OrderParameterTrend,
+    RCTimeConstantTrend,
     ReynoldsTrend,
     RotationalInertiaTrend,
-    MarketImpedanceTrend,
-    RCTimeConstantTrend,
     SNRTrend,
-    OrderParameterTrend,
     SusceptibilityTrend,
-)
-from signalflow.ta.trend.stops import (
-    PsarTrend,
-    SupertrendTrend,
-    ChandelierTrend,
-    HiloTrend,
-    CkspTrend,
-)
-from signalflow.ta.trend.detection import (
-    IchimokuTrend,
-    DpoTrend,
-    QstickTrend,
-    TtmTrend,
+    VhfTrend,
+    ViscosityTrend,
+    VortexTrend,
 )
 
 __all__ = [
     # Strength
     "AdxTrend",
     "AroonTrend",
-    "VortexTrend",
-    "VhfTrend",
-    "ChopTrend",
-    "ViscosityTrend",
-    "ReynoldsTrend",
-    "RotationalInertiaTrend",
-    "MarketImpedanceTrend",
-    "RCTimeConstantTrend",
-    "SNRTrend",
-    "OrderParameterTrend",
-    "SusceptibilityTrend",
-    # Stops
-    "PsarTrend",
-    "SupertrendTrend",
     "ChandelierTrend",
-    "HiloTrend",
+    "ChopTrend",
     "CkspTrend",
+    "DpoTrend",
+    "HiloTrend",
     # Detection
     "IchimokuTrend",
-    "DpoTrend",
+    "LinRegDiffDirection",
+    "LinRegDirection",
+    "LinRegPriceDiff",
+    "MarketImpedanceTrend",
+    "OrderParameterTrend",
+    # Stops
+    "PsarTrend",
     "QstickTrend",
+    "RCTimeConstantTrend",
+    "ReynoldsTrend",
+    "RotationalInertiaTrend",
+    "SNRTrend",
+    "SmaDiffDirection",
+    "SmaDirection",
+    "SupertrendTrend",
+    "SusceptibilityTrend",
     "TtmTrend",
+    "TwoMaRegime",
+    "VhfTrend",
+    "ViscosityTrend",
+    "VortexTrend",
+    # Regime
+    "WilliamsAlligatorRegime",
 ]

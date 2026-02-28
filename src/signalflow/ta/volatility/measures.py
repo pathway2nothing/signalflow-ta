@@ -1,18 +1,32 @@
 """Other volatility metrics."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
+from signalflow.ta._numba_kernels import (
+    historical_vol_kernel as _historical_vol_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    mass_index_kernel as _mass_index_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    rma_sma_init as _rma_sma_init,
+)
+from signalflow.ta._numba_kernels import (
+    rvi_kernel as _rvi_kernel,
+)
+from signalflow.ta._numba_kernels import (
+    ulcer_index_kernel as _ulcer_index_kernel,
+)
 
 
 @dataclass
-@sf_component(name="volatility/mass_index")
+@feature("volatility/mass_index")
 class MassIndexVol(Feature):
     """Mass Index.
 
@@ -35,37 +49,19 @@ class MassIndexVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low"]
-    outputs = ["massi_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[str]] = ["massi_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        n = len(high)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
 
         hl_range = high - low
-
-        alpha = 2 / (self.fast + 1)
-
-        ema1 = np.full(n, np.nan)
-        ema2 = np.full(n, np.nan)
-
-        ema1[0] = hl_range[0]
-        ema2[0] = hl_range[0]
-
-        for i in range(1, n):
-            ema1[i] = alpha * hl_range[i] + (1 - alpha) * ema1[i - 1]
-            ema2[i] = alpha * ema1[i] + (1 - alpha) * ema2[i - 1]
-
-        ratio = ema1 / (ema2 + 1e-10)
-
-        massi = np.full(n, np.nan)
-        for i in range(self.slow - 1, n):
-            massi[i] = np.sum(ratio[i - self.slow + 1 : i + 1])
+        massi = _mass_index_kernel(hl_range, self.fast, self.slow)
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             massi = normalize_zscore(massi, window=norm_window)
@@ -98,7 +94,7 @@ class MassIndexVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/ulcer_index")
+@feature("volatility/ulcer_index")
 class UlcerIndexVol(Feature):
     """Ulcer Index.
 
@@ -120,24 +116,17 @@ class UlcerIndexVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["ulcer_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["ulcer_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        ui = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            window = close[i - self.period + 1 : i + 1]
-            highest = np.maximum.accumulate(window)
-            pct_dd = 100 * (window - highest) / highest
-            ui[i] = np.sqrt(np.mean(pct_dd**2))
+        ui = _ulcer_index_kernel(close, self.period)
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ui = normalize_zscore(ui, window=norm_window)
@@ -170,7 +159,7 @@ class UlcerIndexVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/rvi")
+@feature("volatility/rvi")
 class RviVol(Feature):
     """Relative Volatility Index (RVI).
 
@@ -193,42 +182,13 @@ class RviVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["rvi_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["rvi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        std = np.full(n, np.nan)
-        for i in range(self.std_period - 1, n):
-            std[i] = np.std(close[i - self.std_period + 1 : i + 1], ddof=1)
-
-        diff = np.diff(close, prepend=close[0])
-
-        up_std = np.where(diff > 0, std, 0)
-        dn_std = np.where(diff <= 0, std, 0)
-
-        alpha = 2 / (self.period + 1)
-
-        up_ema = np.full(n, np.nan)
-        dn_ema = np.full(n, np.nan)
-
-        # Initialize with SMA for reproducibility
-        init_idx = self.std_period + self.period - 2
-
-        if n > init_idx:
-            # Use SMA of first `period` valid std values
-            start_std = self.std_period - 1
-            end_init = min(start_std + self.period, n)
-            up_ema[init_idx] = np.nanmean(up_std[start_std:end_init])
-            dn_ema[init_idx] = np.nanmean(dn_std[start_std:end_init])
-
-        for i in range(init_idx + 1, n):
-            up_ema[i] = alpha * up_std[i] + (1 - alpha) * up_ema[i - 1]
-            dn_ema[i] = alpha * dn_std[i] + (1 - alpha) * dn_ema[i - 1]
-
-        rvi = 100 * up_ema / (up_ema + dn_ema + 1e-10)
+        rvi = _rvi_kernel(close, self.period, self.std_period)
 
         # Normalization for bounded output [0,100] → [0,1]
         if self.normalized:
@@ -256,7 +216,7 @@ class RviVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/historical_vol")
+@feature("volatility/historical_vol")
 class HistoricalVol(Feature):
     """Historical Volatility (Close-to-Close).
 
@@ -278,26 +238,17 @@ class HistoricalVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["hv_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["hv_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        log_ret = np.log(close / np.roll(close, 1))
-        log_ret[0] = 0
-
-        hv = np.full(n, np.nan)
-
-        for i in range(self.period - 1, n):
-            hv[i] = np.std(log_ret[i - self.period + 1 : i + 1], ddof=1) * np.sqrt(
-                self.annualize
-            )
+        hv = _historical_vol_kernel(close, self.period, self.annualize)
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             hv = normalize_zscore(hv, window=norm_window)
@@ -330,7 +281,7 @@ class HistoricalVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/atr_percent")
+@feature("volatility/atr_percent")
 class AtrPercentVol(Feature):
     """ATR as Percentage of Price.
 
@@ -348,34 +299,28 @@ class AtrPercentVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["atr_pct_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["atr_pct_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        alpha = 1 / self.period
-        atr = np.full(n, np.nan)
-        atr[self.period - 1] = np.mean(tr[: self.period])
-        for i in range(self.period, n):
-            atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+        atr = _rma_sma_init(tr.astype(np.float64), self.period)
 
         atr_pct = 100 * atr / close
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             atr_pct = normalize_zscore(atr_pct, window=norm_window)

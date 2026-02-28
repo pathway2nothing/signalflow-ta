@@ -7,20 +7,20 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="volume/market_force")
+@feature("volume/market_force")
 class MarketForceVolume(Feature):
-    """Market Force (F = m × a).
+    """Market Force (F = m x a).
 
     Volume-weighted price acceleration.
 
     velocity = ln(Close / Close[1])
     acceleration = velocity - velocity[1]
-    force = volume × acceleration
+    force = volume x acceleration
 
     Interpretation:
     - Large positive force: strong buying with increasing momentum
@@ -35,8 +35,8 @@ class MarketForceVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mforce_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["mforce_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -67,7 +67,7 @@ class MarketForceVolume(Feature):
                 force[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             force = normalize_zscore(force, window=norm_window)
@@ -95,13 +95,13 @@ class MarketForceVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/impulse")
+@feature("volume/impulse")
 class ImpulseVolume(Feature):
-    """Market Impulse (J = Σ F × Δt).
+    """Market Impulse (J = Σ F x Δt).
 
     Cumulative force over a rolling window.
 
-    force = volume × acceleration
+    force = volume x acceleration
     impulse = Σ(force, period)
 
     Interpretation:
@@ -117,8 +117,8 @@ class ImpulseVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["impulse_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["impulse_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -149,7 +149,7 @@ class ImpulseVolume(Feature):
                 impulse[i] = np.sum(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             impulse = normalize_zscore(impulse, window=norm_window)
@@ -177,15 +177,15 @@ class ImpulseVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/market_momentum")
+@feature("volume/market_momentum")
 class MarketMomentumVolume(Feature):
-    """Market Momentum (p = m × v).
+    """Market Momentum (p = m x v).
 
     Volume-weighted velocity. Unlike simple price momentum,
     this weights by "mass" (volume participation).
 
     velocity = ln(Close / Close[1])
-    momentum = volume × velocity
+    momentum = volume x velocity
 
     Smoothed over rolling period.
 
@@ -195,15 +195,15 @@ class MarketMomentumVolume(Feature):
     - Divergence from OBV: acceleration vs cumulative bias
     - More responsive than OBV to recent activity
 
-    Reference: Newtonian momentum (mass × velocity)
+    Reference: Newtonian momentum (mass x velocity)
     """
 
     period: int = 14
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mmom_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["mmom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -228,7 +228,7 @@ class MarketMomentumVolume(Feature):
                 mmom[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mmom = normalize_zscore(mmom, window=norm_window)
@@ -256,16 +256,16 @@ class MarketMomentumVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/market_power")
+@feature("volume/market_power")
 class MarketPowerVolume(Feature):
-    """Market Power (P = F × v).
+    """Market Power (P = F x v).
 
     Rate at which work is being done by market participants.
 
     velocity = ln(Close / Close[1])
     acceleration = velocity - velocity[1]
-    force = volume × acceleration
-    power = force × velocity
+    force = volume x acceleration
+    power = force x velocity
 
     Smoothed over rolling period.
 
@@ -275,15 +275,15 @@ class MarketPowerVolume(Feature):
     - Power spikes precede significant moves
     - Combines directionality (velocity sign) with conviction (force magnitude)
 
-    Reference: Newtonian power (force × velocity)
+    Reference: Newtonian power (force x velocity)
     """
 
     period: int = 14
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mpower_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["mpower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -314,7 +314,7 @@ class MarketPowerVolume(Feature):
                 mpower[i] = np.mean(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mpower = normalize_zscore(mpower, window=norm_window)
@@ -342,7 +342,7 @@ class MarketPowerVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/market_capacitance")
+@feature("volume/market_capacitance")
 class MarketCapacitanceVolume(Feature):
     """Market Capacitance - volume absorbed per unit price change.
 
@@ -363,8 +363,8 @@ class MarketCapacitanceVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["mcap_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["mcap_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -379,7 +379,7 @@ class MarketCapacitanceVolume(Feature):
                 mcap[i] = vol_sum / price_change
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             mcap = normalize_zscore(mcap, window=norm_window)
@@ -407,7 +407,7 @@ class MarketCapacitanceVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/gravitational_pull")
+@feature("volume/gravitational_pull")
 class GravitationalPullVolume(Feature):
     """Gravitational Pull - volume-weighted attraction to recent price levels.
 
@@ -428,8 +428,8 @@ class GravitationalPullVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["gpull_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["gpull_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -448,7 +448,7 @@ class GravitationalPullVolume(Feature):
             gpull[i] = total_pull
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             gpull = normalize_zscore(gpull, window=norm_window)

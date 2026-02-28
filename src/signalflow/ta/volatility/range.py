@@ -1,18 +1,18 @@
 """True Range and ATR-based volatility indicators."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar, Literal
 
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
+from signalflow.ta._numba_kernels import ema_sma_init, rma_sma_init, sma_nb
 
 
 @dataclass
-@sf_component(name="volatility/true_range")
+@feature("volatility/true_range")
 class TrueRangeVol(Feature):
     """True Range.
 
@@ -28,26 +28,24 @@ class TrueRangeVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["true_range"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["true_range"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(20)
             tr = normalize_zscore(tr, window=norm_window)
@@ -78,7 +76,7 @@ class TrueRangeVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/atr")
+@feature("volatility/atr")
 class AtrVol(Feature):
     """Average True Range (ATR).
 
@@ -100,42 +98,32 @@ class AtrVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["atr_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["atr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        atr = np.full(n, np.nan)
-
+        tr_f = tr.astype(np.float64)
         if self.ma_type == "sma":
-            for i in range(self.period - 1, n):
-                atr[i] = np.mean(tr[i - self.period + 1 : i + 1])
+            atr = sma_nb(tr_f, self.period)
         elif self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
-            atr[self.period - 1] = np.mean(tr[: self.period])
-            for i in range(self.period, n):
-                atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+            atr = ema_sma_init(tr_f, self.period)
         else:
-            alpha = 1 / self.period
-            atr[self.period - 1] = np.mean(tr[: self.period])
-            for i in range(self.period, n):
-                atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
+            atr = rma_sma_init(tr_f, self.period)
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             atr = normalize_zscore(atr, window=norm_window)
@@ -168,7 +156,7 @@ class AtrVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/natr")
+@feature("volatility/natr")
 class NatrVol(Feature):
     """Normalized Average True Range (NATR).
 
@@ -188,45 +176,34 @@ class NatrVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["natr_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["natr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        tr = np.maximum(
-            high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close))
-        )
+        tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        atr = np.full(n, np.nan)
-
+        tr_f = tr.astype(np.float64)
         if self.ma_type == "rma":
-            alpha = 1 / self.period
+            atr = rma_sma_init(tr_f, self.period)
         elif self.ma_type == "ema":
-            alpha = 2 / (self.period + 1)
+            atr = ema_sma_init(tr_f, self.period)
         else:
-            alpha = None
-
-        if alpha is not None:
-            atr[self.period - 1] = np.mean(tr[: self.period])
-            for i in range(self.period, n):
-                atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
-        else:
-            for i in range(self.period - 1, n):
-                atr[i] = np.mean(tr[i - self.period + 1 : i + 1])
+            atr = sma_nb(tr_f, self.period)
 
         natr = 100 * atr / close
 
         # Normalization for unbounded output
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             natr = normalize_zscore(natr, window=norm_window)

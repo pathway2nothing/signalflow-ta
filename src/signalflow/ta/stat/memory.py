@@ -2,17 +2,17 @@
 """Time series memory measures - persistence, mean-reversion, diffusion, oscillator dynamics."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
-@sf_component(name="stat/hurst")
+@feature("stat/hurst")
 class HurstStat(Feature):
     """Rolling Hurst Exponent.
 
@@ -35,14 +35,12 @@ class HurstStat(Feature):
     source_col: str = "close"
     period: int = 100
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_hurst_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_hurst_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 20:
-            raise ValueError(
-                f"period must be >= 20 for reliable Hurst estimate, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 20 for reliable Hurst estimate, got {self.period}")
 
     def _hurst_rs(self, ts: np.ndarray) -> float:
         """Compute Hurst via R/S method."""
@@ -61,7 +59,8 @@ class HurstStat(Feature):
         rs = r / std
 
         if rs > 0:
-            return np.log(rs) / np.log(n)
+            hurst_val: float = float(np.log(rs) / np.log(n))
+            return hurst_val
         return np.nan
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -73,9 +72,7 @@ class HurstStat(Feature):
             window = values[i - self.period + 1 : i + 1]
             hurst[i] = self._hurst_rs(window)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_hurst_{self.period}", values=hurst)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_hurst_{self.period}", values=hurst))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 100},
@@ -89,7 +86,7 @@ class HurstStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/autocorr")
+@feature("stat/autocorr")
 class AutocorrStat(Feature):
     """Rolling Autocorrelation.
 
@@ -109,8 +106,8 @@ class AutocorrStat(Feature):
     period: int = 30
     lag: int = 1
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_acf{lag}_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_acf{lag}_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -125,9 +122,7 @@ class AutocorrStat(Feature):
                 corr = np.corrcoef(x, x_lag)[0, 1]
                 acf[i] = corr if not np.isnan(corr) else 0
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_acf{self.lag}_{self.period}", values=acf)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_acf{self.lag}_{self.period}", values=acf))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30, "lag": 1},
@@ -142,7 +137,7 @@ class AutocorrStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/variance_ratio")
+@feature("stat/variance_ratio")
 class VarianceRatioStat(Feature):
     """Rolling Variance Ratio.
 
@@ -162,8 +157,8 @@ class VarianceRatioStat(Feature):
     period: int = 50
     k: int = 5
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_vr{k}_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_vr{k}_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -185,9 +180,7 @@ class VarianceRatioStat(Feature):
             if var_1 > 1e-10:
                 vr[i] = var_k / (self.k * var_1)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_vr{self.k}_{self.period}", values=vr)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_vr{self.k}_{self.period}", values=vr))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 50, "k": 5},
@@ -205,11 +198,11 @@ class VarianceRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/diffusion_coeff")
+@feature("stat/diffusion_coeff")
 class DiffusionCoeffStat(Feature):
     """Rolling Diffusion Coefficient.
 
-    D = Var(log-returns) / (2 × Δt)
+    D = Var(log-returns) / (2 x Δt)
 
     Measures local intensity of random movement.
     In a pure random walk, D is constant; changes in D
@@ -220,7 +213,7 @@ class DiffusionCoeffStat(Feature):
     - Falling D: volatility contraction, potential trend forming
     - Stable D: stationary regime
 
-    Reference: Einstein diffusion equation, MSD = 2D×t
+    Reference: Einstein diffusion equation, MSD = 2Dxt
     """
 
     source_col: str = "close"
@@ -228,8 +221,8 @@ class DiffusionCoeffStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_diffcoeff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_diffcoeff_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -248,7 +241,7 @@ class DiffusionCoeffStat(Feature):
                 dc[i] = np.var(valid, ddof=1) / 2.0
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             dc = normalize_zscore(dc, window=norm_window)
@@ -276,18 +269,18 @@ class DiffusionCoeffStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/anomalous_diffusion")
+@feature("stat/anomalous_diffusion")
 class AnomalousDiffusionStat(Feature):
-    """Anomalous Diffusion Exponent (α).
+    """Anomalous Diffusion Exponent (alpha).
 
-    MSD(τ) ~ τ^α  →  α = log(MSD(τ2)/MSD(τ1)) / log(τ2/τ1)
+    MSD(τ) ~ τ^alpha  →  alpha = log(MSD(τ2)/MSD(τ1)) / log(τ2/τ1)
 
     Estimated by comparing MSD at two time scales within a rolling window.
 
     Interpretation:
-    - α ≈ 1: normal diffusion (random walk)
-    - α > 1: super-diffusion (trending / persistent)
-    - α < 1: sub-diffusion (mean-reverting / anti-persistent)
+    - alpha ≈ 1: normal diffusion (random walk)
+    - alpha > 1: super-diffusion (trending / persistent)
+    - alpha < 1: sub-diffusion (mean-reverting / anti-persistent)
     - More responsive than Hurst for short windows
 
     Reference: Anomalous diffusion in physics
@@ -301,14 +294,12 @@ class AnomalousDiffusionStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_adiff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_adiff_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.tau_long <= self.tau_short:
-            raise ValueError(
-                f"tau_long ({self.tau_long}) must be > tau_short ({self.tau_short})"
-            )
+            raise ValueError(f"tau_long ({self.tau_long}) must be > tau_short ({self.tau_short})")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -320,25 +311,21 @@ class AnomalousDiffusionStat(Feature):
 
         for i in range(self.period + self.tau_long - 1, n):
             window = log_values[i - self.period + 1 : i + 1]
-            w = len(window)
+            len(window)
 
             # MSD for tau_short
             displacements_short = window[self.tau_short :] - window[: -self.tau_short]
-            msd_short = (
-                np.mean(displacements_short**2) if len(displacements_short) > 0 else 0
-            )
+            msd_short = np.mean(displacements_short**2) if len(displacements_short) > 0 else 0
 
             # MSD for tau_long
             displacements_long = window[self.tau_long :] - window[: -self.tau_long]
-            msd_long = (
-                np.mean(displacements_long**2) if len(displacements_long) > 0 else 0
-            )
+            msd_long = np.mean(displacements_long**2) if len(displacements_long) > 0 else 0
 
             if msd_short > 1e-20 and msd_long > 1e-20:
                 adiff[i] = np.log(msd_long / msd_short) / log_ratio
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             adiff = normalize_zscore(adiff, window=norm_window)
@@ -366,7 +353,7 @@ class AnomalousDiffusionStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/msd_ratio")
+@feature("stat/msd_ratio")
 class MsdRatioStat(Feature):
     """Mean Squared Displacement Ratio.
 
@@ -389,8 +376,8 @@ class MsdRatioStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_msdr_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_msdr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -415,7 +402,7 @@ class MsdRatioStat(Feature):
                 msdr[i] = msd_2tau / msd_tau
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             msdr = normalize_zscore(msdr, window=norm_window)
@@ -446,11 +433,11 @@ class MsdRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spring_constant")
+@feature("stat/spring_constant")
 class SpringConstantStat(Feature):
     """Rolling Spring Constant (k) - Mean Reversion Strength.
 
-    Models price as a spring: restoring_force ∝ -k × displacement.
+    Models price as a spring: restoring_force ∝ -k x displacement.
 
     displacement = ln(Close) - ln(SMA)
     Δdisplacement = displacement[t] - displacement[t-1]
@@ -471,8 +458,8 @@ class SpringConstantStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_spring_k_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_spring_k_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -514,7 +501,7 @@ class SpringConstantStat(Feature):
                     spring_k[i] = -slope  # k = -slope (restoring force convention)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             spring_k = normalize_zscore(spring_k, window=norm_window)
@@ -542,7 +529,7 @@ class SpringConstantStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/damping_ratio")
+@feature("stat/damping_ratio")
 class DampingRatioStat(Feature):
     """Rolling Damping Ratio (ζ) - Oscillation Decay Characterization.
 
@@ -569,8 +556,8 @@ class DampingRatioStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_damping_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_damping_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -615,7 +602,7 @@ class DampingRatioStat(Feature):
                     damping[i] = delta / np.sqrt(4 * np.pi**2 + delta**2)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             damping = normalize_zscore(damping, window=norm_window)
@@ -643,14 +630,14 @@ class DampingRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/natural_frequency")
+@feature("stat/natural_frequency")
 class NaturalFrequencyStat(Feature):
     """Rolling Natural Frequency (ω₀) via zero-crossing rate.
 
     Estimates the dominant oscillation frequency of price around
     its moving average by counting zero-crossings of displacement.
 
-    ω₀ ≈ π × (zero_crossings / period)
+    ω₀ ≈ π x (zero_crossings / period)
 
     Interpretation:
     - High ω₀: rapid oscillation around MA (choppy, mean-reverting)
@@ -668,8 +655,8 @@ class NaturalFrequencyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_natfreq_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_natfreq_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -696,11 +683,11 @@ class NaturalFrequencyStat(Feature):
             signs = np.sign(valid)
             crossings = np.sum(np.abs(np.diff(signs)) > 0)
 
-            # ω₀ = π × crossings / N
+            # ω₀ = π x crossings / N
             natfreq[i] = np.pi * crossings / len(valid)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             natfreq = normalize_zscore(natfreq, window=norm_window)
@@ -731,7 +718,7 @@ class NaturalFrequencyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/plastic_strain")
+@feature("stat/plastic_strain")
 class PlasticStrainStat(Feature):
     """Plastic Strain Ratio - fraction of non-reversible deformation.
 
@@ -754,8 +741,8 @@ class PlasticStrainStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_plastic_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_plastic_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -791,7 +778,7 @@ class PlasticStrainStat(Feature):
                     plastic[i] = 1.0 - max(corr, 0)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             plastic = normalize_zscore(plastic, window=norm_window)
@@ -819,11 +806,11 @@ class PlasticStrainStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/escape_velocity")
+@feature("stat/escape_velocity")
 class EscapeVelocityStat(Feature):
     """Escape Velocity - velocity needed to break free from MA attraction.
 
-    v_escape = sqrt(2 × k × |displacement|)
+    v_escape = sqrt(2 x k x |displacement|)
 
     Compares current velocity to escape velocity.
     Ratio > 1 means price has enough momentum to break away.
@@ -844,8 +831,8 @@ class EscapeVelocityStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_vesc_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_vesc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -880,11 +867,7 @@ class EscapeVelocityStat(Feature):
             x_v = x[valid]
             y_v = y[valid]
 
-            if (
-                len(x_v) > 5
-                and not np.isnan(velocity[i])
-                and not np.isnan(displacement[i])
-            ):
+            if len(x_v) > 5 and not np.isnan(velocity[i]) and not np.isnan(displacement[i]):
                 x_mean = np.mean(x_v)
                 y_mean = np.mean(y_v)
                 ss_xx = np.sum((x_v - x_mean) ** 2)
@@ -899,7 +882,7 @@ class EscapeVelocityStat(Feature):
                             vesc_ratio[i] = abs_v / v_escape
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             vesc_ratio = normalize_zscore(vesc_ratio, window=norm_window)
@@ -927,7 +910,7 @@ class EscapeVelocityStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/correlation_length")
+@feature("stat/correlation_length")
 class CorrelationLengthStat(Feature):
     """Correlation Length - distance to first autocorrelation zero-crossing.
 
@@ -948,8 +931,8 @@ class CorrelationLengthStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_corrlen_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_corrlen_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -983,7 +966,7 @@ class CorrelationLengthStat(Feature):
                 corrlen[i] = self.max_lag
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             corrlen = normalize_zscore(corrlen, window=norm_window)

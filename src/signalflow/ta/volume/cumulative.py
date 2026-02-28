@@ -1,14 +1,14 @@
 """Cumulative volume-price indicators."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
-
-from signalflow import sf_component
-from signalflow.feature.base import Feature
-from typing import ClassVar
 from numba import njit
+
+from signalflow.core import feature
+from signalflow.feature.base import Feature
 
 
 @njit
@@ -30,7 +30,7 @@ def rolling_sum_numpy(arr: np.ndarray, window: int) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="volume/obv")
+@feature("volume/obv")
 class ObvVolume(Feature):
     """On Balance Volume (OBV) - Windowed version for reproducibility.
 
@@ -59,8 +59,8 @@ class ObvVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["obv"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["obv"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -78,7 +78,7 @@ class ObvVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             obv = normalize_zscore(obv, window=norm_window)
@@ -109,7 +109,7 @@ class ObvVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/ad")
+@feature("volume/ad")
 class AdVolume(Feature):
     """Accumulation/Distribution Line (A/D) - Windowed version.
 
@@ -140,8 +140,8 @@ class AdVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["ad"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["ad"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -161,7 +161,7 @@ class AdVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ad = normalize_zscore(ad, window=norm_window)
@@ -192,7 +192,7 @@ class AdVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/pvt")
+@feature("volume/pvt")
 class PvtVolume(Feature):
     """Price-Volume Trend (PVT) - Windowed version.
 
@@ -217,8 +217,8 @@ class PvtVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["pvt"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["pvt"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -236,7 +236,7 @@ class PvtVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             pvt = normalize_zscore(pvt, window=norm_window)
@@ -267,7 +267,7 @@ class PvtVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/nvi")
+@feature("volume/nvi")
 class NviVolume(Feature):
     """Negative Volume Index (NVI) - Windowed version.
 
@@ -293,8 +293,8 @@ class NviVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["nvi"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["nvi"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -314,7 +314,7 @@ class NviVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             nvi = normalize_zscore(nvi, window=norm_window)
@@ -345,7 +345,7 @@ class NviVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/pvi")
+@feature("volume/pvi")
 class PviVolume(Feature):
     """Positive Volume Index (PVI) - Windowed version.
 
@@ -371,8 +371,8 @@ class PviVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["pvi"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["pvi"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -393,7 +393,7 @@ class PviVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             pvi = normalize_zscore(pvi, window=norm_window)

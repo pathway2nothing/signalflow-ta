@@ -4,16 +4,18 @@ RSI Divergence Detector
 Identifies regular and hidden divergences between price and RSI momentum indicator.
 """
 
-import numpy as np
-import polars as pl
 from dataclasses import dataclass
 from typing import ClassVar
-from signalflow.core import sf_component
+
+import numpy as np
+import polars as pl
+
+from signalflow.core import feature
 from signalflow.ta.divergence.base import DivergenceBase
 from signalflow.ta.momentum import RsiMom
 
 
-@sf_component(name="divergence/rsi")
+@feature("divergence/rsi")
 @dataclass
 class RsiDivergence(DivergenceBase):
     """
@@ -101,8 +103,7 @@ class RsiDivergence(DivergenceBase):
     rsi_oversold: float = 30.0
     """RSI level considered oversold"""
 
-    requires = ["high", "low", "close"]
-
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = [
         "rsi_{rsi_period}",
         "rsi_div_bullish",
@@ -111,7 +112,6 @@ class RsiDivergence(DivergenceBase):
         "rsi_div_hidden_bearish",
         "rsi_div_strength",
     ]
-
     test_params: ClassVar[list[dict]] = [
         {"rsi_period": 14, "pivot_window": 5, "min_pivot_distance": 10},
         {"rsi_period": 21, "pivot_window": 7, "min_pivot_distance": 15},
@@ -140,31 +140,23 @@ class RsiDivergence(DivergenceBase):
         # 2. Extract numpy arrays for processing
         close = df["close"].to_numpy()
         rsi = df[rsi_col].to_numpy()
-        n = len(close)
+        len(close)
 
         # 3. Find pivots in price and RSI
         price_highs_idx, price_lows_idx = self.find_pivots(close)
         rsi_highs_idx, rsi_lows_idx = self.find_pivots(rsi)
 
         # 4. Detect regular bullish divergence (Price LL, RSI HL)
-        bullish_div = self.detect_regular_bullish_divergence(
-            close, price_lows_idx, rsi, rsi_lows_idx
-        )
+        bullish_div = self.detect_regular_bullish_divergence(close, price_lows_idx, rsi, rsi_lows_idx)
 
         # 5. Detect regular bearish divergence (Price HH, RSI LH)
-        bearish_div = self.detect_regular_bearish_divergence(
-            close, price_highs_idx, rsi, rsi_highs_idx
-        )
+        bearish_div = self.detect_regular_bearish_divergence(close, price_highs_idx, rsi, rsi_highs_idx)
 
         # 6. Detect hidden bullish divergence (Price HL, RSI LL)
-        hidden_bullish_div = self.detect_hidden_bullish_divergence(
-            close, price_lows_idx, rsi, rsi_lows_idx
-        )
+        hidden_bullish_div = self.detect_hidden_bullish_divergence(close, price_lows_idx, rsi, rsi_lows_idx)
 
         # 7. Detect hidden bearish divergence (Price LH, RSI HH)
-        hidden_bearish_div = self.detect_hidden_bearish_divergence(
-            close, price_highs_idx, rsi, rsi_highs_idx
-        )
+        hidden_bearish_div = self.detect_hidden_bearish_divergence(close, price_highs_idx, rsi, rsi_highs_idx)
 
         # 8. Calculate divergence strength
         all_divs = bullish_div | bearish_div | hidden_bullish_div | hidden_bearish_div
@@ -176,9 +168,7 @@ class RsiDivergence(DivergenceBase):
         )
 
         # 9. Boost strength for extreme RSI levels
-        strength = self._apply_rsi_extremity_boost(
-            rsi, strength, bullish_div, bearish_div
-        )
+        strength = self._apply_rsi_extremity_boost(rsi, strength, bullish_div, bearish_div)
 
         # 10. Add divergence columns to dataframe
         df = df.with_columns(
@@ -228,9 +218,7 @@ class RsiDivergence(DivergenceBase):
         oversold_mask = bullish_div & (rsi < self.rsi_oversold)
         if np.any(oversold_mask):
             # More oversold = bigger boost (up to +15 points)
-            oversold_depth = (
-                self.rsi_oversold - rsi[oversold_mask]
-            ) / self.rsi_oversold
+            oversold_depth = (self.rsi_oversold - rsi[oversold_mask]) / self.rsi_oversold
             boost = oversold_depth * 15
             boosted[oversold_mask] += boost
 
@@ -238,9 +226,7 @@ class RsiDivergence(DivergenceBase):
         overbought_mask = bearish_div & (rsi > self.rsi_overbought)
         if np.any(overbought_mask):
             # More overbought = bigger boost (up to +15 points)
-            overbought_depth = (rsi[overbought_mask] - self.rsi_overbought) / (
-                100 - self.rsi_overbought
-            )
+            overbought_depth = (rsi[overbought_mask] - self.rsi_overbought) / (100 - self.rsi_overbought)
             boost = overbought_depth * 15
             boosted[overbought_mask] += boost
 

@@ -6,12 +6,12 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
 
 
 @dataclass
-@sf_component(name="volatility/gap")
+@feature("volatility/gap")
 class GapVol(Feature):
     """Gap Analysis.
 
@@ -34,8 +34,8 @@ class GapVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["open", "high", "low", "close"]
-    outputs = [
+    requires: ClassVar[list[str]] = ["open", "high", "low", "close"]
+    outputs: ClassVar[list[str]] = [
         "gap_val",
         "gap_pct",
         "gap_fill_pct",
@@ -62,7 +62,7 @@ class GapVol(Feature):
         # If Gap Up: (Open - Low) / GapVal
         # If Gap Down: (High - Open) / abs(GapVal)
         # 100% means fully filled (and possibly more).
-        gap_fill_pct = np.zeros(n)
+        gap_fill_pct: np.ndarray = np.zeros(n)
 
         is_up = gap_val > 0
         is_down = gap_val < 0
@@ -94,7 +94,7 @@ class GapVol(Feature):
 
         # Normalization for unbounded outputs
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(20)
             gap_val = normalize_zscore(gap_val, window=norm_window)

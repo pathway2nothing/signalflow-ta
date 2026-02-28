@@ -6,29 +6,19 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-
-
-def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
-    """RMA with SMA initialization for reproducibility."""
-    n = len(values)
-    alpha = 1 / period
-    rma = np.full(n, np.nan)
-
-    if n < period:
-        return rma
-
-    rma[period - 1] = np.mean(values[:period])
-
-    for i in range(period, n):
-        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
-
-    return rma
+from signalflow.ta._numba_kernels import cci_kernel as _cci_kernel
+from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
+from signalflow.ta._numba_kernels import rolling_max as _rolling_max
+from signalflow.ta._numba_kernels import rolling_min as _rolling_min
+from signalflow.ta._numba_kernels import sma_nb as _sma_nb
+from signalflow.ta._numba_kernels import stoch_kernel as _stoch_kernel
+from signalflow.ta._numba_kernels import uo_kernel as _uo_kernel
 
 
 @dataclass
-@sf_component(name="momentum/stoch")
+@feature("momentum/stoch")
 class StochMom(Feature):
     """Stochastic Oscillator.
 
@@ -47,46 +37,15 @@ class StochMom(Feature):
     smooth_k: int = 3
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["stoch_k_{k_period}", "stoch_d_{k_period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["stoch_k_{k_period}", "stoch_d_{k_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
-        n = len(close)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        # Raw %K
-        raw_k = np.full(n, np.nan)
-
-        for i in range(self.k_period - 1, n):
-            hh = np.max(high[i - self.k_period + 1 : i + 1])
-            ll = np.min(low[i - self.k_period + 1 : i + 1])
-
-            if hh != ll:
-                raw_k[i] = 100 * (close[i] - ll) / (hh - ll)
-            else:
-                raw_k[i] = 50.0  # Neutral when no range
-
-        # Smoothed %K (SMA)
-        stoch_k = np.full(n, np.nan)
-        start_k = self.k_period + self.smooth_k - 2
-
-        for i in range(start_k, n):
-            window = raw_k[i - self.smooth_k + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                stoch_k[i] = np.mean(valid)
-
-        # %D (SMA of %K)
-        stoch_d = np.full(n, np.nan)
-        start_d = start_k + self.d_period - 1
-
-        for i in range(start_d, n):
-            window = stoch_k[i - self.d_period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                stoch_d[i] = np.mean(valid)
+        stoch_k, stoch_d = _stoch_kernel(high, low, close, self.k_period, self.smooth_k, self.d_period)
 
         # Normalization: [0, 100] → [0, 1] for both outputs
         if self.normalized:
@@ -120,7 +79,7 @@ class StochMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/stochrsi")
+@feature("momentum/stochrsi")
 class StochRsiMom(Feature):
     """Stochastic RSI with reproducible initialization.
 
@@ -139,8 +98,8 @@ class StochRsiMom(Feature):
     d_period: int = 3
     normalized: bool = False
 
-    requires = ["close"]
-    outputs = ["stochrsi_k_{rsi_period}", "stochrsi_d_{rsi_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["stochrsi_k_{rsi_period}", "stochrsi_d_{rsi_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -158,42 +117,22 @@ class StochRsiMom(Feature):
 
         rsi = 100 - (100 / (1 + avg_gain / (avg_loss + 1e-10)))
 
-        # Stochastic of RSI (pure lookback - reproducible)
+        # Stochastic of RSI using rolling min/max + SMA kernels
+        rsi_min = _rolling_min(rsi, self.stoch_period)
+        rsi_max = _rolling_max(rsi, self.stoch_period)
+
         raw_stoch = np.full(n, np.nan)
         start = self.rsi_period + self.stoch_period - 2
-
         for i in range(start, n):
-            rsi_window = rsi[i - self.stoch_period + 1 : i + 1]
-            valid_rsi = rsi_window[~np.isnan(rsi_window)]
-
-            if len(valid_rsi) >= 2:
-                rsi_min = np.min(valid_rsi)
-                rsi_max = np.max(valid_rsi)
-
-                if rsi_max != rsi_min:
-                    raw_stoch[i] = 100 * (rsi[i] - rsi_min) / (rsi_max - rsi_min)
+            if not np.isnan(rsi_min[i]) and not np.isnan(rsi_max[i]):
+                if rsi_max[i] != rsi_min[i]:
+                    raw_stoch[i] = 100 * (rsi[i] - rsi_min[i]) / (rsi_max[i] - rsi_min[i])
                 else:
                     raw_stoch[i] = 50.0
 
-        # Smoothed %K (SMA)
-        stoch_k = np.full(n, np.nan)
-        start_k = start + self.k_period - 1
-
-        for i in range(start_k, n):
-            window = raw_stoch[i - self.k_period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                stoch_k[i] = np.mean(valid)
-
-        # %D (SMA of %K)
-        stoch_d = np.full(n, np.nan)
-        start_d = start_k + self.d_period - 1
-
-        for i in range(start_d, n):
-            window = stoch_k[i - self.d_period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                stoch_d[i] = np.mean(valid)
+        # Smoothed %K and %D
+        stoch_k = _sma_nb(raw_stoch, self.k_period)
+        stoch_d = _sma_nb(stoch_k, self.d_period)
 
         # Normalization: [0, 100] → [0, 1] for both outputs
         if self.normalized:
@@ -236,7 +175,7 @@ class StochRsiMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/willr")
+@feature("momentum/willr")
 class WillrMom(Feature):
     """Williams %R.
 
@@ -252,25 +191,20 @@ class WillrMom(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["willr_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["willr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        close = df["close"].to_numpy()
-        n = len(close)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        willr = np.full(n, np.nan)
+        hh = _rolling_max(high, self.period)
+        ll = _rolling_min(low, self.period)
 
-        for i in range(self.period - 1, n):
-            hh = np.max(high[i - self.period + 1 : i + 1])
-            ll = np.min(low[i - self.period + 1 : i + 1])
-
-            if hh != ll:
-                willr[i] = -100 * (hh - close[i]) / (hh - ll)
-            else:
-                willr[i] = -50.0
+        diff = hh - ll
+        willr = np.where(diff != 0, -100 * (hh - close) / diff, -50.0)
+        willr[: self.period - 1] = np.nan
 
         # Normalization: [-100, 0] → [0, 1]
         if self.normalized:
@@ -298,7 +232,7 @@ class WillrMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/cci")
+@feature("momentum/cci")
 class CciMom(Feature):
     """Commodity Channel Index (CCI).
 
@@ -317,29 +251,22 @@ class CciMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close"]
-    outputs = ["cci_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["cci_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
-        tp = (high + low + close) / 3
-        cci = np.full(n, np.nan)
+        tp = ((high + low + close) / 3).astype(np.float64)
 
-        for i in range(self.period - 1, n):
-            window = tp[i - self.period + 1 : i + 1]
-            sma = np.mean(window)
-            mad = np.mean(np.abs(window - sma))
-
-            if mad > 0:
-                cci[i] = (tp[i] - sma) / (self.constant * mad)
+        cci = _cci_kernel(tp, self.period, self.constant)
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             cci = normalize_zscore(cci, window=norm_window)
@@ -372,7 +299,7 @@ class CciMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/uo")
+@feature("momentum/uo")
 class UoMom(Feature):
     """Ultimate Oscillator (UO).
 
@@ -391,46 +318,31 @@ class UoMom(Feature):
     slow_weight: float = 1.0
     normalized: bool = False
 
-    requires = ["high", "low", "close"]
-    outputs = ["uo_{fast}_{medium}_{slow}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["uo_{fast}_{medium}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
         close = df["close"].to_numpy()
-        n = len(close)
+        _n = len(close)
 
         prev_close = np.roll(close, 1)
         prev_close[0] = close[0]
 
-        bp = close - np.minimum(low, prev_close)
-        tr = np.maximum(high, prev_close) - np.minimum(low, prev_close)
+        bp = (close - np.minimum(low, prev_close)).astype(np.float64)
+        tr = (np.maximum(high, prev_close) - np.minimum(low, prev_close)).astype(np.float64)
 
-        uo = np.full(n, np.nan)
-
-        for i in range(self.slow - 1, n):
-            fast_bp = np.sum(bp[i - self.fast + 1 : i + 1])
-            fast_tr = np.sum(tr[i - self.fast + 1 : i + 1])
-
-            med_bp = np.sum(bp[i - self.medium + 1 : i + 1])
-            med_tr = np.sum(tr[i - self.medium + 1 : i + 1])
-
-            slow_bp = np.sum(bp[i - self.slow + 1 : i + 1])
-            slow_tr = np.sum(tr[i - self.slow + 1 : i + 1])
-
-            if fast_tr > 0 and med_tr > 0 and slow_tr > 0:
-                fast_avg = fast_bp / fast_tr
-                med_avg = med_bp / med_tr
-                slow_avg = slow_bp / slow_tr
-
-                total_weight = self.fast_weight + self.medium_weight + self.slow_weight
-                weighted = (
-                    self.fast_weight * fast_avg
-                    + self.medium_weight * med_avg
-                    + self.slow_weight * slow_avg
-                )
-
-                uo[i] = 100 * weighted / total_weight
+        uo = _uo_kernel(
+            bp,
+            tr,
+            self.fast,
+            self.medium,
+            self.slow,
+            self.fast_weight,
+            self.medium_weight,
+            self.slow_weight,
+        )
 
         # Normalization: [0, 100] → [0, 1]
         if self.normalized:
@@ -458,7 +370,7 @@ class UoMom(Feature):
 
 
 @dataclass
-@sf_component(name="momentum/ao")
+@feature("momentum/ao")
 class AoMom(Feature):
     """Awesome Oscillator (AO).
 
@@ -477,25 +389,21 @@ class AoMom(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low"]
-    outputs = ["ao_{fast}_{slow}"]
+    requires: ClassVar[list[str]] = ["high", "low"]
+    outputs: ClassVar[list[str]] = ["ao_{fast}_{slow}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        high = df["high"].to_numpy()
-        low = df["low"].to_numpy()
-        n = len(high)
+        high = df["high"].to_numpy().astype(np.float64)
+        low = df["low"].to_numpy().astype(np.float64)
 
         median = (high + low) / 2
-        ao = np.full(n, np.nan)
-
-        for i in range(self.slow - 1, n):
-            fast_sma = np.mean(median[i - self.fast + 1 : i + 1])
-            slow_sma = np.mean(median[i - self.slow + 1 : i + 1])
-            ao[i] = fast_sma - slow_sma
+        fast_sma = _sma_nb(median, self.fast)
+        slow_sma = _sma_nb(median, self.slow)
+        ao = fast_sma - slow_sma
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             ao = normalize_zscore(ao, window=norm_window)

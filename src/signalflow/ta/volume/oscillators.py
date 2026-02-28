@@ -1,18 +1,17 @@
 """Volume-based oscillators."""
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
-@sf_component(name="volume/mfi")
+@feature("volume/mfi")
 class MfiVolume(Feature):
     """Money Flow Index (MFI).
 
@@ -34,8 +33,8 @@ class MfiVolume(Feature):
     period: int = 14
     normalized: bool = False
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["mfi_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["mfi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -50,7 +49,7 @@ class MfiVolume(Feature):
         pos_mf = np.where(tp_diff > 0, rmf, 0)
         neg_mf = np.where(tp_diff < 0, rmf, 0)
 
-        mfi = np.full(n, np.nan)
+        mfi: np.ndarray = np.full(n, np.nan)
 
         for i in range(self.period - 1, n):
             pos_sum = np.sum(pos_mf[i - self.period + 1 : i + 1])
@@ -86,7 +85,7 @@ class MfiVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/cmf")
+@feature("volume/cmf")
 class CmfVolume(Feature):
     """Chaikin Money Flow (CMF).
 
@@ -109,8 +108,8 @@ class CmfVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["cmf_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["cmf_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -134,7 +133,7 @@ class CmfVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             cmf = normalize_zscore(cmf, window=norm_window)
@@ -167,7 +166,7 @@ class CmfVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/efi")
+@feature("volume/efi")
 class EfiVolume(Feature):
     """Elder's Force Index (EFI).
 
@@ -190,8 +189,8 @@ class EfiVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close", "volume"]
-    outputs = ["efi_{period}"]
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["efi_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
@@ -213,7 +212,7 @@ class EfiVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             efi = normalize_zscore(efi, window=norm_window)
@@ -246,7 +245,7 @@ class EfiVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/eom")
+@feature("volume/eom")
 class EomVolume(Feature):
     """Ease of Movement (EMV/EOM).
 
@@ -271,8 +270,8 @@ class EomVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "volume"]
-    outputs = ["eom_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "volume"]
+    outputs: ClassVar[list[str]] = ["eom_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -298,7 +297,7 @@ class EomVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             eom = normalize_zscore(eom, window=norm_window)
@@ -331,7 +330,7 @@ class EomVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/kvo")
+@feature("volume/kvo")
 class KvoVolume(Feature):
     """Klinger Volume Oscillator (KVO).
 
@@ -363,8 +362,8 @@ class KvoVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["kvo_{fast}_{slow}", "kvo_signal_{signal}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["kvo_{fast}_{slow}", "kvo_signal_{signal}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -418,7 +417,7 @@ class KvoVolume(Feature):
 
         # Normalization: z-score for unbounded oscillator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.slow)
             kvo = normalize_zscore(kvo, window=norm_window)
@@ -460,7 +459,7 @@ class KvoVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/vwap")
+@feature("volume/vwap")
 class VwapVolume(Feature):
     """Volume Weighted Average Price (VWAP).
 
@@ -482,8 +481,8 @@ class VwapVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["vwap"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["vwap"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -500,7 +499,7 @@ class VwapVolume(Feature):
 
         # Normalization: z-score for unbounded price-like indicator
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(20)
             vwap = normalize_zscore(vwap, window=norm_window)
@@ -531,7 +530,7 @@ class VwapVolume(Feature):
 
 
 @dataclass
-@sf_component(name="volume/vwap_bands")
+@feature("volume/vwap_bands")
 class VwapBandsVolume(Feature):
     """VWAP with Standard Deviation Bands.
 
@@ -553,8 +552,8 @@ class VwapBandsVolume(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["high", "low", "close", "volume"]
-    outputs = ["vwap", "vwap_upper_{period}", "vwap_lower_{period}"]
+    requires: ClassVar[list[str]] = ["high", "low", "close", "volume"]
+    outputs: ClassVar[list[str]] = ["vwap", "vwap_upper_{period}", "vwap_lower_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
@@ -580,7 +579,7 @@ class VwapBandsVolume(Feature):
 
         # Normalization: z-score for unbounded price-like indicators
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             vwap = normalize_zscore(vwap, window=norm_window)

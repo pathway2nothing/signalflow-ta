@@ -20,9 +20,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -38,9 +37,7 @@ def _log_returns(values: np.ndarray) -> np.ndarray:
     return lr
 
 
-def _kalman_innovation_variance(
-    returns: np.ndarray, process_noise_ratio: float
-) -> float:
+def _kalman_innovation_variance(returns: np.ndarray, process_noise_ratio: float) -> float:
     """Normalized Innovation Statistic (NIS) from a 1-D local-level Kalman filter.
 
     Model:
@@ -321,7 +318,7 @@ def _prediction_error_decomp(returns: np.ndarray, forecast_horizon: int) -> floa
 
 
 @dataclass
-@sf_component(name="stat/kalman_innovation")
+@feature("stat/kalman_innovation")
 class KalmanInnovationStat(Feature):
     """Rolling Kalman Innovation Statistic (Harvey, 1989).
 
@@ -364,18 +361,14 @@ class KalmanInnovationStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kalman_innov_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kalman_innov_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 30:
-            raise ValueError(
-                f"period must be >= 30 for Kalman filter convergence, got {self.period}"
-            )
+            raise ValueError(f"period must be >= 30 for Kalman filter convergence, got {self.period}")
         if self.process_noise <= 0 or self.process_noise > 10.0:
-            raise ValueError(
-                f"process_noise must be in (0, 10], got {self.process_noise}"
-            )
+            raise ValueError(f"process_noise must be in (0, 10], got {self.process_noise}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -391,7 +384,7 @@ class KalmanInnovationStat(Feature):
                 result[i] = _kalman_innovation_variance(valid, self.process_noise)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -423,7 +416,7 @@ class KalmanInnovationStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/ar_coefficient")
+@feature("stat/ar_coefficient")
 class ARCoefficientStat(Feature):
     """Rolling AR Coefficient — System Identification (Ljung, 1999).
 
@@ -462,18 +455,15 @@ class ARCoefficientStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_ar_coeff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_ar_coeff_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.ar_order < 1 or self.ar_order > 5:
             raise ValueError(f"ar_order must be in [1, 5], got {self.ar_order}")
         min_period = self.ar_order * 10 + 10
         if self.period < min_period:
-            raise ValueError(
-                f"period must be >= {min_period} for ar_order={self.ar_order}, "
-                f"got {self.period}"
-            )
+            raise ValueError(f"period must be >= {min_period} for ar_order={self.ar_order}, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -489,7 +479,7 @@ class ARCoefficientStat(Feature):
                 result[i] = _ar_coefficient(valid, self.ar_order)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -516,7 +506,7 @@ class ARCoefficientStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/lyapunov_exponent")
+@feature("stat/lyapunov_exponent")
 class LyapunovExponentStat(Feature):
     """Rolling Maximum Lyapunov Exponent (Rosenstein et al., 1993).
 
@@ -564,25 +554,19 @@ class LyapunovExponentStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_lyapunov_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_lyapunov_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 50:
-            raise ValueError(
-                f"period must be >= 50 for reliable Lyapunov estimation, "
-                f"got {self.period}"
-            )
+            raise ValueError(f"period must be >= 50 for reliable Lyapunov estimation, got {self.period}")
         if self.embed_dim < 2 or self.embed_dim > 7:
             raise ValueError(f"embed_dim must be in [2, 7], got {self.embed_dim}")
         if self.tau < 1 or self.tau > 10:
             raise ValueError(f"tau must be in [1, 10], got {self.tau}")
         min_period = self.embed_dim * self.tau * 5
         if self.period < min_period:
-            raise ValueError(
-                f"period must be >= embed_dim * tau * 5 = {min_period}, "
-                f"got {self.period}"
-            )
+            raise ValueError(f"period must be >= embed_dim * tau * 5 = {min_period}, got {self.period}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -599,7 +583,7 @@ class LyapunovExponentStat(Feature):
                 result[i] = _max_lyapunov(valid, self.embed_dim, self.tau)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -626,7 +610,7 @@ class LyapunovExponentStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/pid_error")
+@feature("stat/pid_error")
 class PIDErrorStat(Feature):
     """Rolling PID Error Signal (Astrom & Murray, 2008).
 
@@ -674,16 +658,14 @@ class PIDErrorStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_pid_error_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pid_error_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 20:
             raise ValueError(f"period must be >= 20, got {self.period}")
         if self.kp < 0 or self.ki < 0 or self.kd < 0:
-            raise ValueError(
-                f"gains must be non-negative, got kp={self.kp}, ki={self.ki}, kd={self.kd}"
-            )
+            raise ValueError(f"gains must be non-negative, got kp={self.kp}, ki={self.ki}, kd={self.kd}")
         if self.kp == 0 and self.ki == 0 and self.kd == 0:
             raise ValueError("at least one gain (kp, ki, kd) must be > 0")
 
@@ -701,7 +683,7 @@ class PIDErrorStat(Feature):
                 result[i] = _pid_error_signal(valid, self.kp, self.ki, self.kd)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -735,7 +717,7 @@ class PIDErrorStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/prediction_error_decomp")
+@feature("stat/prediction_error_decomp")
 class PredictionErrorDecompositionStat(Feature):
     """Rolling Prediction Error Decomposition (Geman et al., 1992).
 
@@ -779,16 +761,14 @@ class PredictionErrorDecompositionStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_pred_err_decomp_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pred_err_decomp_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.period < 30:
             raise ValueError(f"period must be >= 30, got {self.period}")
         if self.forecast_horizon < 1 or self.forecast_horizon > 5:
-            raise ValueError(
-                f"forecast_horizon must be in [1, 5], got {self.forecast_horizon}"
-            )
+            raise ValueError(f"forecast_horizon must be in [1, 5], got {self.forecast_horizon}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -804,7 +784,7 @@ class PredictionErrorDecompositionStat(Feature):
                 result[i] = _prediction_error_decomp(valid, self.forecast_horizon)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)

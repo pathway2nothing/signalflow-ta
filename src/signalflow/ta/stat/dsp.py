@@ -21,9 +21,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -47,9 +46,7 @@ def _detrend_window(window: np.ndarray) -> np.ndarray | None:
     return detrended
 
 
-def _power_spectrum(
-    detrended: np.ndarray, skip_dc: bool = True
-) -> tuple[np.ndarray, np.ndarray]:
+def _power_spectrum(detrended: np.ndarray, skip_dc: bool = True) -> tuple[np.ndarray, np.ndarray]:
     """Compute power spectrum and frequency bins from a detrended window.
 
     Args:
@@ -118,7 +115,8 @@ def _dct_ii(x: np.ndarray) -> np.ndarray:
     n_len = len(x)
     n = np.arange(n_len)
     k = np.arange(n_len).reshape(-1, 1)
-    return 2.0 * (x * np.cos(np.pi * k * (2 * n + 1) / (2 * n_len))).sum(axis=1)
+    result: np.ndarray = 2.0 * (x * np.cos(np.pi * k * (2 * n + 1) / (2 * n_len))).sum(axis=1)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +125,7 @@ def _dct_ii(x: np.ndarray) -> np.ndarray:
 
 
 @dataclass
-@sf_component(name="stat/spectral_flux")
+@feature("stat/spectral_flux")
 class SpectralFluxStat(Feature):
     """Rolling Spectral Flux (Scheirer & Slaney, 1997).
 
@@ -160,8 +158,8 @@ class SpectralFluxStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sflux_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sflux_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -191,16 +189,14 @@ class SpectralFluxStat(Feature):
                 continue
             curr_power_norm = power / norm
 
-            if prev_power_norm is not None and len(prev_power_norm) == len(
-                curr_power_norm
-            ):
+            if prev_power_norm is not None and len(prev_power_norm) == len(curr_power_norm):
                 diff = curr_power_norm - prev_power_norm
                 flux[i] = float(np.sum(diff**2))
 
             prev_power_norm = curr_power_norm
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             flux = normalize_zscore(flux, window=norm_window)
@@ -228,7 +224,7 @@ class SpectralFluxStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/zero_crossing_rate")
+@feature("stat/zero_crossing_rate")
 class ZeroCrossingRateStat(Feature):
     """Rolling Zero-Crossing Rate (Kedem, 1986).
 
@@ -260,8 +256,8 @@ class ZeroCrossingRateStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_zcr_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_zcr_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -282,7 +278,7 @@ class ZeroCrossingRateStat(Feature):
             zcr[i] = float(crossings) / (self.period - 1)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             zcr = normalize_zscore(zcr, window=norm_window)
@@ -310,7 +306,7 @@ class ZeroCrossingRateStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_rolloff")
+@feature("stat/spectral_rolloff")
 class SpectralRolloffStat(Feature):
     """Rolling Spectral Rolloff (Peeters, 2004).
 
@@ -344,10 +340,10 @@ class SpectralRolloffStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_srolloff_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_srolloff_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not (0.0 < self.rolloff_pct < 1.0):
             raise ValueError(f"rolloff_pct must be in (0, 1), got {self.rolloff_pct}")
 
@@ -378,7 +374,7 @@ class SpectralRolloffStat(Feature):
                 rolloff[i] = float(freqs[-1])
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             rolloff = normalize_zscore(rolloff, window=norm_window)
@@ -406,7 +402,7 @@ class SpectralRolloffStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_flatness")
+@feature("stat/spectral_flatness")
 class SpectralFlatnessStat(Feature):
     """Rolling Spectral Flatness / Wiener Entropy (Dubnov, 2004).
 
@@ -442,8 +438,8 @@ class SpectralFlatnessStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sflat_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sflat_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -473,7 +469,7 @@ class SpectralFlatnessStat(Feature):
             flatness[i] = float(geom_mean / arith_mean)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             flatness = normalize_zscore(flatness, window=norm_window)
@@ -501,7 +497,7 @@ class SpectralFlatnessStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/power_cepstrum")
+@feature("stat/power_cepstrum")
 class PowerCepstrumStat(Feature):
     """Rolling Power Cepstrum (Bogert, Healy & Tukey, 1963).
 
@@ -542,16 +538,15 @@ class PowerCepstrumStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_cepstrum_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_cepstrum_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.min_quefrency < 1:
             raise ValueError(f"min_quefrency must be >= 1, got {self.min_quefrency}")
         if self.min_quefrency >= self.period // 2:
             raise ValueError(
-                f"min_quefrency must be < period // 2, got "
-                f"min_quefrency={self.min_quefrency}, period={self.period}"
+                f"min_quefrency must be < period // 2, got min_quefrency={self.min_quefrency}, period={self.period}"
             )
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -588,7 +583,7 @@ class PowerCepstrumStat(Feature):
                     cepstrum_peak[i] = float(np.max(search_range))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             cepstrum_peak = normalize_zscore(cepstrum_peak, window=norm_window)
@@ -616,7 +611,7 @@ class PowerCepstrumStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_bandwidth")
+@feature("stat/spectral_bandwidth")
 class SpectralBandwidthStat(Feature):
     """Rolling Spectral Bandwidth (Peeters, 2004).
 
@@ -655,8 +650,8 @@ class SpectralBandwidthStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sbw_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sbw_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -680,7 +675,7 @@ class SpectralBandwidthStat(Feature):
             result[i] = float(np.sqrt(variance))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -708,7 +703,7 @@ class SpectralBandwidthStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_slope")
+@feature("stat/spectral_slope")
 class SpectralSlopeStat(Feature):
     """Rolling Spectral Slope (Peeters, 2004).
 
@@ -740,8 +735,8 @@ class SpectralSlopeStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_sslope_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_sslope_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -765,7 +760,7 @@ class SpectralSlopeStat(Feature):
             result[i] = float(slope)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -793,7 +788,7 @@ class SpectralSlopeStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_kurtosis")
+@feature("stat/spectral_kurtosis")
 class SpectralKurtosisStat(Feature):
     """Rolling Spectral Kurtosis (Peeters, 2004).
 
@@ -827,8 +822,8 @@ class SpectralKurtosisStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_skurt_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_skurt_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -856,7 +851,7 @@ class SpectralKurtosisStat(Feature):
             result[i] = float(kurtosis)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -884,7 +879,7 @@ class SpectralKurtosisStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/spectral_contrast")
+@feature("stat/spectral_contrast")
 class SpectralContrastStat(Feature):
     """Rolling Spectral Contrast (Jiang et al., 2002).
 
@@ -926,10 +921,10 @@ class SpectralContrastStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_scontrast_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_scontrast_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.n_bands < 1:
             raise ValueError(f"n_bands must be >= 1, got {self.n_bands}")
         if not (0.0 < self.alpha <= 0.5):
@@ -969,7 +964,7 @@ class SpectralContrastStat(Feature):
                 result[i] = float(np.mean(contrasts))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)
@@ -997,7 +992,7 @@ class SpectralContrastStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/mfcc_band_energy")
+@feature("stat/mfcc_band_energy")
 class MFCCBandEnergyStat(Feature):
     """Rolling MFCC Band Energy (Davis & Mermelstein, 1980).
 
@@ -1038,17 +1033,14 @@ class MFCCBandEnergyStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_mfccbe_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_mfccbe_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.n_filters < 2:
             raise ValueError(f"n_filters must be >= 2, got {self.n_filters}")
         if self.n_coeffs >= self.n_filters:
-            raise ValueError(
-                f"n_coeffs must be < n_filters, got "
-                f"n_coeffs={self.n_coeffs}, n_filters={self.n_filters}"
-            )
+            raise ValueError(f"n_coeffs must be < n_filters, got n_coeffs={self.n_coeffs}, n_filters={self.n_filters}")
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy().astype(np.float64)
@@ -1092,7 +1084,7 @@ class MFCCBandEnergyStat(Feature):
             result[i] = float(np.sqrt(np.sum(selected**2)))
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             result = normalize_zscore(result, window=norm_window)

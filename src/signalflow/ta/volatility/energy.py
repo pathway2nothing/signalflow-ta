@@ -7,16 +7,25 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_kernels import (
+    rolling_mean_nan as _rolling_mean_nan,
+)
+from signalflow.ta._numba_kernels import (
+    sma_nb as _sma_nb,
+)
+from signalflow.ta._numba_kernels import (
+    velocity_kernel as _velocity_kernel,
+)
 
 
 @dataclass
-@sf_component(name="volatility/kinetic_energy")
+@feature("volatility/kinetic_energy")
 class KineticEnergyVol(Feature):
     """Kinetic Energy of price movement.
 
-    KE = ½ × v²  where v = ln(Close / Close[1])
+    KE = ½ x v²  where v = ln(Close / Close[1])
 
     Smoothed over rolling period.
 
@@ -33,32 +42,19 @@ class KineticEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["ke_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["ke_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        # Velocity (log-returns)
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                velocity[i] = np.log(close[i] / close[i - 1])
-
-        # Kinetic energy = 0.5 * v^2
+        velocity = _velocity_kernel(close)
         ke_raw = 0.5 * velocity**2
-
-        # Smooth with rolling mean
-        ke = np.full(n, np.nan)
-        for i in range(self.period, n):
-            window = ke_raw[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                ke[i] = np.mean(valid)
+        ke_raw[0] = np.nan  # first velocity is 0 by convention
+        ke = _rolling_mean_nan(ke_raw, self.period)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             ke = normalize_zscore(ke, window=norm_window)
@@ -86,7 +82,7 @@ class KineticEnergyVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/potential_energy")
+@feature("volatility/potential_energy")
 class PotentialEnergyVol(Feature):
     """Potential Energy - displacement from equilibrium (moving average).
 
@@ -109,37 +105,21 @@ class PotentialEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["pe_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["pe_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        # Moving average as equilibrium
-        ma = np.full(n, np.nan)
-        for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
-
-        # Log displacement from equilibrium
+        ma = _sma_nb(close, self.ma_period)
         log_close = np.log(np.maximum(close, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         displacement = log_close - log_ma
-
-        # Potential energy = displacement^2
         pe_raw = displacement**2
-
-        # Smooth with rolling mean
-        pe = np.full(n, np.nan)
-        for i in range(max(self.ma_period, self.period) - 1, n):
-            start = max(0, i - self.period + 1)
-            window = pe_raw[start : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                pe[i] = np.mean(valid)
+        pe = _rolling_mean_nan(pe_raw, self.period)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             pe = normalize_zscore(pe, window=norm_window)
@@ -167,13 +147,13 @@ class PotentialEnergyVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/total_energy")
+@feature("volatility/total_energy")
 class TotalEnergyVol(Feature):
     """Total Mechanical Energy (E = KE + PE).
 
     Combines kinetic (movement intensity) and potential (displacement) energy.
 
-    KE = ½ × v²
+    KE = ½ x v²
     PE = (ln(Close) - ln(MA))²
     E = KE + PE
 
@@ -191,46 +171,26 @@ class TotalEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["te_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["te_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        # Velocity
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                velocity[i] = np.log(close[i] / close[i - 1])
-
-        # KE = 0.5 * v^2
+        velocity = _velocity_kernel(close)
         ke = 0.5 * velocity**2
+        ke[0] = np.nan
 
-        # MA equilibrium
-        ma = np.full(n, np.nan)
-        for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
-
-        # PE = displacement^2
+        ma = _sma_nb(close, self.ma_period)
         log_close = np.log(np.maximum(close, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         pe = (log_close - log_ma) ** 2
 
-        # Total energy
         te_raw = ke + pe
-
-        # Smooth with rolling mean
-        te = np.full(n, np.nan)
-        for i in range(max(self.ma_period, self.period) - 1, n):
-            start = max(0, i - self.period + 1)
-            window = te_raw[start : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                te[i] = np.mean(valid)
+        te = _rolling_mean_nan(te_raw, self.period)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             te = normalize_zscore(te, window=norm_window)
@@ -258,7 +218,7 @@ class TotalEnergyVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/energy_flow")
+@feature("volatility/energy_flow")
 class EnergyFlowVol(Feature):
     """Energy Flow Rate (Power of the system).
 
@@ -279,50 +239,34 @@ class EnergyFlowVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["eflow_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["eflow_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity
-        velocity = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                velocity[i] = np.log(close[i] / close[i - 1])
-
-        # KE
+        velocity = _velocity_kernel(close)
         ke = 0.5 * velocity**2
+        ke[0] = np.nan
 
-        # MA equilibrium
-        ma = np.full(n, np.nan)
-        for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
-
-        # PE
+        ma = _sma_nb(close, self.ma_period)
         log_close = np.log(np.maximum(close, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         pe = (log_close - log_ma) ** 2
 
-        # Total energy smoothed
         te_raw = ke + pe
-        te = np.full(n, np.nan)
-        for i in range(max(self.ma_period, self.period) - 1, n):
-            start = max(0, i - self.period + 1)
-            window = te_raw[start : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                te[i] = np.mean(valid)
+        te = _rolling_mean_nan(te_raw, self.period)
 
-        # Energy flow = dE/dt
+        # Energy flow = dE/dt (vectorized diff with lag)
         eflow = np.full(n, np.nan)
-        for i in range(max(self.ma_period, self.period) - 1 + self.flow_lag, n):
-            if not np.isnan(te[i]) and not np.isnan(te[i - self.flow_lag]):
+        valid_mask = ~np.isnan(te)
+        for i in range(self.flow_lag, n):
+            if valid_mask[i] and valid_mask[i - self.flow_lag]:
                 eflow[i] = te[i] - te[i - self.flow_lag]
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             eflow = normalize_zscore(eflow, window=norm_window)
@@ -350,7 +294,7 @@ class EnergyFlowVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/elastic_strain")
+@feature("volatility/elastic_strain")
 class ElasticStrainVol(Feature):
     """Elastic Strain - relative displacement from equilibrium.
 
@@ -372,29 +316,18 @@ class ElasticStrainVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["strain_{period}_{ma_period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["strain_{period}_{ma_period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        ma = np.full(n, np.nan)
-        for i in range(self.ma_period - 1, n):
-            ma[i] = np.mean(close[i - self.ma_period + 1 : i + 1])
-
+        ma = _sma_nb(close, self.ma_period)
         strain_raw = (close - ma) / np.maximum(ma, 1e-10)
-
-        # Smooth
-        strain = np.full(n, np.nan)
-        for i in range(max(self.ma_period, self.period) - 1, n):
-            window = strain_raw[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                strain[i] = np.mean(valid)
+        strain = _rolling_mean_nan(strain_raw, self.period)
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.ma_period)
             strain = normalize_zscore(strain, window=norm_window)
@@ -422,11 +355,11 @@ class ElasticStrainVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/temperature")
+@feature("volatility/temperature")
 class TemperatureVol(Feature):
     """Market Temperature - kinetic energy per degree of freedom.
 
-    T = Var(log-returns) × period
+    T = Var(log-returns) x period
 
     Statistical mechanics analogy: temperature is proportional
     to average kinetic energy.
@@ -444,27 +377,23 @@ class TemperatureVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["mtemp_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["mtemp_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
+        close = df["close"].to_numpy().astype(np.float64)
 
-        log_ret = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                log_ret[i] = np.log(close[i] / close[i - 1])
+        log_ret = _velocity_kernel(close)
+        log_ret[0] = np.nan  # mark first as invalid
 
-        temp = np.full(n, np.nan)
-        for i in range(self.period, n):
-            window = log_ret[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 2:
-                temp[i] = np.var(valid, ddof=1) * self.period
+        from signalflow.ta._numba_kernels import rolling_std as _rolling_std
+
+        std_vals = _rolling_std(log_ret, self.period)
+        # var(ddof=1) = std^2, temperature = var * period
+        temp = std_vals**2 * self.period
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             temp = normalize_zscore(temp, window=norm_window)
@@ -492,7 +421,7 @@ class TemperatureVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/heat_capacity")
+@feature("volatility/heat_capacity")
 class HeatCapacityVol(Feature):
     """Heat Capacity - resistance of market to temperature change.
 
@@ -513,39 +442,28 @@ class HeatCapacityVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["heatcap_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["heatcap_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Log returns
-        log_ret = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                log_ret[i] = np.log(close[i] / close[i - 1])
+        log_ret = _velocity_kernel(close)
+        log_ret[0] = np.nan
 
-        # Temperature (rolling variance × period)
-        temp = np.full(n, np.nan)
-        for i in range(self.period, n):
-            window = log_ret[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 2:
-                temp[i] = np.var(valid, ddof=1) * self.period
+        from signalflow.ta._numba_kernels import rolling_std as _rolling_std
 
-        # Total energy (KE smoothed)
+        std_vals = _rolling_std(log_ret, self.period)
+        temp = std_vals**2 * self.period
+
         ke_raw = 0.5 * log_ret**2
-        energy = np.full(n, np.nan)
-        for i in range(self.period, n):
-            window = ke_raw[i - self.period + 1 : i + 1]
-            valid = window[~np.isnan(window)]
-            if len(valid) > 0:
-                energy[i] = np.mean(valid)
+        ke_raw[0] = np.nan
+        energy = _rolling_mean_nan(ke_raw, self.period)
 
         # Heat capacity = ΔT / ΔE
         hcap = np.full(n, np.nan)
-        for i in range(self.period + self.lag, n):
+        for i in range(self.lag, n):
             if (
                 not np.isnan(temp[i])
                 and not np.isnan(temp[i - self.lag])
@@ -558,7 +476,7 @@ class HeatCapacityVol(Feature):
                     hcap[i] = d_temp / d_energy
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             hcap = normalize_zscore(hcap, window=norm_window)
@@ -586,11 +504,11 @@ class HeatCapacityVol(Feature):
 
 
 @dataclass
-@sf_component(name="volatility/free_energy")
+@feature("volatility/free_energy")
 class FreeEnergyVol(Feature):
-    """Helmholtz Free Energy (F = E - T×S).
+    """Helmholtz Free Energy (F = E - TxS).
 
-    Total energy minus "thermal" energy (temperature × entropy).
+    Total energy minus "thermal" energy (temperature x entropy).
     The "useful" energy available for directed movement.
 
     Interpretation:
@@ -607,18 +525,18 @@ class FreeEnergyVol(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["close"]
-    outputs = ["fenergy_{period}"]
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["fenergy_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
+        close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        log_ret = np.full(n, np.nan)
-        for i in range(1, n):
-            if close[i - 1] > 0 and close[i] > 0:
-                log_ret[i] = np.log(close[i] / close[i - 1])
+        log_ret = _velocity_kernel(close)
+        log_ret[0] = np.nan
 
+        # FreeEnergy uses histogram (np.histogram) which Numba can't handle
+        # Keep the rolling loop but use precomputed log_ret
         fenergy = np.full(n, np.nan)
         for i in range(self.period, n):
             window = log_ret[i - self.period + 1 : i + 1]
@@ -626,23 +544,18 @@ class FreeEnergyVol(Feature):
             if len(valid) < 5:
                 continue
 
-            # Energy = mean KE
             energy = np.mean(0.5 * valid**2)
-
-            # Temperature = variance × period
             temperature = np.var(valid, ddof=1) * self.period
 
-            # Entropy via histogram
             hist, _ = np.histogram(valid, bins=self.entropy_bins)
             p = hist / hist.sum()
             p = p[p > 0]
             entropy = -np.sum(p * np.log(p))
 
-            # Free energy = E - T*S
             fenergy[i] = energy - temperature * entropy
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             fenergy = normalize_zscore(fenergy, window=norm_window)

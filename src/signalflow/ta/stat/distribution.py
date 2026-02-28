@@ -2,18 +2,19 @@
 """Distribution shape measures - position, moments, information."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import polars as pl
-from scipy.stats import kurtosis as sp_kurtosis, skew as sp_skew
+from scipy.stats import kurtosis as sp_kurtosis
+from scipy.stats import skew as sp_skew
 
-from signalflow import sf_component
+from signalflow.core import feature
 from signalflow.feature.base import Feature
-from typing import ClassVar
 
 
 @dataclass
-@sf_component(name="stat/median")
+@feature("stat/median")
 class MedianStat(Feature):
     """Rolling Median.
 
@@ -26,8 +27,8 @@ class MedianStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_median_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_median_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         return df.with_columns(
@@ -45,16 +46,11 @@ class MedianStat(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        return (
-            getattr(
-                self, "period", getattr(self, "length", getattr(self, "window", 20))
-            )
-            * 5
-        )
+        return getattr(self, "period", getattr(self, "length", getattr(self, "window", 20))) * 5
 
 
 @dataclass
-@sf_component(name="stat/quantile")
+@feature("stat/quantile")
 class QuantileStat(Feature):
     """Rolling Quantile.
 
@@ -68,10 +64,10 @@ class QuantileStat(Feature):
     period: int = 30
     q: float = 0.5
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_q{q}_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_q{q}_{period}"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not 0 < self.q < 1:
             raise ValueError(f"q must be in (0, 1), got {self.q}")
 
@@ -96,7 +92,7 @@ class QuantileStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/pctrank")
+@feature("stat/pctrank")
 class PctRankStat(Feature):
     """Rolling Percentile Rank.
 
@@ -111,8 +107,8 @@ class PctRankStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_pctrank_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_pctrank_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -124,9 +120,7 @@ class PctRankStat(Feature):
             current = values[i]
             pctrank[i] = (np.sum(window < current) / self.period) * 100
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_pctrank_{self.period}", values=pctrank)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_pctrank_{self.period}", values=pctrank))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -141,7 +135,7 @@ class PctRankStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/minmax")
+@feature("stat/minmax")
 class MinMaxStat(Feature):
     """Rolling Min-Max Normalization.
 
@@ -156,19 +150,15 @@ class MinMaxStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_minmax_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_minmax_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         col = pl.col(self.source_col)
         min_val = col.rolling_min(window_size=self.period)
         max_val = col.rolling_max(window_size=self.period)
 
-        return df.with_columns(
-            ((col - min_val) / (max_val - min_val)).alias(
-                f"{self.source_col}_minmax_{self.period}"
-            )
-        )
+        return df.with_columns(((col - min_val) / (max_val - min_val)).alias(f"{self.source_col}_minmax_{self.period}"))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -183,7 +173,7 @@ class MinMaxStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/skew")
+@feature("stat/skew")
 class SkewStat(Feature):
     """Rolling Skewness.
 
@@ -200,8 +190,8 @@ class SkewStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_skew_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_skew_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -213,9 +203,7 @@ class SkewStat(Feature):
             if not np.any(np.isnan(window)):
                 skew[i] = sp_skew(window, bias=False)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_skew_{self.period}", values=skew)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_skew_{self.period}", values=skew))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -230,7 +218,7 @@ class SkewStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/kurtosis")
+@feature("stat/kurtosis")
 class KurtosisStat(Feature):
     """Rolling Excess Kurtosis.
 
@@ -247,8 +235,8 @@ class KurtosisStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_kurt_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_kurt_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -260,9 +248,7 @@ class KurtosisStat(Feature):
             if not np.any(np.isnan(window)):
                 kurt[i] = sp_kurtosis(window, fisher=True)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_kurt_{self.period}", values=kurt)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_kurt_{self.period}", values=kurt))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -277,7 +263,7 @@ class KurtosisStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/entropy")
+@feature("stat/entropy")
 class EntropyStat(Feature):
     """Rolling Shannon Entropy.
 
@@ -296,8 +282,8 @@ class EntropyStat(Feature):
     period: int = 10
     base: float = 2.0
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_entropy_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_entropy_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -314,9 +300,7 @@ class EntropyStat(Feature):
                 p = p[p > 0]
                 entropy[i] = -np.sum(p * np.log(p) / log_base)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_entropy_{self.period}", values=entropy)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_entropy_{self.period}", values=entropy))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 10, "base": 2.0},
@@ -335,7 +319,7 @@ class EntropyStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/jarque_bera")
+@feature("stat/jarque_bera")
 class JarqueBeraStat(Feature):
     """Rolling Jarque-Bera Test Statistic.
 
@@ -352,8 +336,8 @@ class JarqueBeraStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_jb_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_jb_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -375,9 +359,7 @@ class JarqueBeraStat(Feature):
 
                     jb[i] = (n / 6) * (skew**2 + (kurt**2) / 4)
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_jb_{self.period}", values=jb)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_jb_{self.period}", values=jb))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -392,7 +374,7 @@ class JarqueBeraStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/mode_distance")
+@feature("stat/mode_distance")
 class ModeDistanceStat(Feature):
     """Rolling Distance from Mode (most frequent value region).
 
@@ -406,8 +388,8 @@ class ModeDistanceStat(Feature):
     period: int = 30
     n_bins: int = 10
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_mode_dist_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_mode_dist_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -425,11 +407,7 @@ class ModeDistanceStat(Feature):
 
                 mode_dist[i] = values[i] - mode_center
 
-        return df.with_columns(
-            pl.Series(
-                name=f"{self.source_col}_mode_dist_{self.period}", values=mode_dist
-            )
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_mode_dist_{self.period}", values=mode_dist))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30, "n_bins": 10},
@@ -444,7 +422,7 @@ class ModeDistanceStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/above_mean_ratio")
+@feature("stat/above_mean_ratio")
 class AboveMeanRatioStat(Feature):
     """Rolling Ratio of Values Above Mean.
 
@@ -459,8 +437,8 @@ class AboveMeanRatioStat(Feature):
     source_col: str = "close"
     period: int = 30
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_above_mean_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_above_mean_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -472,9 +450,7 @@ class AboveMeanRatioStat(Feature):
             mean = np.mean(window)
             ratio[i] = np.sum(window > mean) / self.period
 
-        return df.with_columns(
-            pl.Series(name=f"{self.source_col}_above_mean_{self.period}", values=ratio)
-        )
+        return df.with_columns(pl.Series(name=f"{self.source_col}_above_mean_{self.period}", values=ratio))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -488,7 +464,7 @@ class AboveMeanRatioStat(Feature):
 
 
 @dataclass
-@sf_component(name="stat/entropy_rate")
+@feature("stat/entropy_rate")
 class EntropyRateStat(Feature):
     """Rolling Entropy Rate - speed of information change.
 
@@ -512,8 +488,8 @@ class EntropyRateStat(Feature):
     normalized: bool = False
     norm_period: int | None = None
 
-    requires = ["{source_col}"]
-    outputs = ["{source_col}_entropy_rate_{period}"]
+    requires: ClassVar[list[str]] = ["{source_col}"]
+    outputs: ClassVar[list[str]] = ["{source_col}_entropy_rate_{period}"]
 
     def _compute_entropy(self, window: np.ndarray) -> float:
         """Compute Shannon entropy for a window."""
@@ -522,7 +498,8 @@ class EntropyRateStat(Feature):
             return np.nan
         p = window / window_sum
         p = p[p > 0]
-        return -np.sum(p * np.log(p) / np.log(self.base))
+        entropy_val: float = float(-np.sum(p * np.log(p) / np.log(self.base)))
+        return entropy_val
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         values = df[self.source_col].to_numpy()
@@ -541,7 +518,7 @@ class EntropyRateStat(Feature):
                 erate[i] = (entropy[i] - entropy[i - self.lag]) / self.lag
 
         if self.normalized:
-            from signalflow.ta._normalization import normalize_zscore, get_norm_window
+            from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
             norm_window = self.norm_period or get_norm_window(self.period)
             erate = normalize_zscore(erate, window=norm_window)

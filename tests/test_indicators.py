@@ -12,10 +12,8 @@ from __future__ import annotations
 import numpy as np
 import polars as pl
 import pytest
-
-from conftest import generate_test_ohlcv, SEED
+from conftest import SEED, generate_test_ohlcv
 from indicator_registry import IndicatorConfig
-
 
 # =============================================================================
 # Test Configuration
@@ -146,14 +144,14 @@ class TestReproducibility:
         if failures:
             msg = [
                 f"\nREPRODUCIBILITY FAILURE: {config.name}",
-                f"Indicator values differ based on entry point!",
-                f"",
-                f"Test setup:",
+                "Indicator values differ based on entry point!",
+                "",
+                "Test setup:",
                 f"  Long period: {LONG_PERIOD} bars",
                 f"  Short period: {SHORT_PERIOD} bars",
                 f"  Comparison: last {TEST_LENGTH} bars",
-                f"  Tolerance: 0.01%",
-                f"",
+                "  Tolerance: 0.01%",
+                "",
             ]
 
             for f in failures:
@@ -163,7 +161,7 @@ class TestReproducibility:
                         f"  Max diff: {f['max_diff_pct']:.6f}%",
                         f"  Long value: {f['long_value']:.8f}",
                         f"  Short value: {f['short_value']:.8f}",
-                        f"",
+                        "",
                     ]
                 )
 
@@ -255,15 +253,15 @@ class TestLookAhead:
         if failures:
             msg = [
                 f"\nLOOK-AHEAD BIAS DETECTED: {config.name}",
-                f"Indicator uses future data!",
-                f"",
-                f"Test setup:",
+                "Indicator uses future data!",
+                "",
+                "Test setup:",
                 f"  Long period: {LONG_PERIOD} bars",
                 f"  Short period: {SHORT_PERIOD} bars (truncated)",
                 f"  Comparison: {TEST_LENGTH} bars before truncation point",
-                f"  Tolerance: 0 (must be exact)",
-                f"",
-                f"Failures:",
+                "  Tolerance: 0 (must be exact)",
+                "",
+                "Failures:",
             ]
 
             for failure in failures:
@@ -287,9 +285,7 @@ class TestBasicValidation:
         df = generate_test_ohlcv(n_rows=500, seed=SEED)
         result = run_indicator(config, df)
 
-        assert len(result) == len(df), (
-            f"{config.name}: output length {len(result)} != input length {len(df)}"
-        )
+        assert len(result) == len(df), f"{config.name}: output length {len(result)} != input length {len(df)}"
 
     def test_produces_output_columns(self, config: IndicatorConfig):
         """Indicator should produce output columns."""
@@ -316,9 +312,7 @@ class TestBasicValidation:
             valid = ~np.isnan(values)
 
             if valid.any():
-                assert not np.any(np.isinf(values[valid])), (
-                    f"{config.name}.{col}: contains infinite values"
-                )
+                assert not np.any(np.isinf(values[valid])), f"{config.name}.{col}: contains infinite values"
 
 
 # =============================================================================

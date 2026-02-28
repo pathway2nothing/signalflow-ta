@@ -8,53 +8,53 @@ Modules:
 """
 
 from signalflow.ta.momentum.core import (
-    RsiMom,
-    RocMom,
-    MomMom,
     CmoMom,
+    MomMom,
+    RocMom,
+    RsiMom,
 )
-from signalflow.ta.momentum.oscillators import (
-    StochMom,
-    StochRsiMom,
-    WillrMom,
-    CciMom,
-    UoMom,
-    AoMom,
+from signalflow.ta.momentum.kinematics import (
+    AccelerationMom,
+    AngularMomentumMom,
+    JerkMom,
+    TorqueMom,
 )
 from signalflow.ta.momentum.macd import (
     MacdMom,
     PpoMom,
-    TsiMom,
     TrixMom,
+    TsiMom,
 )
-from signalflow.ta.momentum.kinematics import (
-    AccelerationMom,
-    JerkMom,
-    AngularMomentumMom,
-    TorqueMom,
+from signalflow.ta.momentum.oscillators import (
+    AoMom,
+    CciMom,
+    StochMom,
+    StochRsiMom,
+    UoMom,
+    WillrMom,
 )
 
 __all__ = [
+    # Kinematics
+    "AccelerationMom",
+    "AngularMomentumMom",
+    "AoMom",
+    "CciMom",
+    "CmoMom",
+    "JerkMom",
+    # MACD family
+    "MacdMom",
+    "MomMom",
+    "PpoMom",
+    "RocMom",
     # Core
     "RsiMom",
-    "RocMom",
-    "MomMom",
-    "CmoMom",
     # Oscillators
     "StochMom",
     "StochRsiMom",
-    "WillrMom",
-    "CciMom",
-    "UoMom",
-    "AoMom",
-    # MACD family
-    "MacdMom",
-    "PpoMom",
-    "TsiMom",
-    "TrixMom",
-    # Kinematics
-    "AccelerationMom",
-    "JerkMom",
-    "AngularMomentumMom",
     "TorqueMom",
+    "TrixMom",
+    "TsiMom",
+    "UoMom",
+    "WillrMom",
 ]
