@@ -5,7 +5,8 @@ Pure float64[:] arrays in/out — no Python objects inside.
 """
 
 import numpy as np
-from numba import njit
+
+from signalflow.ta._numba_compat import njit
 
 
 @njit(cache=True)

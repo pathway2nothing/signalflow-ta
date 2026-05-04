@@ -5,10 +5,10 @@ from typing import ClassVar
 
 import numpy as np
 import polars as pl
-from numba import njit
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
+from signalflow.ta._numba_compat import njit
 
 
 @njit
