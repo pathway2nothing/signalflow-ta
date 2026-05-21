@@ -8,7 +8,7 @@
 
 # signalflow-ta
 
-**Technical analysis extension for SignalFlow — 189 indicators + 24 signal detectors**
+**Technical analysis extension for SignalFlow — 290+ indicators + 24 signal detectors**
 
 <p>
 <a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.6.0-7c3aed" alt="Version"></a>
@@ -22,7 +22,7 @@
 
 Part of the [SignalFlow](https://github.com/pathway2nothing/sf-project) ecosystem.
 
-189 technical analysis indicators organized into 8 modules, 24 signal detectors with configurable filters, and `AutoFeatureNormalizer` for automatic normalization.
+290+ technical analysis indicators organized into 11 modules, 24 signal detectors with configurable filters, and `AutoFeatureNormalizer` for automatic normalization.
 
 ## Installation
 
@@ -222,6 +222,111 @@ signals = detector.run(raw_data_view)
 | `PctReturn` | `perf/pct_ret` | Percentage Returns |
 | `RsiDivergence` | `divergence/rsi` | RSI Divergence (regular & hidden) |
 | `MacdDivergence` | `divergence/macd` | MACD Divergence (regular & hidden) |
+
+### Microstructure (14) — NEW
+
+Candle geometry features added from sf-profit feature research.
+Strongest single-axis tested — `BodyToRangeRatio` and `WickToBodyRatio` rank in the top-10 of walk-forward IV pool.
+
+| Class | Module | Description |
+|-------|--------|-------------|
+| `BodyToRangeRatio` | `microstructure/candles` | `\|body\| / range` rolling mean (0=doji, 1=marubozu) |
+| `ClosePositionInBar` | `microstructure/candles` | `(close-low) / (high-low) ∈ [0,1]` |
+| `HiLoMedianGap` | `microstructure/candles` | `(high+low)/2 - close` rolling |
+| `LowerWickPersistence` | `microstructure/candles` | fraction of bars with `lower_wick > \|body\|` |
+| `UpperWickPersistence` | `microstructure/candles` | fraction of bars with `upper_wick > \|body\|` |
+| `WickAsymmetry` | `microstructure/candles` | `(upper-lower) / (upper+lower) ∈ [-1,+1]` |
+| `WickToBodyLower` | `microstructure/candles` | `lower_wick / \|body\|` rolling mean |
+| `WickToBodyRatio` | `microstructure/candles` | `(upper+lower) / \|body\|` rolling mean |
+| `WickToBodyUpper` | `microstructure/candles` | `upper_wick / \|body\|` rolling mean |
+| `HighLowImbalance` | `microstructure/ranges` | signed position in recent (max-min) range |
+| `RangeExpansion` | `microstructure/ranges` | `(high-low) / SMA(high-low) - 1` |
+| `RangeFragmentation` | `microstructure/ranges` | `sum_abs_returns / (max-min)` over window |
+| `RangeNormalizedReturn` | `microstructure/ranges` | `return / prev_bar_range`, rolling mean |
+| `SignedRollingRange` | `microstructure/ranges` | signed position by ATR |
+
+### Path-shape (15) — NEW
+
+Geometric properties of price path: roughness, efficiency, streaks, entropy.
+
+| Class | Module | Description |
+|-------|--------|-------------|
+| `PathRoughness` | `path_shape/shape` | `std(\|return\|) / mean(\|return\|)` — CV of move size |
+| `PathEfficiency` | `path_shape/shape` | Kaufman ER: net move / total path |
+| `PathTortuosity` | `path_shape/shape` | total path / (max - min) |
+| `PathSimplicity` | `path_shape/shape` | `\|net_return\| / sum_abs_returns ∈ [0,1]` |
+| `MaxConsecutiveGainRun` | `path_shape/streaks` | longest streak of up-bars in window |
+| `MaxConsecutiveLossRun` | `path_shape/streaks` | longest streak of down-bars in window |
+| `LongestStreak` | `path_shape/streaks` | max(gain_run, loss_run) per window |
+| `ReversalCount` | `path_shape/streaks` | count of local extrema |
+| `ZeroCrossingRate` | `path_shape/streaks` | return sign flip rate |
+| `ReturnSignEntropy` | `path_shape/entropy` | Shannon entropy of return signs |
+| `DirectionalEntropy` | `path_shape/entropy` | entropy of (sign × magnitude_quintile) joint |
+| `VolumeEntropy` | `path_shape/entropy` | entropy of volume distribution (10 quantized bins) |
+| `ReturnAutocorrShort` | `path_shape/autocorr` | rolling autocorr(returns, lag) |
+| `VolatilityClusterScore` | `path_shape/autocorr` | autocorr(\|returns\|) — GARCH proxy |
+| `ErrorAutoCorrelation` | `path_shape/autocorr` | rolling autocorr of `close - SMA(period)` |
+
+### Filters (7) — NEW
+
+`close - filter(close)` residuals across various filters. Useful in mean-reversion and PID-style control strategies.
+
+| Class | Module | Description |
+|-------|--------|-------------|
+| `AdaptiveEMAError` | `filters/smoother_errors` | `close - EMA(period)`. PID-P proxy |
+| `DEMAError` | `filters/smoother_errors` | `close - DEMA`. Less lag than EMA |
+| `TEMAError` | `filters/smoother_errors` | `close - TEMA`. Even less lag |
+| `HMAError` | `filters/smoother_errors` | `close - HMA`. Hull-style smoother residual |
+| `KalmanResidual` | `filters/kalman` | 1D Kalman filter innovation (predictive residual) |
+| `PIDIntegralTerm` | `filters/pid` | Rolling sum of `(close - SMA)`. PID-I |
+| `PIDDerivativeTerm` | `filters/pid` | Derivative of `(close - SMA)`. PID-D |
+
+### Cross-sectional (15) — NEW
+
+Operate on full multi-pair DataFrames. Rank-based variants work robustly on 3+ pairs; distributional variants (skew, breadth) benefit from 5+ pairs.
+
+| Class | Description |
+|-------|-------------|
+| `CrossSectionalReturnRank` | Rank of pair's return across pairs |
+| `CrossSectionalAtrRank` | Rank of pair's ATR across pairs |
+| `CrossSectionalAdxRank` | Rank of pair's \|returns\|-sum (ADX proxy) |
+| `CrossSectionalRangeRank` | Rank of pair's (high-low) range |
+| `CrossSectionalRsiRank` | Rank of pair's RSI proxy |
+| `CrossSectionalVolRank` | Rank of pair's realized vol |
+| `CrossSectionalReturnAccelRank` | Rank of pair's return acceleration |
+| `CrossSectionalBeta` | Rolling β to market median |
+| `AvgPairwiseCorrMarket` | Rolling corr(pair, market_median) |
+| `PairLeadLagCorr` | Rolling corr(pair_t, market_{t-lag}) — leads/lags |
+| `CrossSectionalDispersion` | Mean `\|pair_ret - market_mean\|` across pairs |
+| `CrossSectionalRetSkew` | Skewness of returns across pairs (needs 5+) |
+| `MarketBreadth` | Fraction of pairs with positive return ∈ [0,1] |
+| `RelativeStrengthVsMarket` | z-score of pair vs cross-section |
+| `PairExcessReturn` | pair_ret − market_mean_ret |
+| `DivergenceFromMarketMedian` | pair_ret − market_median_ret |
+
+### Stat / Volatility / Volume / Momentum / Trend extensions
+
+Each existing module gained new classes from sf-profit feature research. Selected highlights:
+
+**Regression (sf-profit iter-15/18/20)** — in `stat`:
+`LinRegSlopeWindow`, `LinRegR2`, `LinRegResidualStd`, `LinRegSlopeChange`, `LinRegSlopeAcceleration`, `Poly2ResidualStd`, `LinRegResidualSkew/Kurtosis`, `LinRegSlopeRatio`, `LinRegSlopeNormalized`, `LinRegInterceptNormalized`, `LinRegFitQuality`.
+
+**Distribution (sf-profit iter-20)** — in `stat`:
+`ReturnSkewWindow`, `ReturnKurtosisWindow`, `ReturnTailRatio`.
+
+**Volatility (sf-profit iter-3.1/15/16/20)** — in `volatility`:
+`NatrRatio`, `NatrPctRank`, `VolOfVol`, `RealizedVolPctRank`, `RealizedVolRatio`, `ParkinsonZScore`, `ParkinsonAccel`, `ParkinsonVolRatio`, `AltVolDeviation`, `GarmanKlassRatio`, `GarmanKlassPctRank`, `PriceZAtr`.
+
+**Volume×price coupling (sf-profit iter-15/16/18/20)** — in `volume`:
+`PriceImpactPerUnit`, `VWAPDeviation`, `SignedVolumeAccumulation`, `AbsReturnVolumeCorr`, `PriceVolumeCorrelation`, `VolumePerRange`, `VolumeImbalance`, `VolumeWeightedReturn`, `VolumeSpike`, `VolumeAcceleration`, `VolumeZScore`, `VolumeMomentumRatio`, `VolPctRankSignedTrend`.
+
+**Momentum (sf-profit feature_research_lib + iter-15/16/18/20)** — in `momentum`:
+`MomPosNeg`, `RocSignedLog`, `MacdNorm`, `RsiSpread`, `PriceMomentumConfirmation`, `VolPriceConfirmation`, `TrendPersistence`, `PriceAcceleration`, `MomentumOfMomentum`.
+
+**Trend (sf-profit feature_research_lib + iter-15/16/18)** — in `trend`:
+`DiBalance`, `NatrXDiBalance`, `UpDownEntropyAsymmetry`, `EntropyRatio`, `RsiDivPolarity`, `HilbertAmplitudeSlope`.
+
+> **Provenance.** All ~100 new classes were extracted from the sf-profit feature research pipeline (iter-3 → iter-21). They were validated through walk-forward IV scoring on 6 monthly folds and Spearman-correlation dedup at \|corr\| ≥ 0.85. 370 features survived to the final pool. See sf-profit's `docs/feature_catalog.md` for per-feature scores and walk-forward stability.
 
 ---
 

@@ -1,6 +1,25 @@
 # src/signalflow/ta/stat/__init__.py
 """Statistical indicators (auxiliary features)."""
 
+from signalflow.ta.stat.regression_extensions import (
+    LinRegFitQuality,
+    LinRegInterceptNormalized,
+    LinRegR2,
+    LinRegResidualKurtosis,
+    LinRegResidualSkew,
+    LinRegResidualStd,
+    LinRegSlopeAcceleration,
+    LinRegSlopeChange,
+    LinRegSlopeNormalized,
+    LinRegSlopeRatio,
+    LinRegSlopeWindow,
+    Poly2ResidualStd,
+)
+from signalflow.ta.stat.distribution_extensions import (
+    ReturnKurtosisWindow,
+    ReturnSkewWindow,
+    ReturnTailRatio,
+)
 from signalflow.ta.stat.complexity import (
     DfaExponentStat,
     FisherInformationStat,
@@ -216,4 +235,21 @@ __all__ = [
     "YangZhangVolStat",
     "ZeroCrossingRateStat",
     "ZscoreStat",
+    # Regression extensions (sf-profit iter-15/18/20)
+    "LinRegFitQuality",
+    "LinRegInterceptNormalized",
+    "LinRegR2",
+    "LinRegResidualKurtosis",
+    "LinRegResidualSkew",
+    "LinRegResidualStd",
+    "LinRegSlopeAcceleration",
+    "LinRegSlopeChange",
+    "LinRegSlopeNormalized",
+    "LinRegSlopeRatio",
+    "LinRegSlopeWindow",
+    "Poly2ResidualStd",
+    # Distribution / tail extensions (sf-profit iter-20)
+    "ReturnKurtosisWindow",
+    "ReturnSkewWindow",
+    "ReturnTailRatio",
 ]

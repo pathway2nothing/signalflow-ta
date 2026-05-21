@@ -44,6 +44,14 @@ from signalflow.ta.trend.strength import (
     ViscosityTrend,
     VortexTrend,
 )
+from signalflow.ta.trend.extensions import (
+    DiBalance,
+    EntropyRatio,
+    HilbertAmplitudeSlope,
+    NatrXDiBalance,
+    RsiDivPolarity,
+    UpDownEntropyAsymmetry,
+)
 
 __all__ = [
     # Strength
@@ -79,4 +87,11 @@ __all__ = [
     "VortexTrend",
     # Regime
     "WilliamsAlligatorRegime",
+    # Extensions (sf-profit feature_research_lib + iter-15/16/18)
+    "DiBalance",
+    "EntropyRatio",
+    "HilbertAmplitudeSlope",
+    "NatrXDiBalance",
+    "RsiDivPolarity",
+    "UpDownEntropyAsymmetry",
 ]
