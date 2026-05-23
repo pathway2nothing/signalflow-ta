@@ -186,3 +186,45 @@ class ForeshockBuildupStat(Feature):
         slope = ((wins - ym) * t_c).sum(axis=1) / denom
         pad = np.full(w - 1, np.nan, dtype=np.float64)
         return df.with_columns(pl.Series(out_col, np.concatenate([pad, slope]), dtype=pl.Float64))
+
+
+@dataclass
+@feature("stat/gutenberg_richter_b_value")
+class GutenbergRichterBValueStat(Feature):
+    """Gutenberg-Richter b-value (Aki MLE): tail slope of |return| magnitude distribution.
+
+    From seismology: log10(N(>m)) = a - b·m. Computed via Aki's MLE:
+    b = log10(e) / (mean(M) - M_min) where M = log|return|.
+    Low b indicates heavier tails / more large events relative to small.
+
+    Iter-29 stability: mean MI_normalised = 0.128 across 15 stable triples.
+
+    Reference: Aki, K. (1965). Maximum likelihood estimate of b in the
+    formula logN = a - bM and its confidence limits.
+    """
+
+    period: int = 240
+
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["f28_gr_b_{period}"]
+    test_params: ClassVar[list[dict]] = [
+        {"period": 240},
+        {"period": 480},
+        {"period": 960},
+    ]
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        import math
+        from numpy.lib.stride_tricks import sliding_window_view
+        out_col = f"f28_gr_b_{self.period}"
+        c = df["close"].to_numpy().astype(np.float64)
+        n = len(c); w = int(self.period)
+        if n < w:
+            return df.with_columns(pl.lit(np.nan).alias(out_col))
+        r = np.diff(np.log(c), prepend=c[0])
+        mag = np.log(np.abs(r) + 1e-12)
+        wins = sliding_window_view(mag, w)
+        m_min = wins.min(axis=1); m_mean = wins.mean(axis=1)
+        b = np.log10(math.e) / np.maximum(m_mean - m_min, 1e-12)
+        pad = np.full(w - 1, np.nan, dtype=np.float64)
+        return df.with_columns(pl.Series(out_col, np.concatenate([pad, b]), dtype=pl.Float64))

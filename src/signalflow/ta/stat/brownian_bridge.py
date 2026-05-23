@@ -155,3 +155,42 @@ class BBTensionDirectionalStat(Feature):
         sd = wins.std(axis=1) + 1e-12
         pad = np.full(w - 1, np.nan, dtype=np.float64)
         return df.with_columns(pl.Series(out_col, np.concatenate([pad, signed_max / sd]), dtype=pl.Float64))
+
+
+@dataclass
+@feature("stat/swing_amp_displacement")
+class SwingAmpDisplacementStat(Feature):
+    """sum(high − low) over window / |close_end − close_start| — micro-swing tortuosity.
+
+    Range-based path-tortuosity variant. Counts cumulative high-low
+    excursions per unit of net displacement; high values = much chop,
+    little net move.
+
+    Iter-29 stability: mean MI_normalised = 0.266 on D3, std 0.012 across
+    12 stable triples.
+    """
+
+    period: int = 15
+
+    requires: ClassVar[list[str]] = ["high", "low", "close"]
+    outputs: ClassVar[list[str]] = ["f24_swing_disp_{period}"]
+    test_params: ClassVar[list[dict]] = [
+        {"period": 15},
+        {"period": 60},
+        {"period": 240},
+    ]
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        out_col = f"f24_swing_disp_{self.period}"
+        c = df["close"].to_numpy().astype(np.float64)
+        h = df["high"].to_numpy().astype(np.float64)
+        l = df["low"].to_numpy().astype(np.float64)
+        n = len(c); w = int(self.period)
+        if n < w:
+            return df.with_columns(pl.lit(np.nan).alias(out_col))
+        wins = sliding_window_view(h - l, w)
+        swings = wins.sum(axis=1)
+        disp = np.abs(c[w - 1:] - c[: n - w + 1]) + 1e-12
+        out = swings / disp
+        pad = np.full(w - 1, np.nan, dtype=np.float64)
+        return df.with_columns(pl.Series(out_col, np.concatenate([pad, out]), dtype=pl.Float64))

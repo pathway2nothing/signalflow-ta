@@ -3,6 +3,7 @@
 
 from signalflow.ta.stat.aftershock import (
     ForeshockBuildupStat,
+    GutenbergRichterBValueStat,
     OmoriAftershockRateStat,
     OmoriRateBroadStat,
 )
@@ -10,14 +11,44 @@ from signalflow.ta.stat.allostatic import (
     AllostaticFastSlowRatioStat,
     AllostaticLoadDirectionalStat,
     AllostaticLoadStat,
+    CumZScorePowerLawStat,
+    DownsideZScoreEMAStat,
+    VolWeightedZScoreEMAStat,
 )
+from signalflow.ta.stat.asymmetric_stretch import AsymmetricSemiVolStretchStat
+from signalflow.ta.stat.changepoint import FocusMaxStatStat
+from signalflow.ta.stat.fractal_dim import KatzFractalDimensionStat
 from signalflow.ta.stat.brownian_bridge import (
     BBPathRoughnessStat,
     BBTensionDirectionalStat,
     BrownianBridgeTensionStat,
+    SwingAmpDisplacementStat,
 )
-from signalflow.ta.stat.hawkes import HawkesSelfExcitationStat
+from signalflow.ta.stat.hawkes import (
+    HawkesSelfExcitationStat,
+    HawkesSignedJumpsStat,
+    HawkesVolClimaxIntensityStat,
+    MarkedHawkesJumpsStat,
+    PowerLawHawkesStat,
+)
+from signalflow.ta.stat.impact_decay import AlmgrenChrissImpactDecayStat
 from signalflow.ta.stat.kl_drift import KullbackLeiblerDriftStat
+from signalflow.ta.stat.microstructure_proxies import (
+    BidAskSpreadProxyEMAStat,
+    FisherInformationReturnsStat,
+    KalmanInnovationVolStat,
+    OFISignedProxyStat,
+    VolWeightedBBWidthStat,
+    VwapParkinsonStretchStat,
+)
+from signalflow.ta.stat.realized_decomposition import (
+    JumpTruncatedVarianceRatioStat,
+    PreAveragedBipowerVariationStat,
+    RealisedBipowerVarianceRatioStat,
+    RealisedSemivarianceRatioStat,
+    RealizedQuarticityStat,
+    RVSemivarianceAsymmetryStat,
+)
 from signalflow.ta.stat.regression_extensions import (
     LinRegFitQuality,
     LinRegInterceptNormalized,
@@ -269,16 +300,41 @@ __all__ = [
     "ReturnKurtosisWindow",
     "ReturnSkewWindow",
     "ReturnTailRatio",
-    # Cross-disciplinary (sf-profit iter-27/28)
+    # Cross-disciplinary (sf-profit iter-27/28/29)
     "AllostaticFastSlowRatioStat",
     "AllostaticLoadDirectionalStat",
     "AllostaticLoadStat",
+    "AlmgrenChrissImpactDecayStat",
+    "AsymmetricSemiVolStretchStat",
     "BBPathRoughnessStat",
     "BBTensionDirectionalStat",
+    "BidAskSpreadProxyEMAStat",
     "BrownianBridgeTensionStat",
+    "CumZScorePowerLawStat",
+    "DownsideZScoreEMAStat",
+    "FisherInformationReturnsStat",
+    "FocusMaxStatStat",
     "ForeshockBuildupStat",
+    "GutenbergRichterBValueStat",
     "HawkesSelfExcitationStat",
+    "HawkesSignedJumpsStat",
+    "HawkesVolClimaxIntensityStat",
+    "JumpTruncatedVarianceRatioStat",
+    "KalmanInnovationVolStat",
+    "KatzFractalDimensionStat",
     "KullbackLeiblerDriftStat",
+    "MarkedHawkesJumpsStat",
+    "OFISignedProxyStat",
     "OmoriAftershockRateStat",
     "OmoriRateBroadStat",
+    "PowerLawHawkesStat",
+    "PreAveragedBipowerVariationStat",
+    "RealisedBipowerVarianceRatioStat",
+    "RealisedSemivarianceRatioStat",
+    "RealizedQuarticityStat",
+    "RVSemivarianceAsymmetryStat",
+    "SwingAmpDisplacementStat",
+    "VolWeightedBBWidthStat",
+    "VolWeightedZScoreEMAStat",
+    "VwapParkinsonStretchStat",
 ]

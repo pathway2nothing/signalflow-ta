@@ -173,3 +173,120 @@ class AllostaticFastSlowRatioStat(Feature):
         load_fast = _ema(z, self.tau_fast)
         load_slow = _ema(z, self.tau_slow) + 1e-12
         return df.with_columns(pl.Series(out_col, load_fast / load_slow, dtype=pl.Float64))
+
+
+@dataclass
+@feature("stat/cum_zscore_power_law")
+class CumZScorePowerLawStat(Feature):
+    """Cumulative z-score with power-law decay kernel.
+
+    EMA replaced by a slow power-law kernel `(i+1)^(-gamma)` giving
+    long-memory weights instead of exponential decay. Mimics
+    fractional-integration / rough-volatility memory structure.
+
+    Iter-29 stability: mean MI_normalised = 0.292 on D3 mean-reversion,
+    std 0.011 across 23 stable triples.
+    """
+
+    period: int = 60
+    gamma: int = 50  # gamma/100 = decay exponent
+
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["f08_pl_cum_z_{period}_{gamma}"]
+    test_params: ClassVar[list[dict]] = [
+        {"period": 60, "gamma": 50},
+        {"period": 240, "gamma": 70},
+        {"period": 120, "gamma": 50},
+    ]
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        from numpy.lib.stride_tricks import sliding_window_view
+        out_col = f"f08_pl_cum_z_{self.period}_{self.gamma}"
+        c = df["close"].to_numpy().astype(np.float64)
+        r = np.diff(np.log(c), prepend=c[0])
+        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
+        z = np.where(sd > 0, r / sd, 0.0)
+        w = (np.arange(1, self.period + 1).astype(np.float64)) ** (-self.gamma / 100.0)
+        w /= w.sum()
+        n = len(z)
+        out = np.full(n, np.nan, dtype=np.float64)
+        if n >= self.period:
+            wins = sliding_window_view(z, self.period)
+            out[self.period - 1:] = wins.dot(w[::-1])
+        return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
+
+
+@dataclass
+@feature("stat/vol_weighted_zscore_ema")
+class VolWeightedZScoreEMAStat(Feature):
+    """EMA of (return z-score × normalised volume) — conviction-weighted stress.
+
+    Scales each bar's z-score by its volume relative to recent average,
+    then EMA-smooths. Captures momentum from high-conviction bars and
+    suppresses noisy low-volume moves.
+
+    Iter-29 stability: mean MI_normalised = 0.249 on D3 mean-reversion,
+    std 0.015 across 19 stable triples.
+
+    Reference: Easley, D., Lopez de Prado, M. & O'Hara, M. (2012).
+    Flow Toxicity and Liquidity in a High-Frequency World.
+    """
+
+    period: int = 30
+    tau: int = 60
+
+    requires: ClassVar[list[str]] = ["close", "volume"]
+    outputs: ClassVar[list[str]] = ["f10_vw_z_ema_{period}_{tau}"]
+    test_params: ClassVar[list[dict]] = [
+        {"period": 30, "tau": 60},
+        {"period": 240, "tau": 120},
+        {"period": 120, "tau": 60},
+    ]
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        out_col = f"f10_vw_z_ema_{self.period}_{self.tau}"
+        c = df["close"].to_numpy().astype(np.float64)
+        v = df["volume"].to_numpy().astype(np.float64)
+        r = np.diff(np.log(c), prepend=c[0])
+        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
+        mn = pl.Series(r).rolling_mean(self.period, min_samples=2).to_numpy()
+        z = np.where(sd > 0, (r - mn) / sd, 0.0)
+        v_mean = pl.Series(v).rolling_mean(self.period, min_samples=2).to_numpy()
+        norm_v = v / np.maximum(v_mean, 1e-12)
+        wz = z * norm_v
+        wz = np.nan_to_num(wz, nan=0.0, posinf=0.0, neginf=0.0)
+        if (wz != 0).any():
+            lo, hi = np.quantile(wz, [0.01, 0.99])
+            wz = np.clip(wz, lo, hi)
+        out = pl.Series(wz).ewm_mean(span=self.tau).to_numpy()
+        return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
+
+
+@dataclass
+@feature("stat/downside_zscore_ema")
+class DownsideZScoreEMAStat(Feature):
+    """EMA of downside-only return z-score — panic-driven selling stress.
+
+    Iter-29 stability: mean MI_normalised = 0.117 across 10 stable triples.
+    """
+
+    period: int = 60
+    tau: int = 45
+
+    requires: ClassVar[list[str]] = ["close"]
+    outputs: ClassVar[list[str]] = ["f13_down_z_ema_{period}_{tau}"]
+    test_params: ClassVar[list[dict]] = [
+        {"period": 60, "tau": 45},
+        {"period": 240, "tau": 120},
+        {"period": 480, "tau": 60},
+    ]
+
+    def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        out_col = f"f13_down_z_ema_{self.period}_{self.tau}"
+        c = df["close"].to_numpy().astype(np.float64)
+        r = np.diff(np.log(c), prepend=c[0])
+        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
+        down = np.where(r < 0, r, 0.0)
+        z = np.where(sd > 0, down / sd, 0.0)
+        out = pl.Series(z).ewm_mean(span=self.tau).to_numpy()
+        return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
