@@ -1,6 +1,23 @@
 # src/signalflow/ta/stat/__init__.py
 """Statistical indicators (auxiliary features)."""
 
+from signalflow.ta.stat.aftershock import (
+    ForeshockBuildupStat,
+    OmoriAftershockRateStat,
+    OmoriRateBroadStat,
+)
+from signalflow.ta.stat.allostatic import (
+    AllostaticFastSlowRatioStat,
+    AllostaticLoadDirectionalStat,
+    AllostaticLoadStat,
+)
+from signalflow.ta.stat.brownian_bridge import (
+    BBPathRoughnessStat,
+    BBTensionDirectionalStat,
+    BrownianBridgeTensionStat,
+)
+from signalflow.ta.stat.hawkes import HawkesSelfExcitationStat
+from signalflow.ta.stat.kl_drift import KullbackLeiblerDriftStat
 from signalflow.ta.stat.regression_extensions import (
     LinRegFitQuality,
     LinRegInterceptNormalized,
@@ -252,4 +269,16 @@ __all__ = [
     "ReturnKurtosisWindow",
     "ReturnSkewWindow",
     "ReturnTailRatio",
+    # Cross-disciplinary (sf-profit iter-27/28)
+    "AllostaticFastSlowRatioStat",
+    "AllostaticLoadDirectionalStat",
+    "AllostaticLoadStat",
+    "BBPathRoughnessStat",
+    "BBTensionDirectionalStat",
+    "BrownianBridgeTensionStat",
+    "ForeshockBuildupStat",
+    "HawkesSelfExcitationStat",
+    "KullbackLeiblerDriftStat",
+    "OmoriAftershockRateStat",
+    "OmoriRateBroadStat",
 ]
