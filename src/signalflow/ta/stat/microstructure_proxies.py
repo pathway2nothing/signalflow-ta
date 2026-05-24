@@ -14,6 +14,7 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
+from signalflow.ta.stat._causal_helpers import log_returns, rolling_mean, rolling_std, truncated_ema
 
 
 @dataclass
@@ -49,10 +50,10 @@ class BidAskSpreadProxyEMAStat(Feature):
         c = df["close"].to_numpy().astype(np.float64)
         sp = np.log(np.maximum(h, 1e-12) / np.maximum(l, 1e-12)) - np.abs(
             np.log(np.maximum(c, 1e-12) / np.maximum(o, 1e-12)))
-        m = pl.Series(sp).rolling_mean(self.period, min_samples=2).to_numpy()
-        s = pl.Series(sp).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(s > 0, (sp - m) / s, 0.0)
-        out = pl.Series(z).ewm_mean(span=self.tau).to_numpy()
+        m = rolling_mean(sp, self.period)
+        s = rolling_std(sp, self.period)
+        z = np.where(np.isfinite(s) & (s > 0), (sp - m) / np.maximum(s, 1e-12), 0.0)
+        out = truncated_ema(z, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -128,7 +129,7 @@ class OFISignedProxyStat(Feature):
         v_med = pl.Series(v).rolling_median(240, min_samples=2).to_numpy()
         ofi_n = ofi_bar / np.maximum(v_med, 1e-12)
         ofi_n = np.nan_to_num(ofi_n, nan=0.0, posinf=0.0, neginf=0.0)
-        out = pl.Series(ofi_n).ewm_mean(span=self.period).to_numpy()
+        out = truncated_ema(ofi_n, self.period)
         return df.with_columns(pl.Series(out_col, np.clip(out, -10, 10), dtype=pl.Float64))
 
 
@@ -158,19 +159,23 @@ class KalmanInnovationVolStat(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Warmup-invariant rewrite: steady-state Kalman ≈ EMA, innovations = c - EMA.
+
+        For a random-walk Kalman with process noise q and obs noise 1, the
+        steady-state gain K* solves K*² + (q-1)K* - q = 0 ⇒ K* = (q + √(q²+4q)) / 2,
+        equivalent to EMA with span ≈ 2/K* − 1. We use truncated_ema instead of
+        recursive Kalman to make innovations warmup-invariant.
+        """
         out_col = f"f042_kalman_innov_{self.period}_{self.q}"
         c = df["close"].to_numpy().astype(np.float64)
         q_val = self.q / 100.0
-        n = len(c)
-        x_hat = np.zeros(n); P = np.ones(n); innov = np.zeros(n)
-        x_hat[0] = c[0]; P[0] = 1.0
-        for i in range(1, n):
-            x_pred = x_hat[i - 1]; P_pred = P[i - 1] + q_val
-            innov[i] = c[i] - x_pred
-            S = P_pred + 1.0; K = P_pred / S
-            x_hat[i] = x_pred + K * innov[i]
-            P[i] = (1 - K) * P_pred
-        out = pl.Series(innov).rolling_std(self.period, min_samples=2).to_numpy()
+        # Steady-state Kalman gain for random-walk model with R=1 observation noise:
+        K_star = (q_val + np.sqrt(q_val ** 2 + 4 * q_val)) / 2.0
+        tau = max(2, int(2.0 / max(K_star, 1e-6) - 1))
+        ema = truncated_ema(c, tau)
+        innov = c - ema
+        innov = np.where(np.isfinite(innov), innov, 0.0)
+        out = rolling_std(innov, self.period)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -207,10 +212,10 @@ class VwapParkinsonStretchStat(Feature):
         l = df["low"].to_numpy().astype(np.float64)
         v = df["volume"].to_numpy().astype(np.float64)
         pv = c * v
-        vwap = pl.Series(pv).rolling_mean(self.period, min_samples=2).to_numpy() / np.maximum(
-            pl.Series(v).rolling_mean(self.period, min_samples=2).to_numpy(), 1e-12)
+        v_mean = rolling_mean(v, self.period)
+        vwap = rolling_mean(pv, self.period) / np.where(np.isfinite(v_mean) & (v_mean > 0), v_mean, 1e-12)
         rng_sq = np.log(np.maximum(h, 1e-12) / np.maximum(l, 1e-12)) ** 2
-        park = np.sqrt(pl.Series(rng_sq).rolling_mean(self.period, min_samples=2).to_numpy() / (4 * math.log(2)))
+        park = np.sqrt(rolling_mean(rng_sq, self.period) / (4 * math.log(2)))
         out = (c - vwap) / np.maximum(park * c, 1e-12)
         return df.with_columns(pl.Series(out_col, np.clip(out, -20, 20), dtype=pl.Float64))
 
@@ -238,7 +243,7 @@ class FisherInformationReturnsStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"fisher_info_returns_{self.period}"
         c = df[self.source_col].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
+        r = log_returns(c)
+        sd = rolling_std(r, self.period)
         fisher = self.period / (sd ** 2 + 1e-20)
         return df.with_columns(pl.Series(out_col, np.log1p(fisher), dtype=pl.Float64))

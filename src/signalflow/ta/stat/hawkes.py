@@ -29,6 +29,7 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
+from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, rolling_sum, truncated_ema
 
 
 @dataclass
@@ -64,17 +65,12 @@ class HawkesSelfExcitationStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"hawkes_{self.period}_{self.tau}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        rets = np.diff(np.log(x), prepend=x[0])
-        sd = pl.Series(rets).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, np.abs(rets) / sd, 0.0)
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        rets = log_returns(c)
+        sd = rolling_std(rets, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), np.abs(rets) / np.maximum(sd, 1e-12), 0.0)
         events = (z > 2.0).astype(np.float64)
-        alpha = 1.0 - math.exp(-1.0 / self.tau)
-        intensity = np.zeros_like(events)
-        s = 0.0
-        for i in range(len(events)):
-            s = alpha * events[i] + (1 - alpha) * s
-            intensity[i] = s
+        intensity = truncated_ema(events, self.tau)
         return df.with_columns(pl.Series(out_col, intensity, dtype=pl.Float64))
 
 
@@ -105,11 +101,11 @@ class MarkedHawkesJumpsStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f15_marked_hawkes_{self.period}_{self.tau}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, r / sd, 0.0)
+        r = log_returns(c)
+        sd = rolling_std(r, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), r / np.maximum(sd, 1e-12), 0.0)
         mark = np.where(np.abs(z) > 2.0, np.abs(z), 0.0)
-        out = pl.Series(mark).ewm_mean(span=self.tau).to_numpy()
+        out = truncated_ema(mark, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -136,12 +132,13 @@ class HawkesVolClimaxIntensityStat(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        from signalflow.ta.stat._causal_helpers import rolling_mean
         out_col = f"f17_hawkes_vol_climax_{self.period}_{self.tau}"
         v = df["volume"].to_numpy().astype(np.float64)
-        mn = pl.Series(v).rolling_mean(self.period, min_samples=2).to_numpy()
-        sd = pl.Series(v).rolling_std(self.period, min_samples=2).to_numpy()
+        mn = rolling_mean(v, self.period)
+        sd = rolling_std(v, self.period)
         ev = (v > mn + 3 * sd).astype(np.float64)
-        out = pl.Series(ev).ewm_mean(span=self.tau).to_numpy()
+        out = truncated_ema(ev, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -170,12 +167,11 @@ class HawkesSignedJumpsStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f19_signed_jumps_{self.period}_{self.tau}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, r / sd, 0.0)
+        r = log_returns(c)
+        sd = rolling_std(r, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), r / np.maximum(sd, 1e-12), 0.0)
         jp = (z > 2.0).astype(np.float64); jn = (z < -2.0).astype(np.float64)
-        out = (pl.Series(jp).ewm_mean(span=self.tau).to_numpy() -
-               pl.Series(jn).ewm_mean(span=self.tau).to_numpy())
+        out = truncated_ema(jp, self.tau) - truncated_ema(jn, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -209,9 +205,9 @@ class PowerLawHawkesStat(Feature):
         from numpy.lib.stride_tricks import sliding_window_view
         out_col = f"f029_pl_hawkes_{self.K}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.K, min_samples=2).to_numpy()
-        z = np.where(sd > 0, np.abs(r) / sd, 0.0)
+        r = log_returns(c)
+        sd = rolling_std(r, self.K)
+        z = np.where(np.isfinite(sd) & (sd > 0), np.abs(r) / np.maximum(sd, 1e-12), 0.0)
         kernel = (np.arange(1, self.K + 1)) ** (-1.2)
         kernel /= kernel.sum()
         n = len(z)

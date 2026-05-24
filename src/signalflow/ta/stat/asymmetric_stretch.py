@@ -56,7 +56,7 @@ class AsymmetricSemiVolStretchStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f03_asym_sma_semi_{self.period}"
         c = df[self.source_col].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         ma = pl.Series(c).rolling_mean(self.period, min_samples=2).to_numpy()
         down_sq = np.where(r < 0, r ** 2, 0.0)
         up_sq = np.where(r > 0, r ** 2, 0.0)

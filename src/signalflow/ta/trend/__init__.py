@@ -29,6 +29,7 @@ from signalflow.ta.trend.stops import (
     PsarTrend,
     SupertrendTrend,
 )
+from signalflow.ta.trend.strength_causal import AdxTrendCausal
 from signalflow.ta.trend.strength import (
     AdxTrend,
     AroonTrend,
@@ -56,6 +57,7 @@ from signalflow.ta.trend.extensions import (
 __all__ = [
     # Strength
     "AdxTrend",
+    "AdxTrendCausal",
     "AroonTrend",
     "ChandelierTrend",
     "ChopTrend",

@@ -49,7 +49,7 @@ class RealisedBipowerVarianceRatioStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f30_bv_rv_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         rv = pl.Series(r ** 2).rolling_sum(self.period, min_samples=2).to_numpy()
         abs_r = np.abs(r)
         bv = (math.pi / 2.0) * pl.Series(abs_r * np.roll(abs_r, 1)).rolling_sum(
@@ -83,7 +83,7 @@ class RealisedSemivarianceRatioStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f31_rs_ratio_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         down = np.where(r < 0, r ** 2, 0.0)
         up = np.where(r > 0, r ** 2, 0.0)
         rs_neg = pl.Series(down).rolling_sum(self.period, min_samples=2).to_numpy()
@@ -117,7 +117,7 @@ class JumpTruncatedVarianceRatioStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f34_jt_ratio_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
         z = np.where(sd > 0, r / sd, 0.0)
         r_tr = np.where(np.abs(z) < 2.0, r, 0.0)
@@ -155,7 +155,7 @@ class RVSemivarianceAsymmetryStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f013_rv_asym_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         down = np.where(r < 0, r ** 2, 0.0)
         up = np.where(r > 0, r ** 2, 0.0)
         rs_n = pl.Series(down).rolling_sum(self.period, min_samples=2).to_numpy()
@@ -188,7 +188,7 @@ class RealizedQuarticityStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f051_rq_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         rq = pl.Series(r ** 4).rolling_sum(self.period, min_samples=2).to_numpy() * (self.period / 3.0)
         return df.with_columns(pl.Series(out_col, np.log1p(rq * 1e8), dtype=pl.Float64))
 

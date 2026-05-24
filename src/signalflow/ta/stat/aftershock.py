@@ -65,29 +65,30 @@ class OmoriAftershockRateStat(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Warmup-invariant: per-bar window scan only on last `lookforward` bars."""
+        from signalflow.ta.stat._causal_helpers import log_returns, rolling_std
         out_col = f"omori_rate_{self.period}_{self.lookforward}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        n = len(x)
-        rets = np.diff(np.log(x), prepend=x[0])
-        s = pl.Series(rets).rolling_std(window_size=self.period, min_samples=2).to_numpy()
-        z = np.where(s > 0, rets / s, 0.0)
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        n = len(c)
+        rets = log_returns(c)
+        s = rolling_std(rets, self.period)
+        z = np.where(np.isfinite(s) & (s > 0), rets / np.maximum(s, 1e-12), 0.0)
         big = (np.abs(z) > 3.0).astype(np.int8)
         small = (np.abs(z) > 1.0).astype(np.int8)
-        last_big = np.full(n, -1, dtype=np.int64)
-        idx = -1
-        for i in range(n):
-            if big[i]:
-                idx = i
-            last_big[i] = idx
+        # For each bar i: find last big-event in [i-lookforward, i-1]. If none → NaN.
+        # Then count fraction of "small" events in (lb, i].
         out = np.full(n, np.nan, dtype=np.float64)
-        for i in range(n):
-            lb = last_big[i]
-            if lb < 0 or i - lb > self.lookforward:
+        lf = int(self.lookforward)
+        for i in range(lf, n):
+            win_big = big[i - lf:i]
+            if not win_big.any():
                 continue
-            start = lb + 1
-            end = min(i + 1, lb + 1 + self.lookforward)
-            if end > start:
-                out[i] = small[start:end].sum() / (end - start)
+            # last big index within window (relative offset from i-lf)
+            rel_lb = int(np.where(win_big)[0][-1])
+            lb = (i - lf) + rel_lb
+            seg = small[lb + 1:i + 1]
+            if seg.size > 0:
+                out[i] = seg.sum() / seg.size
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -117,29 +118,27 @@ class OmoriRateBroadStat(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Warmup-invariant Omori broad."""
+        from signalflow.ta.stat._causal_helpers import log_returns, rolling_std
         out_col = f"omori_broad_{self.period}_{self.lookforward}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        n = len(x)
-        rets = np.diff(np.log(x), prepend=x[0])
-        s = pl.Series(rets).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(s > 0, rets / s, 0.0)
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        n = len(c)
+        rets = log_returns(c)
+        s = rolling_std(rets, self.period)
+        z = np.where(np.isfinite(s) & (s > 0), rets / np.maximum(s, 1e-12), 0.0)
         big = (np.abs(z) > 2.5).astype(np.int8)
         small = (np.abs(z) > 0.5).astype(np.int8)
-        last_big = np.full(n, -1, dtype=np.int64)
-        idx = -1
-        for i in range(n):
-            if big[i]:
-                idx = i
-            last_big[i] = idx
         out = np.full(n, np.nan, dtype=np.float64)
-        for i in range(n):
-            lb = last_big[i]
-            if lb < 0 or i - lb > self.lookforward:
+        lf = int(self.lookforward)
+        for i in range(lf, n):
+            win_big = big[i - lf:i]
+            if not win_big.any():
                 continue
-            start = lb + 1
-            end = min(i + 1, lb + 1 + self.lookforward)
-            if end > start:
-                out[i] = small[start:end].sum() / (end - start)
+            rel_lb = int(np.where(win_big)[0][-1])
+            lb = (i - lf) + rel_lb
+            seg = small[lb + 1:i + 1]
+            if seg.size > 0:
+                out[i] = seg.sum() / seg.size
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -168,12 +167,13 @@ class ForeshockBuildupStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         from numpy.lib.stride_tricks import sliding_window_view
+        from signalflow.ta.stat._causal_helpers import log_returns, rolling_std
 
         out_col = f"foreshock_{self.period}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        rets = np.diff(np.log(x), prepend=x[0])
-        sd = pl.Series(rets).rolling_std(self.period * 4, min_samples=2).to_numpy()
-        z = np.where(sd > 0, np.abs(rets) / sd, 0.0)
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        rets = log_returns(c)
+        sd = rolling_std(rets, self.period * 4)
+        z = np.where(np.isfinite(sd) & (sd > 0), np.abs(rets) / np.maximum(sd, 1e-12), 0.0)
         n = len(z)
         w = self.period
         if n < w:
@@ -221,7 +221,7 @@ class GutenbergRichterBValueStat(Feature):
         n = len(c); w = int(self.period)
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
-        r = np.diff(np.log(c), prepend=c[0])
+        r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         mag = np.log(np.abs(r) + 1e-12)
         wins = sliding_window_view(mag, w)
         m_min = wins.min(axis=1); m_mean = wins.mean(axis=1)

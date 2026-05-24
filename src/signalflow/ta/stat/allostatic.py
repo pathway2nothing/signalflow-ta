@@ -21,6 +21,7 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
+from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, truncated_ema
 
 
 @dataclass
@@ -62,16 +63,11 @@ class AllostaticLoadStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"allo_load_{self.period}_{self.tau}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        rets = np.diff(np.log(x), prepend=x[0])
-        sd = pl.Series(rets).rolling_std(window_size=self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, np.abs(rets) / sd, 0.0)
-        alpha = 1.0 - math.exp(-1.0 / self.tau)
-        load = np.zeros_like(z)
-        s = 0.0
-        for i in range(len(z)):
-            s = alpha * z[i] + (1 - alpha) * s
-            load[i] = s
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        rets = log_returns(c)
+        sd = rolling_std(rets, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), np.abs(rets) / np.maximum(sd, 1e-12), 0.0)
+        load = truncated_ema(z, self.tau)
         return df.with_columns(pl.Series(out_col, load, dtype=pl.Float64))
 
 
@@ -110,16 +106,11 @@ class AllostaticLoadDirectionalStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"allo_dir_{self.period}_{self.tau}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        rets = np.diff(np.log(x), prepend=x[0])
-        sd = pl.Series(rets).rolling_std(self.period, min_samples=2).to_numpy()
-        signed_z = np.where(sd > 0, rets / sd, 0.0)
-        alpha = 1.0 - math.exp(-1.0 / self.tau)
-        load = np.zeros_like(signed_z)
-        s = 0.0
-        for i in range(len(signed_z)):
-            s = alpha * signed_z[i] + (1 - alpha) * s
-            load[i] = s
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        rets = log_returns(c)
+        sd = rolling_std(rets, self.period)
+        signed_z = np.where(np.isfinite(sd) & (sd > 0), rets / np.maximum(sd, 1e-12), 0.0)
+        load = truncated_ema(signed_z, self.tau)
         return df.with_columns(pl.Series(out_col, load, dtype=pl.Float64))
 
 
@@ -156,23 +147,14 @@ class AllostaticFastSlowRatioStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"allo_fs_{self.period}_{self.tau_fast}_{self.tau_slow}"
-        x = df[self.source_col].to_numpy().astype(np.float64)
-        rets = np.diff(np.log(x), prepend=x[0])
-        sd = pl.Series(rets).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, np.abs(rets) / sd, 0.0)
-
-        def _ema(arr, tau):
-            a = 1.0 - math.exp(-1.0 / tau)
-            out = np.zeros_like(arr)
-            s = 0.0
-            for i in range(len(arr)):
-                s = a * arr[i] + (1 - a) * s
-                out[i] = s
-            return out
-
-        load_fast = _ema(z, self.tau_fast)
-        load_slow = _ema(z, self.tau_slow) + 1e-12
-        return df.with_columns(pl.Series(out_col, load_fast / load_slow, dtype=pl.Float64))
+        c = df[self.source_col].to_numpy().astype(np.float64)
+        rets = log_returns(c)
+        sd = rolling_std(rets, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), np.abs(rets) / np.maximum(sd, 1e-12), 0.0)
+        load_fast = truncated_ema(z, self.tau_fast)
+        load_slow = truncated_ema(z, self.tau_slow)
+        ratio = load_fast / np.where(np.isfinite(load_slow) & (load_slow > 1e-12), load_slow, 1e-12)
+        return df.with_columns(pl.Series(out_col, ratio, dtype=pl.Float64))
 
 
 @dataclass
@@ -203,9 +185,9 @@ class CumZScorePowerLawStat(Feature):
         from numpy.lib.stride_tricks import sliding_window_view
         out_col = f"f08_pl_cum_z_{self.period}_{self.gamma}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, r / sd, 0.0)
+        r = log_returns(c)
+        sd = rolling_std(r, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), r / np.maximum(sd, 1e-12), 0.0)
         w = (np.arange(1, self.period + 1).astype(np.float64)) ** (-self.gamma / 100.0)
         w /= w.sum()
         n = len(z)
@@ -244,21 +226,22 @@ class VolWeightedZScoreEMAStat(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        from signalflow.ta.stat._causal_helpers import rolling_mean
         out_col = f"f10_vw_z_ema_{self.period}_{self.tau}"
         c = df["close"].to_numpy().astype(np.float64)
         v = df["volume"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
-        mn = pl.Series(r).rolling_mean(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, (r - mn) / sd, 0.0)
-        v_mean = pl.Series(v).rolling_mean(self.period, min_samples=2).to_numpy()
-        norm_v = v / np.maximum(v_mean, 1e-12)
+        r = log_returns(c)
+        sd = rolling_std(r, self.period)
+        mn = rolling_mean(r, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), (r - mn) / np.maximum(sd, 1e-12), 0.0)
+        v_mean = rolling_mean(v, self.period)
+        norm_v = v / np.where(np.isfinite(v_mean) & (v_mean > 0), v_mean, 1e-12)
         wz = z * norm_v
         wz = np.nan_to_num(wz, nan=0.0, posinf=0.0, neginf=0.0)
-        if (wz != 0).any():
-            lo, hi = np.quantile(wz, [0.01, 0.99])
-            wz = np.clip(wz, lo, hi)
-        out = pl.Series(wz).ewm_mean(span=self.tau).to_numpy()
+        wz_std = rolling_std(wz, self.period * 4)
+        wz_std = np.where(np.isfinite(wz_std) & (wz_std > 0), wz_std, 1.0)
+        wz = np.clip(wz, -5.0 * wz_std, 5.0 * wz_std)
+        out = truncated_ema(wz, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 
 
@@ -284,9 +267,9 @@ class DownsideZScoreEMAStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f13_down_z_ema_{self.period}_{self.tau}"
         c = df["close"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
+        r = log_returns(c)
+        sd = rolling_std(r, self.period)
         down = np.where(r < 0, r, 0.0)
-        z = np.where(sd > 0, down / sd, 0.0)
-        out = pl.Series(z).ewm_mean(span=self.tau).to_numpy()
+        z = np.where(np.isfinite(sd) & (sd > 0), down / np.maximum(sd, 1e-12), 0.0)
+        out = truncated_ema(z, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))

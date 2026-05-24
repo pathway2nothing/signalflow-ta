@@ -40,17 +40,27 @@ class FocusMaxStatStat(Feature):
     ]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Warmup-invariant: max-stat computed via rolling cumulative within window only.
+
+        Original cum_z = np.cumsum(z) introduces unbounded path-dependence.
+        Equivalent formulation: max over s ∈ [t-w+1, t+1] of Σ_{k=s..t} z[k]
+        is computed by taking the maximum *suffix sum* within the rolling window.
+        """
+        from signalflow.ta.stat._causal_helpers import log_returns, rolling_mean, rolling_std
         out_col = f"f037_focus_{self.period}"
         c = df[self.source_col].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
-        mn = pl.Series(r).rolling_mean(self.period, min_samples=2).to_numpy()
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
-        z = np.where(sd > 0, (r - mn) / sd, 0.0)
-        cum_z = np.cumsum(z)
-        n = len(cum_z); w = self.period
+        r = log_returns(c)
+        mn = rolling_mean(r, self.period)
+        sd = rolling_std(r, self.period)
+        z = np.where(np.isfinite(sd) & (sd > 0), (r - mn) / np.maximum(sd, 1e-12), 0.0)
+        n = len(z); w = self.period
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
-        wins = sliding_window_view(cum_z, w)
-        max_stat = wins[:, -1:] - wins.min(axis=1, keepdims=True)
+        wins = sliding_window_view(z, w)
+        # Suffix sums per row: cumulative sum from end to start
+        # max(suffix_sums) = max over s of Σ_{k=s..end} z[k]
+        # Vectorise: reverse, cumsum, max
+        rev_cumsum = np.cumsum(wins[:, ::-1], axis=1)
+        max_stat = rev_cumsum.max(axis=1)
         pad = np.full(w - 1, np.nan, dtype=np.float64)
-        return df.with_columns(pl.Series(out_col, np.concatenate([pad, max_stat.flatten()]), dtype=pl.Float64))
+        return df.with_columns(pl.Series(out_col, np.concatenate([pad, max_stat]), dtype=pl.Float64))

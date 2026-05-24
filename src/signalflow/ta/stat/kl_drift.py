@@ -66,7 +66,7 @@ class KullbackLeiblerDriftStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"kl_drift_{self.short}_{self.long}"
         x = df[self.source_col].to_numpy().astype(np.float64)
-        rets = np.diff(np.log(x), prepend=x[0])
+        rets = np.diff(np.log(np.maximum(x, 1e-12)), prepend=np.log(max(float(x[0]), 1e-12)))
         n = len(rets)
         if n < self.long:
             return df.with_columns(pl.lit(np.nan).alias(out_col))

@@ -1,5 +1,6 @@
 """Global (cross-sectional) features for market-wide indicators."""
 
+from signalflow.ta.global_features.btc_contagion import BTCStressContagionStat
 from signalflow.ta.global_features.market import (
     MarketIndexFeature,
     MarketRollingMinFeature,
@@ -28,6 +29,8 @@ from signalflow.ta.global_features.cross_sectional import (
 )
 
 __all__ = [
+    # Cross-pair contagion (sf-profit iter-31)
+    "BTCStressContagionStat",
     "MarketIndexFeature",
     "MarketRollingMinFeature",
     "MarketRsiFeature",

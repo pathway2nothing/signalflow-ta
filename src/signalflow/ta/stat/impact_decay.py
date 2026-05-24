@@ -19,6 +19,7 @@ import polars as pl
 
 from signalflow.core import feature
 from signalflow.feature.base import Feature
+from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, rolling_sum, truncated_ema
 
 
 @dataclass
@@ -46,10 +47,10 @@ class AlmgrenChrissImpactDecayStat(Feature):
         out_col = f"f51_ac_impact_{self.ema}_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
         v = df["volume"].to_numpy().astype(np.float64)
-        r = np.diff(np.log(c), prepend=c[0])
+        r = log_returns(c)
         rv = r * v
-        ema_rv = pl.Series(rv).ewm_mean(span=self.ema).to_numpy()
-        sd = pl.Series(r).rolling_std(self.period, min_samples=2).to_numpy()
-        v_sum = pl.Series(v).rolling_sum(self.ema, min_samples=2).to_numpy()
+        ema_rv = truncated_ema(rv, self.ema)
+        sd = rolling_std(r, self.period)
+        v_sum = rolling_sum(v, self.ema)
         out = ema_rv / np.maximum(sd * v_sum, 1e-12)
         return df.with_columns(pl.Series(out_col, np.clip(out, -100, 100), dtype=pl.Float64))
