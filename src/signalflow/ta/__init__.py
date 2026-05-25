@@ -3,8 +3,15 @@ from signalflow.ta import (
     global_features,
     microstructure,
     path_shape,
+    probabilistic,
     signal_features,
     signals,
+)
+from signalflow.ta.probabilistic import (
+    BayesianShrinkageZscore,
+    GMMVolRegime3State,
+    GMMVolRegime5State,
+    PosteriorReversalProb,
 )
 from signalflow.ta.filters import (
     AdaptiveEMAError,
