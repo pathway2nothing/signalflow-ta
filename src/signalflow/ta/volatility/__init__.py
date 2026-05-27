@@ -34,6 +34,20 @@ from signalflow.ta.volatility.range import (
     NatrVol,
     TrueRangeVol,
 )
+from signalflow.ta.volatility.extensions import (
+    AltVolDeviation,
+    GarmanKlassPctRank,
+    GarmanKlassRatio,
+    NatrPctRank,
+    NatrRatio,
+    ParkinsonAccel,
+    ParkinsonVolRatio,
+    ParkinsonZScore,
+    PriceZAtr,
+    RealizedVolPctRank,
+    RealizedVolRatio,
+    VolOfVol,
+)
 
 __all__ = [
     "AccBandsVol",
@@ -59,4 +73,17 @@ __all__ = [
     # Range
     "TrueRangeVol",
     "UlcerIndexVol",
+    # Extensions (sf-profit iter-3.1/15/16/20)
+    "AltVolDeviation",
+    "GarmanKlassPctRank",
+    "GarmanKlassRatio",
+    "NatrPctRank",
+    "NatrRatio",
+    "ParkinsonAccel",
+    "ParkinsonVolRatio",
+    "ParkinsonZScore",
+    "PriceZAtr",
+    "RealizedVolPctRank",
+    "RealizedVolRatio",
+    "VolOfVol",
 ]

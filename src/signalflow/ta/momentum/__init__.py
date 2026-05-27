@@ -33,6 +33,17 @@ from signalflow.ta.momentum.oscillators import (
     UoMom,
     WillrMom,
 )
+from signalflow.ta.momentum.extensions import (
+    MacdNorm,
+    MomPosNeg,
+    MomentumOfMomentum,
+    PriceAcceleration,
+    PriceMomentumConfirmation,
+    RocSignedLog,
+    RsiSpread,
+    TrendPersistence,
+    VolPriceConfirmation,
+)
 
 __all__ = [
     # Kinematics
@@ -57,4 +68,14 @@ __all__ = [
     "TsiMom",
     "UoMom",
     "WillrMom",
+    # Extensions (sf-profit feature_research_lib + iter-15/16/18/20)
+    "MacdNorm",
+    "MomPosNeg",
+    "MomentumOfMomentum",
+    "PriceAcceleration",
+    "PriceMomentumConfirmation",
+    "RocSignedLog",
+    "RsiSpread",
+    "TrendPersistence",
+    "VolPriceConfirmation",
 ]

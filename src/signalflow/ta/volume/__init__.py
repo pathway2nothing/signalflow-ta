@@ -28,6 +28,21 @@ from signalflow.ta.volume.oscillators import (
     KvoVolume,
     MfiVolume,
 )
+from signalflow.ta.volume.extensions import (
+    AbsReturnVolumeCorr,
+    PriceImpactPerUnit,
+    PriceVolumeCorrelation,
+    SignedVolumeAccumulation,
+    VWAPDeviation,
+    VolPctRankSignedTrend,
+    VolumeAcceleration,
+    VolumeImbalance,
+    VolumeMomentumRatio,
+    VolumePerRange,
+    VolumeSpike,
+    VolumeWeightedReturn,
+    VolumeZScore,
+)
 
 __all__ = [
     "AdVolume",
@@ -49,4 +64,18 @@ __all__ = [
     "ObvVolume",
     "PviVolume",
     "PvtVolume",
+    # Extensions (sf-profit iter-15/16/18/20)
+    "AbsReturnVolumeCorr",
+    "PriceImpactPerUnit",
+    "PriceVolumeCorrelation",
+    "SignedVolumeAccumulation",
+    "VWAPDeviation",
+    "VolPctRankSignedTrend",
+    "VolumeAcceleration",
+    "VolumeImbalance",
+    "VolumeMomentumRatio",
+    "VolumePerRange",
+    "VolumeSpike",
+    "VolumeWeightedReturn",
+    "VolumeZScore",
 ]
