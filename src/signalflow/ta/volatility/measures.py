@@ -52,6 +52,11 @@ class MassIndexVol(Feature):
     requires: ClassVar[list[str]] = ["high", "low"]
     outputs: ClassVar[list[str]] = ["massi_{fast}_{slow}"]
 
+    # Recursive: mass_index_kernel seeds its EMAs from the single first observation
+    # (ema1[0] = hl_range[0], NOT SMA-init). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy().astype(np.float64)
         low = df["low"].to_numpy().astype(np.float64)
@@ -185,6 +190,11 @@ class RviVol(Feature):
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["rvi_{period}"]
 
+    # Recursive: rvi_kernel smooths up/down std with EMA seeded from the SMA of the
+    # first `period` values. Converges within warmup. Entry-point invariant.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy().astype(np.float64)
 
@@ -301,6 +311,11 @@ class AtrPercentVol(Feature):
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = ["atr_pct_{period}"]
+
+    # Recursive: ATR uses rma_sma_init (Wilder's RMA seeded from the SMA of the first
+    # `period` TR values). Converges within warmup. Entry-point invariant.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()

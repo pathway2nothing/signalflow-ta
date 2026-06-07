@@ -57,6 +57,11 @@ class KamaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_kama_{period}"]
 
+    # Recursive: kama_kernel seeds from SMA of the first `period` bars and converges
+    # within warmup. Entry-point invariant (SMA-init contract).
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
 
@@ -193,6 +198,11 @@ class JmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_jma_{period}"]
 
+    # Recursive: jma_kernel seeds from SMA of the first `period` bars and converges
+    # within warmup. Entry-point invariant (SMA-init contract).
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
 
@@ -247,6 +257,11 @@ class VidyaSmooth(Feature):
 
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_vidya_{period}"]
+
+    # Recursive: vidya_kernel seeds from SMA of the first (period+1) bars and converges
+    # within warmup. Entry-point invariant (SMA-init contract).
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
@@ -310,6 +325,11 @@ class T3Smooth(Feature):
 
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_t3_{period}"]
+
+    # Recursive: cascaded EMAs all use ema_sma_init (SMA-seeded). Converges within
+    # warmup. Entry-point invariant (SMA-init contract).
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
@@ -382,6 +402,12 @@ class ZlmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_zlma_{period}"]
 
+    # Recursive in the default ma_type="ema" mode: polars ewm_mean(adjust=False),
+    # single-value seed (NOT SMA-init). Not entry-point invariant in the canonical
+    # sense. (ma_type="sma" mode is windowed/invariant, but the default is ema.)
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         lag = int((self.period - 1) / 2)
@@ -447,6 +473,11 @@ class McGinleySmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_mcg_{period}"]
 
+    # Recursive: mcginley_kernel seeds from the single first observation
+    # (md[0] = source[0], NOT SMA-init). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy().astype(np.float64)
 
@@ -502,6 +533,11 @@ class FramaSmooth(Feature):
 
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_frama_{period}"]
+
+    # Recursive: frama_kernel seeds from a single price (source[period-1], NOT an
+    # SMA mean). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
 
     def __post_init__(self) -> None:
         if self.period % 2 != 0:

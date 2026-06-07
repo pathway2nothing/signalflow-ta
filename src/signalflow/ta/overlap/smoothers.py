@@ -93,6 +93,11 @@ class EmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_ema_{period}"]
 
+    # Recursive: uses polars ewm_mean(adjust=False), seeded from the single first
+    # observation (NOT SMA-init). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         ema = df.select(pl.col(self.source_col).ewm_mean(span=self.period, adjust=False)).to_series().to_numpy()
@@ -192,6 +197,11 @@ class RmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_rma_{period}"]
 
+    # Recursive: uses polars ewm_mean(adjust=False), seeded from the single first
+    # observation (NOT SMA-init). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         equivalent_span = 2 * self.period - 1
@@ -246,6 +256,11 @@ class DemaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_dema_{period}"]
 
+    # Recursive: built on cascaded polars ewm_mean(adjust=False), single-value
+    # seed (NOT SMA-init). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()
         ema1 = df[self.source_col].ewm_mean(span=self.period, adjust=False)
@@ -299,6 +314,11 @@ class TemaSmooth(Feature):
 
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_tema_{period}"]
+
+    # Recursive: built on cascaded polars ewm_mean(adjust=False), single-value
+    # seed (NOT SMA-init). Not entry-point invariant in the canonical sense.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = False
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         source = df[self.source_col].to_numpy()

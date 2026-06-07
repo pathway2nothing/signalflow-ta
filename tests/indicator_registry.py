@@ -50,7 +50,13 @@ def get_default_params(cls: type) -> dict:
 
     # Get from dataclass fields
     if hasattr(cls, "__dataclass_fields__"):
+        import dataclasses as _dc
+
         for name, field_info in cls.__dataclass_fields__.items():
+            # Skip ClassVar declarations: they live in __dataclass_fields__ but are
+            # NOT __init__ parameters (e.g. requires/outputs/is_recursive/warmup_invariant).
+            if field_info._field_type is not _dc._FIELD:  # pragma: no cover - simple guard
+                continue
             # Skip inherited fields from base classes, test metadata, and private fields
             if name in (
                 "pair_col",
