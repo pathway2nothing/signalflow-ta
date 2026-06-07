@@ -41,6 +41,11 @@ class RsiMom(Feature):
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["rsi_{period}"]
 
+    # Recursive: avg_gain/avg_loss use rma_sma_init (Wilder's RMA seeded from the SMA
+    # of the first `period` bars). Converges within warmup. Entry-point invariant.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         close = df["close"].to_numpy()
         len(close)

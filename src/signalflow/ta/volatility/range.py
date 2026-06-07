@@ -101,6 +101,11 @@ class AtrVol(Feature):
     requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = ["atr_{period}"]
 
+    # Recursive: every ma_type (rma/ema/sma) uses an SMA-seeded kernel
+    # (rma_sma_init / ema_sma_init / sma_nb). Converges within warmup. Entry-point invariant.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
+
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
@@ -178,6 +183,11 @@ class NatrVol(Feature):
 
     requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = ["natr_{period}"]
+
+    # Recursive: every ma_type (rma/ema/sma) uses an SMA-seeded kernel
+    # (rma_sma_init / ema_sma_init / sma_nb). Converges within warmup. Entry-point invariant.
+    is_recursive: ClassVar[bool] = True
+    warmup_invariant: ClassVar[bool] = True
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         high = df["high"].to_numpy()
