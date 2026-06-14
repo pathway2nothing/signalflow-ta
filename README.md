@@ -8,10 +8,10 @@
 
 # signalflow-ta
 
-**Technical analysis extension for SignalFlow - 290+ indicators + 24 signal detectors**
+**Technical analysis plugin for SignalFlow - 250+ indicator features + 30 signal detectors**
 
 <p>
-<a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.6.0-7c3aed" alt="Version"></a>
+<a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.8.1-7c3aed" alt="Version"></a>
 <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12+-3b82f6?logo=python&logoColor=white" alt="Python 3.12+"></a>
 <a href="https://signalflow-trading.com"><img src="https://img.shields.io/badge/docs-signalflow--trading.com-7c3aed" alt="Docs"></a>
 </p>
@@ -22,17 +22,26 @@
 
 Part of the [SignalFlow](https://github.com/pathway2nothing/sf-project) ecosystem.
 
-290+ technical analysis indicators organized into 11 modules, 24 signal detectors with configurable filters, and `AutoFeatureNormalizer` for automatic normalization.
+A V5 plugin that registers 250+ technical-analysis indicator features and 30
+signal detectors with configurable filters, plus `AutoFeatureNormalizer` for
+automatic normalization. Installing it auto-registers every component with the
+core `signalflow` registry via entry points - no imports or wiring needed.
 
 ## Installation
 
 ```bash
-pip install signalflow-ta
+pip install signalflow-ta            # pulls signalflow-trading
+# or, from the core:
+pip install "signalflow-trading[ta]"
 ```
 
-**Requires:** Python ≥ 3.12, signalflow-trading ≥ 0.5.0, pandas-ta ≥ 0.4.67b0
+**Requires:** Python ≥ 3.12, signalflow-trading ≥ 0.8.0. Optional: `signalflow-ta[numba]` for faster kernels.
 
 ## Usage
+
+Once installed, every indicator and detector is discoverable from the core
+registry (`sf.registry.list(sf.ComponentType.TRANSFORM)`) and usable directly in
+a `Flow`. You can also import the classes:
 
 ```python
 import signalflow.ta as ta
@@ -330,7 +339,7 @@ Each existing module gained new classes from sf-profit feature research. Selecte
 
 ---
 
-## Signal Detectors (24)
+## Signal Detectors (30)
 
 All detectors support configurable `direction` (`"long"`, `"short"`, `"both"`) and optional filters.
 
