@@ -1,24 +1,22 @@
 """BTC stress contagion features.
 
 Broadcast a BTC-derived stress signal (e.g. EMA of |z-score| of BTC returns)
-to all pairs in the universe — treating BTC as a market-wide stress driver
+to all pairs in the universe - treating BTC as a market-wide stress driver
 rather than a per-pair input.
 
 Validated empirically: best mean MI_normalised = 0.160 on forward volatility
 regime (B1) with std 0.037 across 6 walk-forward folds, 37 stable triples
 in iter-31 of sf-profit (cross-pair research).
 """
-from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 BTC_PAIR = "BTCUSDT"
 
@@ -38,13 +36,6 @@ class BTCStressContagionStat(Feature):
 
     Captures systemic stress propagation from the dominant asset to the
     full universe. Predictive of forward volatility regime on altcoins.
-
-    Attributes:
-        period: rolling-σ window for the z-score denominator.
-        tau:    EMA characteristic time (bars).
-
-    Reference: Bivariate Hawkes / cross-excitation literature, applied to
-    crypto. See iter-31 of sf-profit/archive for empirical evidence.
     """
 
     period: int = 240

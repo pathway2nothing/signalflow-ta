@@ -1,13 +1,12 @@
 """Context-aware signal features (signal + market environment)."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -46,7 +45,6 @@ class RegimeSensitivity(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Hit flag
         df = df.with_columns(
             pl.when(pl.col("label").is_not_null())
             .then((pl.col("signal_type") == pl.col("label")).cast(pl.Float64))
@@ -54,7 +52,6 @@ class RegimeSensitivity(SignalFeature):
             .alias("_hit"),
         )
 
-        # Get volatility from context
         ohlcv = context.get("ohlcv") if context else None
         if ohlcv is None or "close" not in ohlcv.columns:
             return df.select([self.group_col, self.ts_col]).with_columns(
@@ -63,7 +60,6 @@ class RegimeSensitivity(SignalFeature):
                 pl.lit(None, dtype=pl.Float64).alias(spread_col),
             )
 
-        # Compute rolling volatility on ohlcv
         vol_df = (
             ohlcv.sort([self.group_col, self.ts_col])
             .with_columns(
@@ -77,10 +73,8 @@ class RegimeSensitivity(SignalFeature):
             .select([self.group_col, self.ts_col, "_rvol"])
         )
 
-        # Join volatility to signals
         df = df.join(vol_df, on=[self.group_col, self.ts_col], how="left")
 
-        # Regime threshold: rolling median of vol
         vol_median = (
             pl.col("_rvol")
             .rolling_median(window_size=self.window, min_samples=2)
@@ -90,7 +84,6 @@ class RegimeSensitivity(SignalFeature):
 
         is_high_vol = pl.col("_rvol") >= pl.col("_vol_median")
 
-        # Per-regime hit (null if wrong regime or label unresolved)
         df = df.with_columns(
             pl.when(is_high_vol & pl.col("_hit").is_not_null())
             .then(pl.col("_hit"))
@@ -102,7 +95,6 @@ class RegimeSensitivity(SignalFeature):
             .alias("_hit_lo"),
         )
 
-        # Rolling accuracy per regime
         df = df.with_columns(
             pl.col("_hit_hi")
             .rolling_mean(window_size=self.window, min_samples=1)
@@ -114,7 +106,6 @@ class RegimeSensitivity(SignalFeature):
             .alias(lo_col),
         )
 
-        # Spread = high_vol_acc - low_vol_acc
         df = df.with_columns(
             (pl.col(hi_col) - pl.col(lo_col)).alias(spread_col),
         )
@@ -156,7 +147,6 @@ class VolatilityAdjustedEV(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Direction sign
         direction = (
             pl.when(pl.col("signal_type") == "rise")
             .then(pl.lit(1.0))
@@ -165,7 +155,6 @@ class VolatilityAdjustedEV(SignalFeature):
             .otherwise(pl.lit(0.0))
         )
 
-        # Signed return
         ret_expr = pl.col("ret").cast(pl.Float64) if "ret" in df.columns else pl.lit(0.0)
         df = df.with_columns(
             pl.when(pl.col("label").is_not_null())
@@ -174,7 +163,6 @@ class VolatilityAdjustedEV(SignalFeature):
             .alias("_signed_ret"),
         )
 
-        # Get volatility
         ohlcv = context.get("ohlcv") if context else None
         if ohlcv is None or "close" not in ohlcv.columns:
             return df.select([self.group_col, self.ts_col]).with_columns(
@@ -196,7 +184,6 @@ class VolatilityAdjustedEV(SignalFeature):
 
         df = df.join(vol_df, on=[self.group_col, self.ts_col], how="left")
 
-        # Vol-adjusted signed return
         df = df.with_columns(
             pl.when(pl.col("_rvol") > 0)
             .then(pl.col("_signed_ret") / pl.col("_rvol"))
@@ -265,7 +252,6 @@ class MomentumAlignment(SignalFeature):
                 pl.lit(None, dtype=pl.Float64).alias(counter_col),
             )
 
-        # Momentum: sign of rolling return over mom_window bars
         mom_df = (
             ohlcv.sort([self.group_col, self.ts_col])
             .with_columns(
@@ -280,7 +266,6 @@ class MomentumAlignment(SignalFeature):
 
         df = df.join(mom_df, on=[self.group_col, self.ts_col], how="left")
 
-        # Signal direction sign: rise = +1, fall = -1
         sig_dir = (
             pl.when(pl.col("signal_type") == "rise")
             .then(pl.lit(1.0))

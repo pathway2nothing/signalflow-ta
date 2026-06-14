@@ -1,12 +1,11 @@
 """PID-controller terms: integral and derivative of close-vs-SMA error."""
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass

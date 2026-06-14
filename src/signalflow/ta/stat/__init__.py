@@ -1,4 +1,3 @@
-# src/signalflow/ta/stat/__init__.py
 """Statistical indicators (auxiliary features)."""
 
 from signalflow.ta.stat.aftershock import (
@@ -188,36 +187,27 @@ __all__ = [
     "AutocorrStat",
     "BeatFrequencyStat",
     "BetaStat",
-    # Wave interference & Spectral
     "ConstructiveInterferenceStat",
     "CorrelationLengthStat",
-    # Regression
     "CorrelationStat",
-    # Cross-Sectional
     "CrossSectionalStat",
     "CvStat",
     "DampingRatioStat",
     "DfaExponentStat",
-    # Diffusion
     "DiffusionCoeffStat",
-    # Distribution (extended)
     "EntropyRateStat",
     "EntropyStat",
     "EscapeVelocityStat",
     "FisherInformationStat",
     "GarmanKlassVolStat",
-    # Memory
     "HurstStat",
-    # Cycle analysis
     "InstAmplitudeStat",
     "InstFrequencyStat",
     "InstPhaseStat",
     "IqrStat",
     "JSDivergenceStat",
     "JarqueBeraStat",
-    # Information Theory & Information Geometry
     "KLDivergenceStat",
-    # Control Theory & Systems Engineering
     "KalmanInnovationStat",
     "KurtosisStat",
     "LempelZivStat",
@@ -227,7 +217,6 @@ __all__ = [
     "LyapunovExponentStat",
     "MFCCBandEnergyStat",
     "MadStat",
-    # Distribution
     "MedianStat",
     "MinMaxStat",
     "ModeDistanceStat",
@@ -236,21 +225,17 @@ __all__ = [
     "PIDErrorStat",
     "ParkinsonVolStat",
     "PctRankStat",
-    # Complexity & Information Theory
     "PermutationEntropyStat",
     "PhaseAccelerationStat",
-    # Elasticity & Escape
     "PlasticStrainStat",
     "PowerCepstrumStat",
     "PredictionErrorDecompositionStat",
     "QuantileStat",
     "RSquaredStat",
     "RangeStat",
-    # Realized Volatility
     "RealizedVolStat",
     "RelativeInfoGainStat",
     "RenyiEntropyStat",
-    # Structure & Spikes
     "ReversePointsStat",
     "RobustZscoreStat",
     "RogersSatchellVolStat",
@@ -263,18 +248,15 @@ __all__ = [
     "SpectralContrastStat",
     "SpectralEntropyStat",
     "SpectralFlatnessStat",
-    # DSP / Acoustics
     "SpectralFluxStat",
     "SpectralKurtosisStat",
     "SpectralRolloffStat",
     "SpectralSlopeStat",
-    # Oscillator dynamics
     "SpringConstantStat",
     "StandingWaveRatioStat",
     "StdStat",
     "TimeSinceSpikeStat",
     "VarianceRatioStat",
-    # Dispersion
     "VarianceStat",
     "VolatilitySpikeDiffStat",
     "VolatilitySpikeStat",
@@ -283,7 +265,6 @@ __all__ = [
     "YangZhangVolStat",
     "ZeroCrossingRateStat",
     "ZscoreStat",
-    # Regression extensions (sf-profit iter-15/18/20)
     "LinRegFitQuality",
     "LinRegInterceptNormalized",
     "LinRegR2",
@@ -296,11 +277,9 @@ __all__ = [
     "LinRegSlopeRatio",
     "LinRegSlopeWindow",
     "Poly2ResidualStd",
-    # Distribution / tail extensions (sf-profit iter-20)
     "ReturnKurtosisWindow",
     "ReturnSkewWindow",
     "ReturnTailRatio",
-    # Cross-disciplinary (sf-profit iter-27/28/29)
     "AllostaticFastSlowRatioStat",
     "AllostaticLoadDirectionalStat",
     "AllostaticLoadStat",

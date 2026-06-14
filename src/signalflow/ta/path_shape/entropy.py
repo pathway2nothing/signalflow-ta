@@ -1,12 +1,11 @@
 """Information-theoretic path entropy features."""
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -61,7 +60,7 @@ class DirectionalEntropy(Feature):
         for i in range(len(rwins)):
             r, a = rwins[i], awins[i]
             qs = np.quantile(a, [0.2, 0.4, 0.6, 0.8])
-            mag_bin = np.digitize(a, qs)  # 0..4
+            mag_bin = np.digitize(a, qs)
             sign_bin = np.where(r > 0, 1, np.where(r < 0, 2, 0))
             joint = sign_bin * 5 + mag_bin
             counts = np.bincount(joint, minlength=15) / self.window

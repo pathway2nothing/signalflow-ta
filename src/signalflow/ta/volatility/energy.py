@@ -1,4 +1,3 @@
-# src/signalflow/ta/volatility/energy.py
 """Energy-based volatility indicators - mechanical energy model for regime detection."""
 
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     rolling_mean_nan as _rolling_mean_nan,
 )
@@ -50,7 +49,7 @@ class KineticEnergyVol(Feature):
 
         velocity = _velocity_kernel(close)
         ke_raw = 0.5 * velocity**2
-        ke_raw[0] = np.nan  # first velocity is 0 by convention
+        ke_raw[0] = np.nan
         ke = _rolling_mean_nan(ke_raw, self.period)
 
         if self.normalized:
@@ -258,7 +257,6 @@ class EnergyFlowVol(Feature):
         te_raw = ke + pe
         te = _rolling_mean_nan(te_raw, self.period)
 
-        # Energy flow = dE/dt (vectorized diff with lag)
         eflow = np.full(n, np.nan)
         valid_mask = ~np.isnan(te)
         for i in range(self.flow_lag, n):
@@ -384,12 +382,11 @@ class TemperatureVol(Feature):
         close = df["close"].to_numpy().astype(np.float64)
 
         log_ret = _velocity_kernel(close)
-        log_ret[0] = np.nan  # mark first as invalid
+        log_ret[0] = np.nan
 
         from signalflow.ta._numba_kernels import rolling_std as _rolling_std
 
         std_vals = _rolling_std(log_ret, self.period)
-        # var(ddof=1) = std^2, temperature = var * period
         temp = std_vals**2 * self.period
 
         if self.normalized:
@@ -461,7 +458,6 @@ class HeatCapacityVol(Feature):
         ke_raw[0] = np.nan
         energy = _rolling_mean_nan(ke_raw, self.period)
 
-        # Heat capacity = ΔT / ΔE
         hcap = np.full(n, np.nan)
         for i in range(self.lag, n):
             if (
@@ -535,8 +531,6 @@ class FreeEnergyVol(Feature):
         log_ret = _velocity_kernel(close)
         log_ret[0] = np.nan
 
-        # FreeEnergy uses histogram (np.histogram) which Numba can't handle
-        # Keep the rolling loop but use precomputed log_ret
         fenergy = np.full(n, np.nan)
         for i in range(self.period, n):
             window = log_ret[i - self.period + 1 : i + 1]

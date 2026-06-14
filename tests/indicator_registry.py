@@ -1,11 +1,9 @@
-"""
-SignalFlow-TA Indicator Registry
+"""SignalFlow-TA Indicator Registry
 
 Automatically discovers and configures all Feature-based indicators
 from signalflow.ta for comprehensive testing.
 """
 
-from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
@@ -25,7 +23,7 @@ class IndicatorConfig:
     outputs: list[str] = field(default_factory=list)
     bounded: tuple[float, float] | None = None
     warmup: int = 20
-    variation_idx: int | None = None  # Index in test_params list
+    variation_idx: int | None = None
 
     @property
     def test_id(self) -> str:
@@ -36,7 +34,6 @@ class IndicatorConfig:
         """
         base = f"{self.category}-{self.name}"
         if self.variation_idx is not None:
-            # Create readable param string: period=7,std=2.0
             param_str = ",".join(
                 f"{k}={v}" for k, v in self.params.items() if k not in ("source_col", "pair_col", "ts_col")
             )
@@ -48,16 +45,12 @@ def get_default_params(cls: type) -> dict:
     """Extract default parameters from indicator class."""
     params = {}
 
-    # Get from dataclass fields
     if hasattr(cls, "__dataclass_fields__"):
         import dataclasses as _dc
 
         for name, field_info in cls.__dataclass_fields__.items():
-            # Skip ClassVar declarations: they live in __dataclass_fields__ but are
-            # NOT __init__ parameters (e.g. requires/outputs/is_recursive/warmup_invariant).
-            if field_info._field_type is not _dc._FIELD:  # pragma: no cover - simple guard
+            if field_info._field_type is not _dc._FIELD:
                 continue
-            # Skip inherited fields from base classes, test metadata, and private fields
             if name in (
                 "pair_col",
                 "ts_col",
@@ -73,12 +66,11 @@ def get_default_params(cls: type) -> dict:
                 "requires",
                 "outputs",
                 "test_params",
-            ):  # ClassVar for test parameter variations
+            ):
                 continue
             if name.startswith("_"):
                 continue
 
-            # Get default value
             import dataclasses as _dc
 
             if field_info.default is not _dc.MISSING:
@@ -95,14 +87,11 @@ def get_default_params(cls: type) -> dict:
 
 def get_requires(cls: type) -> list[str]:
     """Extract required columns from indicator class."""
-    # Check class attribute
     if hasattr(cls, "requires"):
         req = cls.requires
         if isinstance(req, (list, tuple)):
-            # Handle template strings like "{source_col}"
             return [r for r in req if not r.startswith("{")]
 
-    # Default based on category
     return ["close"]
 
 
@@ -111,7 +100,6 @@ def get_outputs(cls: type, params: dict) -> list[str]:
     if hasattr(cls, "outputs"):
         outputs = cls.outputs
         if isinstance(outputs, (list, tuple)):
-            # Substitute params into template strings
             result = []
             for out in outputs:
                 if "{" in out:
@@ -123,7 +111,6 @@ def get_outputs(cls: type, params: dict) -> list[str]:
                     result.append(out)
             return result
 
-    # Generate from class name
     name = cls.__name__.lower()
     for suffix in (
         "mom",
@@ -147,71 +134,54 @@ def get_bounds(cls: type, category: str) -> tuple[float, float] | None:
     """Determine value bounds based on indicator type."""
     name = cls.__name__.lower()
 
-    # Explicitly unbounded indicators (percentage change can exceed 100%)
     if name in ["rocmom", "mommom"]:
         return None
 
-    # RSI: 0-100
     if name in ["rsimom", "stochmom", "stochrsimom", "mfimom", "mfivolume"]:
         return (0, 100)
 
-    # Williams %R: -100 to 0
     if "willr" in name:
         return (-100, 0)
 
-    # CMO: -100 to 100
     if "cmo" in name:
         return (-100, 100)
 
-    # ADX: 0-100
     if name == "adxtrend":
         return (0, 100)
 
-    # Aroon: 0-100 for up/down
     if "aroon" in name:
         return (0, 100)
 
-    # Choppiness: 0-100
     if "chop" in name:
         return (0, 100)
 
-    # UO (Ultimate Oscillator): 0-100
     if name == "uomom":
         return (0, 100)
 
-    # TSI: -100 to 100
     if name == "tsimom":
         return (-100, 100)
 
-    # Hurst: 0-1
     if "hurst" in name:
         return (0, 1)
 
-    # Correlation/Autocorr: -1 to 1
     if name in ["correlationstat", "autocorrstat"]:
         return (-1, 1)
 
-    # R-squared: 0-1
     if name == "rsquaredstat":
         return (0, 1)
 
-    # MinMax normalization: 0-1
     if name == "minmaxstat":
         return (0, 1)
 
-    # AboveMeanRatio: 0-1
     if name == "abovemeanratiostat":
         return (0, 1)
 
-    # CMF (Chaikin Money Flow): -1 to 1
     if name == "cmfvolume":
         return (-1, 1)
 
-    # Positive-only volatility measures
     if name in ["truerangevol", "atrvol", "natrvol", "ulcerindexvol"]:
         return (0, float("inf"))
 
-    # Positive-only stats
     if name in [
         "variancestat",
         "stdevstat",
@@ -230,7 +200,6 @@ def get_bounds(cls: type, category: str) -> tuple[float, float] | None:
     ]:
         return (0, float("inf"))
 
-    # Most indicators are unbounded
     return None
 
 
@@ -244,7 +213,6 @@ def get_warmup(cls: type, params: dict) -> int:
     """
     warmup = 2000
 
-    # StochRSI-like: needs RSI warmup + Stoch warmup
     if "rsi_period" in params:
         warmup += int(params["rsi_period"])
     if "stoch_period" in params:
@@ -254,17 +222,14 @@ def get_warmup(cls: type, params: dict) -> int:
     if "d_period" in params:
         warmup += int(params["d_period"])
 
-    # MACD-like: slow period dominates
     if "slow" in params:
         warmup = max(warmup, int(params["slow"]))
     if "signal" in params:
         warmup += int(params["signal"])
 
-    # TSI/TRIX: multiple smoothing passes
     if "fast" in params and "slow" in params:
         warmup = max(warmup, int(params["slow"]) + int(params["fast"]))
 
-    # Single period indicators
     if "period" in params:
         warmup = max(warmup, int(params["period"]))
     if "length" in params:
@@ -272,17 +237,14 @@ def get_warmup(cls: type, params: dict) -> int:
     if "long_period" in params:
         warmup = max(warmup, int(params["long_period"]))
 
-    # Minimum warmup
     if warmup == 0:
         warmup = 20
 
-    # Add buffer
     return warmup + 10
 
 
 def discover_indicators() -> list[IndicatorConfig]:
-    """
-    Discover all Feature-based indicators from signalflow.ta.
+    """Discover all Feature-based indicators from signalflow.ta.
 
     If an indicator class has `test_params` attribute (ClassVar[list[dict]]),
     creates multiple configs - one for each parameter set.
@@ -306,9 +268,6 @@ def discover_indicators() -> list[IndicatorConfig]:
     - "momentum/RsiMom[period=7]"
     - "momentum/RsiMom[period=14]"
     - "momentum/RsiMom[period=21]"
-
-    Returns:
-        List of IndicatorConfig for all discovered indicators
     """
     configs = []
 
@@ -319,10 +278,8 @@ def discover_indicators() -> list[IndicatorConfig]:
         print(f"Warning: Could not import signalflow.ta: {e}")
         return configs
 
-    # Get all exported names
     all_exports = getattr(ta, "__all__", dir(ta))
 
-    # Category mapping based on naming convention
     category_map = {
         "Mom": "momentum",
         "Smooth": "overlap",
@@ -339,35 +296,28 @@ def discover_indicators() -> list[IndicatorConfig]:
         try:
             cls = getattr(ta, name)
 
-            # Check if it's a class that inherits from Feature
             if not inspect.isclass(cls):
                 continue
 
-            # Check inheritance
             if not issubclass(cls, Feature) or cls is Feature:
                 continue
 
-            # Skip GlobalFeature subclasses (they use compute(), not compute_pair())
             if issubclass(cls, GlobalFeature) and cls is not GlobalFeature:
                 continue
 
-            # Determine category
             category = "other"
             for suffix, cat in category_map.items():
                 if suffix in name:
                     category = cat
                     break
 
-            # Check for test_params attribute (ClassVar[list[dict]])
             test_params = getattr(cls, "test_params", None)
             test_params = test_params if test_params else [get_default_params(cls)]
             if test_params and isinstance(test_params, list) and len(test_params) > 0:
-                # Create config for each parameter set
                 for idx, param_set in enumerate(test_params):
                     if not isinstance(param_set, dict):
                         continue
 
-                    # Merge default params with test params
                     base_params = get_default_params(cls)
                     params = {**base_params, **param_set}
 
@@ -389,7 +339,6 @@ def discover_indicators() -> list[IndicatorConfig]:
                     )
                     configs.append(config)
             else:
-                # No test_params - use default params
                 params = get_default_params(cls)
                 requires = get_requires(cls)
                 outputs = get_outputs(cls, params)
@@ -415,14 +364,8 @@ def discover_indicators() -> list[IndicatorConfig]:
     return configs
 
 
-# =============================================================================
-# Manual Configuration for All Known Indicators
-# =============================================================================
-
-
 def get_all_indicator_configs() -> list[IndicatorConfig]:
-    """
-    Get configurations for all known signalflow.ta indicators.
+    """Get configurations for all known signalflow.ta indicators.
 
     This provides explicit configuration when auto-discovery isn't available.
     """
@@ -435,7 +378,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             AboveMeanRatioStat,
             AccBandsVol,
             AdVolume,
-            # Trend
             AdxTrend,
             AlmaSmooth,
             AoMom,
@@ -451,7 +393,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             CkspTrend,
             CmfVolume,
             CmoMom,
-            # Stat - Regression
             CorrelationStat,
             CvStat,
             DemaSmooth,
@@ -462,23 +403,19 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             EntropyStat,
             EomVolume,
             FramaSmooth,
-            # Gap
             GapVol,
             GarmanKlassVolStat,
             HiloOverlay,
             HiloTrend,
-            # Overlap - Price
             Hl2Price,
             Hlc3Price,
             HmaSmooth,
-            # Stat - Memory
             HurstStat,
             IchimokuOverlay,
             IchimokuTrend,
             IqrStat,
             JarqueBeraStat,
             JmaSmooth,
-            # Overlap - Adaptive
             KamaSmooth,
             KeltnerVol,
             KurtosisStat,
@@ -486,13 +423,11 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             LinRegInterceptStat,
             LinRegResidualStat,
             LinRegSlopeStat,
-            # Performance
             LogReturn,
             MacdMom,
             MadStat,
             MassIndexVol,
             McGinleySmooth,
-            # Stat - Distribution
             MedianStat,
             MfiVolume,
             MidpointPrice,
@@ -502,7 +437,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             MomMom,
             NatrVol,
             NviVolume,
-            # Volume
             ObvVolume,
             Ohlc4Price,
             ParkinsonVolStat,
@@ -515,24 +449,20 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             QstickTrend,
             QuantileStat,
             RangeStat,
-            # Stat - Volatility
             RealizedVolStat,
             RmaSmooth,
             RobustZscoreStat,
             RocMom,
             RogersSatchellVolStat,
-            # Momentum
             RsiMom,
             RSquaredStat,
             RviVol,
             SkewStat,
-            # Overlap - Smoothers
             SmaSmooth,
             SsfSmooth,
             StdevStat,
             StochMom,
             StochRsiMom,
-            # Overlap - Trend
             SupertrendOverlay,
             SupertrendTrend,
             SwmaSmooth,
@@ -540,7 +470,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             TemaSmooth,
             TrimaSmooth,
             TrixMom,
-            # Volatility
             TrueRangeVol,
             TsiMom,
             TtmTrend,
@@ -548,7 +477,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
             UlcerIndexVol,
             UoMom,
             VarianceRatioStat,
-            # Stat - Dispersion
             VarianceStat,
             VhfTrend,
             VidyaSmooth,
@@ -564,9 +492,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         print(f"Could not import signalflow.ta indicators: {e}")
         return []
 
-    # ==========================================================================
-    # MOMENTUM INDICATORS
-    # ==========================================================================
 
     configs.extend(
         [
@@ -587,7 +512,7 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
                 params={"period": 10},
                 requires=["close"],
                 outputs=["roc_10"],
-                bounded=None,  # ROC is unbounded - can be >100% if price doubles
+                bounded=None,
                 warmup=11,
             ),
             IndicatorConfig(
@@ -652,7 +577,7 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
                 params={"period": 20},
                 requires=["high", "low", "close"],
                 outputs=["cci_20"],
-                bounded=None,  # Typically ±200 but unbounded
+                bounded=None,
                 warmup=20,
             ),
             IndicatorConfig(
@@ -718,9 +643,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # OVERLAP - SMOOTHERS
-    # ==========================================================================
 
     configs.extend(
         [
@@ -827,9 +749,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # OVERLAP - ADAPTIVE SMOOTHERS
-    # ==========================================================================
 
     configs.extend(
         [
@@ -921,9 +840,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # OVERLAP - PRICE TRANSFORMS
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1000,9 +916,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # OVERLAP - TREND OVERLAYS
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1055,9 +968,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # PERFORMANCE
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1084,9 +994,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # STAT - DISPERSION
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1183,9 +1090,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # STAT - DISTRIBUTION
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1292,9 +1196,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # STAT - MEMORY
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1331,9 +1232,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # STAT - REGRESSION
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1400,9 +1298,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # STAT - VOLATILITY
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1459,9 +1354,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # TREND
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1482,7 +1374,7 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
                 params={"period": 25},
                 requires=["high", "low"],
                 outputs=["aroon_up_25", "aroon_down_25", "aroon_osc_25"],
-                bounded=(0, 100),  # for up/down; osc is -100 to 100
+                bounded=(0, 100),
                 warmup=26,
             ),
             IndicatorConfig(
@@ -1613,9 +1505,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # VOLATILITY
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1728,9 +1617,6 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
         ]
     )
 
-    # ==========================================================================
-    # VOLUME
-    # ==========================================================================
 
     configs.extend(
         [
@@ -1858,24 +1744,16 @@ def get_all_indicator_configs() -> list[IndicatorConfig]:
     return configs
 
 
-# =============================================================================
-# Export
-# =============================================================================
-
-
 def _load_indicator_configs() -> list[IndicatorConfig]:
     """Load indicator configs with detailed error reporting."""
 
-    # Indicators that require non-standard columns (exclude from auto-testing)
     EXCLUDED_INDICATORS = {
-        "BetaStat",  # requires benchmark_col which is not in standard OHLCV
+        "BetaStat",
     }
 
-    # Try dynamic discovery first
     try:
         configs = discover_indicators()
         if configs:
-            # Filter out excluded indicators
             configs = [c for c in configs if c.name not in EXCLUDED_INDICATORS]
             print(f"[indicator_registry] Auto-discovered {len(configs)} indicators from signalflow.ta")
             return configs
@@ -1884,11 +1762,9 @@ def _load_indicator_configs() -> list[IndicatorConfig]:
     except Exception as e:
         print(f"[indicator_registry] Auto-discovery failed: {e}")
 
-    # Try manual configuration
     try:
         configs = get_all_indicator_configs()
         if configs:
-            # Filter out excluded indicators
             configs = [c for c in configs if c.name not in EXCLUDED_INDICATORS]
             print(f"[indicator_registry] Loaded {len(configs)} indicator configs manually")
             return configs
@@ -1897,13 +1773,11 @@ def _load_indicator_configs() -> list[IndicatorConfig]:
     except Exception as e:
         print(f"[indicator_registry] Manual config failed: {e}")
 
-    # Return empty list if nothing works
     print("[indicator_registry] WARNING: No indicators available. Install signalflow.ta to run indicator tests.")
     print("[indicator_registry] Core framework tests in test_core.py will still run.")
     return []
 
 
-# Load configs at module import time
 INDICATOR_CONFIGS = _load_indicator_configs()
 
 
@@ -1921,59 +1795,33 @@ def get_indicator_ids() -> list[str]:
     - "momentum/RsiMom[period=14,smoothing=ema]" (multiple params)
     """
     if not INDICATOR_CONFIGS:
-        return []  # Empty list - tests will be skipped via pytestmark
+        return []
     return [c.test_id for c in INDICATOR_CONFIGS]
 
 
-# =============================================================================
-# Test Configuration Filtering
-# =============================================================================
-
-
 def filter_configs_by_options(configs: list[IndicatorConfig], pytest_config=None) -> tuple[list, list]:
-    """
-    Filter indicator configs based on pytest command-line options.
-
-    Parameters
-    ----------
-    configs : list[IndicatorConfig]
-        All available indicator configurations
-    pytest_config : pytest.Config, optional
-        Pytest config object to access options
-
-    Returns
-    -------
-    filtered_configs : list[IndicatorConfig]
-        Filtered configs
-    filtered_ids : list[str]
-        IDs for the filtered configs
-    """
+    """Filter indicator configs based on pytest command-line options."""
     if not configs:
         return [None], ["no_indicators"]
 
-    filtered = list(configs)  # Make a copy
+    filtered = list(configs)
 
-    # Apply feature group filtering if specified
     if pytest_config and hasattr(pytest_config, "test_feature_groups"):
         feature_groups = pytest_config.test_feature_groups
         if feature_groups:
             allowed_groups = {g.strip().lower() for g in feature_groups.split(",")}
             filtered = [c for c in filtered if c.category.lower() in allowed_groups]
 
-    # Apply max params limit if specified
     if pytest_config and hasattr(pytest_config, "test_max_params"):
         max_params = pytest_config.test_max_params
         if max_params is not None and max_params > 0:
-            # Group configs by indicator name (without params)
             from collections import defaultdict
 
             by_indicator = defaultdict(list)
             for config in filtered:
-                # Extract base name (e.g., "momentum/RsiMom" from "momentum/RsiMom[...]")
                 base_name = config.name.split("[")[0]
                 by_indicator[base_name].append(config)
 
-            # Keep only first N param sets for each indicator
             filtered = []
             for _base_name, param_configs in sorted(by_indicator.items()):
                 filtered.extend(param_configs[:max_params])
@@ -1984,7 +1832,6 @@ def filter_configs_by_options(configs: list[IndicatorConfig], pytest_config=None
     return filtered, [c.test_id for c in filtered]
 
 
-# Parametrization helpers for test_indicators.py
 _CONFIGS_FOR_PARAM = INDICATOR_CONFIGS if INDICATOR_CONFIGS else [None]
 _IDS_FOR_PARAM = get_indicator_ids() if INDICATOR_CONFIGS else ["no_indicators"]
 

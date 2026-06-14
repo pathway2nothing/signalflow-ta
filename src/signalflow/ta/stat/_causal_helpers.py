@@ -5,7 +5,6 @@ All functions guarantee:
   • Output for bar T is invariant to where the input series begins, AS LONG AS
     the input contains at least ``window`` bars before T (warmup complete).
 """
-from __future__ import annotations
 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view as _swv
@@ -19,11 +18,11 @@ def log_returns(close: np.ndarray) -> np.ndarray:
     c = close.astype(np.float64)
     c_safe = np.maximum(c, 1e-12)
     log_c = np.log(c_safe)
-    return np.diff(log_c, prepend=log_c[0])  # prepend SAME log → first diff = 0
+    return np.diff(log_c, prepend=log_c[0])
 
 
 def truncated_ema(arr: np.ndarray, tau: int, window_factor: int = 5) -> np.ndarray:
-    """Window-bounded exponential moving average — warmup-invariant.
+    """Window-bounded exponential moving average - warmup-invariant.
 
     Standard ewm_mean is recursive (`s_t = α·x_t + (1−α)·s_{t−1}`) and depends
     on the entire prior history, so the same bar T gives different values
@@ -41,14 +40,14 @@ def truncated_ema(arr: np.ndarray, tau: int, window_factor: int = 5) -> np.ndarr
     if n < window or window < 2:
         return np.full(n, np.nan, dtype=np.float64)
     decay = np.exp(-np.arange(window) / tau)
-    kernel = (decay / decay.sum())[::-1]  # most-recent bar gets highest weight (last in window)
+    kernel = (decay / decay.sum())[::-1]
     wins = _swv(arr.astype(np.float64), window)
     out_v = wins @ kernel
     return np.concatenate([np.full(window - 1, np.nan, dtype=np.float64), out_v])
 
 
 def rolling_mean(arr: np.ndarray, window: int) -> np.ndarray:
-    """Simple rolling mean — already warmup-invariant via sliding_window_view."""
+    """Simple rolling mean - already warmup-invariant via sliding_window_view."""
     n = len(arr)
     if n < window:
         return np.full(n, np.nan, dtype=np.float64)

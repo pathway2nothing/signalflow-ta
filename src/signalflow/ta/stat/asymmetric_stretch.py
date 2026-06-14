@@ -6,13 +6,12 @@ tendency of crypto markets where downside excursions occur via faster /
 larger liquidations than upside accumulations.
 
 Iter-29 stability: mean MI_normalised = 0.352 on D3 mean-reversion-event,
-std 0.011 across 6 walk-forward folds — second-highest stable feature
+std 0.011 across 6 walk-forward folds - second-highest stable feature
 after AllostaticLoadDirectionalStat (SOTA 0.467).
 
 Reference: Barndorff-Nielsen, O. E., Kinnebross, S. & Shephard, N. (2010).
 Measuring Downside Risk: Realised Semivariance.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -20,8 +19,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -36,10 +35,6 @@ class AsymmetricSemiVolStretchStat(Feature):
         4. rolling sqrt(mean(r^2 | r>0)) = up_semi over `period`.
         5. diff = close - SMA. Pick scale: down_semi if diff < 0 else up_semi.
         6. feature = diff / (scale * close).
-
-    Attributes:
-        period: rolling window for SMA and semivariance.
-        source_col: input price column.
     """
 
     period: int = 60

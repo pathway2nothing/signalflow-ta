@@ -1,16 +1,8 @@
-# src/signalflow/ta/stat/information.py
 """Information-theoretic measures for time series.
 
 Indicators from information theory and information geometry that capture
 distributional divergence, nonlinear dependencies, and information dynamics
 in financial time series. All computations are causal (no lookahead).
-
-References:
-    - Kullback & Leibler (1951) - KL Divergence
-    - Lin (1991) - Jensen-Shannon Divergence
-    - Rényi (1961) - Rényi Entropy
-    - Kraskov et al. (2004) - Mutual Information estimation
-    - Schreiber (2000) - Transfer Entropy / Information Gain
 """
 
 from dataclasses import dataclass
@@ -19,12 +11,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 def _log_returns(values: np.ndarray) -> np.ndarray:
@@ -103,7 +91,6 @@ def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
     if np.any(np.isnan(p)):
         return np.nan
 
-    # Remove zero bins
     p_nz = p[p > 0]
     if len(p_nz) == 0:
         return np.nan
@@ -113,7 +100,6 @@ def _renyi_entropy(x: np.ndarray, bins: int, alpha: float) -> float:
         return np.nan
 
     if abs(alpha - 1.0) < 1e-10:
-        # Shannon entropy limit
         h = -float(np.sum(p_nz * np.log2(p_nz)))
         return float(h / h_max)
 
@@ -142,7 +128,6 @@ def _auto_mutual_information(x: np.ndarray, lag: int, bins: int) -> float:
     x_current = x[lag:]
     x_lagged = x[: n - lag]
 
-    # Remove pairs with NaN
     valid = ~(np.isnan(x_current) | np.isnan(x_lagged))
     x_c = x_current[valid]
     x_l = x_lagged[valid]
@@ -150,7 +135,6 @@ def _auto_mutual_information(x: np.ndarray, lag: int, bins: int) -> float:
     if len(x_c) < bins * 2:
         return np.nan
 
-    # Joint histogram
     joint_hist, _, _ = np.histogram2d(x_c, x_l, bins=bins)
     joint_total = joint_hist.sum()
     if joint_total == 0:
@@ -158,11 +142,9 @@ def _auto_mutual_information(x: np.ndarray, lag: int, bins: int) -> float:
 
     p_joint = joint_hist / joint_total
 
-    # Marginals
     p_x = p_joint.sum(axis=1)
     p_y = p_joint.sum(axis=0)
 
-    # MI calculation
     mi = 0.0
     for i in range(bins):
         for j in range(bins):
@@ -187,7 +169,6 @@ def _relative_information_gain(x: np.ndarray, sub_window: int, bins: int) -> flo
     if n < sub_window * 2:
         return np.nan
 
-    # Split into two consecutive sub-windows
     first_half = x[:sub_window]
     second_half = x[n - sub_window :]
 
@@ -197,7 +178,6 @@ def _relative_information_gain(x: np.ndarray, sub_window: int, bins: int) -> flo
     if len(valid_first) < bins or len(valid_second) < bins:
         return np.nan
 
-    # Use common bin edges for fair comparison
     all_valid = np.concatenate([valid_first, valid_second])
     _, bin_edges = np.histogram(all_valid, bins=bins)
 
@@ -213,11 +193,6 @@ def _relative_information_gain(x: np.ndarray, sub_window: int, bins: int) -> flo
     p_second = hist_second / total_second
 
     return _jensen_shannon_divergence(p_first, p_second)
-
-
-# ---------------------------------------------------------------------------
-# Indicators
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -238,18 +213,8 @@ class KLDivergenceStat(Feature):
         - KL spike: abrupt distributional shift
         - Rising KL: gradual regime transition
 
-    Note: KL divergence is asymmetric — it measures how "surprising"
+    Note: KL divergence is asymmetric - it measures how "surprising"
     the recent data would be under the baseline model.
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Baseline window size (longer-term reference)
-        short_period: Recent window size (default: period // 4)
-        bins: Number of histogram bins for PDF estimation
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Kullback, S. & Leibler, R.A. (1951). On Information
-    and Sufficiency. Annals of Mathematical Statistics, 22(1), 79-86.
     """
 
     source_col: str = "close"
@@ -292,7 +257,6 @@ class KLDivergenceStat(Feature):
             if len(valid_base) < self.bins * 2 or len(valid_recent) < self.bins:
                 continue
 
-            # Common bin edges from baseline
             _, bin_edges = np.histogram(valid_base, bins=self.bins)
 
             hist_base, _ = np.histogram(valid_base, bins=bin_edges, density=False)
@@ -362,16 +326,6 @@ class JSDivergenceStat(Feature):
         - Bounded: always in [0, 1]
         - Always finite: no division-by-zero issues
         - More numerically stable
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Baseline window size
-        short_period: Recent window size (default: period // 4)
-        bins: Number of histogram bins
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Lin, J. (1991). Divergence Measures Based on the
-    Shannon Entropy. IEEE Transactions on Information Theory, 37(1), 145-151.
     """
 
     source_col: str = "close"
@@ -414,7 +368,6 @@ class JSDivergenceStat(Feature):
             if len(valid_base) < self.bins * 2 or len(valid_recent) < self.bins:
                 continue
 
-            # Common bin edges from full window
             all_valid = np.concatenate([valid_base, valid_recent])
             _, bin_edges = np.histogram(all_valid, bins=self.bins)
 
@@ -491,17 +444,6 @@ class RenyiEntropyStat(Feature):
         - Low Rényi: concentrated behavior (one dominant pattern)
         - Dropping Rényi (alpha=2): single regime becoming dominant
         - Low Rényi (alpha=0.5) but high Shannon: heavy-tailed distribution
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        alpha: Rényi order parameter (default: 2.0 for collision entropy)
-        bins: Number of histogram bins
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Rényi, A. (1961). On Measures of Entropy and Information.
-    Proceedings of the 4th Berkeley Symposium on Mathematical Statistics
-    and Probability, 1, 547-561.
     """
 
     source_col: str = "close"
@@ -585,19 +527,8 @@ class AutoMutualInfoStat(Feature):
         - AMI at lag 1 dropping: loss of temporal structure
 
     AMI is also used to determine optimal embedding delay for
-    phase space reconstruction (Takens' theorem) — the first
+    phase space reconstruction (Takens' theorem) - the first
     minimum of AMI gives the optimal lag.
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        lag: Time lag for mutual information (default: 1)
-        bins: Number of histogram bins per dimension
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Fraser, A.M. & Swinney, H.L. (1986). Independent
-    coordinates for strange attractors from mutual information.
-    Physical Review A, 33(2), 1134-1140.
     """
 
     source_col: str = "close"
@@ -682,15 +613,6 @@ class RelativeInfoGainStat(Feature):
         - IG spike: abrupt regime change
         - Sustained high IG: prolonged instability
         - IG dropping after spike: new regime stabilizing
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Full rolling window size
-        bins: Number of histogram bins
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Schreiber, T. (2000). Measuring Information Transfer.
-    Physical Review Letters, 85(2), 461-464.
     """
 
     source_col: str = "close"

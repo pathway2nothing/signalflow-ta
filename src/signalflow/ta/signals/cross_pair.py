@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import SignalCategory, Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import SignalCategory, Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import BollingerVol
 
@@ -29,33 +29,6 @@ class CrossPairDetector1(SignalDetector):
     Requires global features in context:
         - reference_returns: DataFrame with timestamp and reference pair returns
         - target_usdt_returns: DataFrame with timestamp and target USDT pair returns
-
-    Attributes:
-        bb_period: Bollinger Band period.
-        bb_std: Bollinger Band standard deviation multiplier.
-        zscore_window: Window for z-score normalization.
-        zscore_threshold: Z-score threshold for signal.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import CrossPairDetector1
-
-        # Prepare context with reference pair data
-        context = {
-            "reference_returns": btc_usdt_returns_df,
-            "target_usdt_returns": target_usdt_returns_df,
-        }
-
-        detector = CrossPairDetector1(
-            bb_period=2880,
-            zscore_window=2880,
-            zscore_threshold=10,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view, context=context)
-        ```
     """
 
     signal_category = SignalCategory.MARKET_WIDE
@@ -91,15 +64,7 @@ class CrossPairDetector1(SignalDetector):
         return zscore
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on cross-pair correlation.
-
-        Args:
-            features: DataFrame with computed BB values.
-            context: Must contain reference and target USDT returns.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on cross-pair correlation."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -127,26 +92,21 @@ class CrossPairDetector1(SignalDetector):
         bb_lower = features[self.bb_lower_col].to_numpy()
         n = len(close)
 
-        # BB signal: price below lower band
         bb_signal = close < bb_lower
         bb_diff = bb_lower - close
 
-        # Get cross-pair data from context
         if context is None:
             raise ValueError("CrossPairDetector1 requires context with cross-pair data")
 
-        # Initialize correlation signal
         correlation_signal = np.ones(n, dtype=bool)
 
         if "reference_returns" in context and "target_usdt_returns" in context:
             ref_returns = context["reference_returns"]
             target_returns = context["target_usdt_returns"]
 
-            # Join to features data
             df = features.join(ref_returns, on=self.ts_col, how="left")
             df = df.join(target_returns, on=self.ts_col, how="left")
 
-            # Get return columns (assume named 'returns' or similar)
             ref_col = [c for c in df.columns if "ref" in c.lower() or "btc" in c.lower()]
             target_col = [c for c in df.columns if "target" in c.lower() or "usdt" in c.lower()]
 
@@ -154,28 +114,22 @@ class CrossPairDetector1(SignalDetector):
                 ref_vals = df[ref_col[0]].to_numpy()
                 target_vals = df[target_col[0]].to_numpy()
 
-                # Compute z-scores
                 ref_zscore = self._compute_zscore(ref_vals)
                 target_zscore = self._compute_zscore(target_vals)
 
-                # Multiply z-scores for correlation
                 zscore_mult = ref_zscore * target_zscore
 
-                # Signal condition
                 correlation_signal = zscore_mult < self.zscore_threshold
 
         elif "zscore_mult" in context:
-            # Alternative: pre-computed correlation z-score
             zscore_mult = context["zscore_mult"]
             if isinstance(zscore_mult, pl.Series):
                 zscore_mult = zscore_mult.to_numpy()
             correlation_signal = zscore_mult < self.zscore_threshold
 
-        # Combine signals
         long_signal = bb_signal & correlation_signal
         short_signal = (close > features[f"bb_upper_{self.bb_period}"].to_numpy()) & ~correlation_signal
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -193,7 +147,6 @@ class CrossPairDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

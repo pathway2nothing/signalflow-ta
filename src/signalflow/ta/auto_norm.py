@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
@@ -9,8 +8,7 @@ import polars as pl
 
 @dataclass
 class AutoFeatureNormalizer:
-    """
-    One-class auto normalizer for time-series features (Polars).
+    """One-class auto normalizer for time-series features (Polars).
 
     Input DF columns: [timestamp, pair, feature_...]
     Assumptions:
@@ -28,18 +26,18 @@ class AutoFeatureNormalizer:
     warmup: int = 256
 
     eps: float = 1e-8
-    skew_hi: float = 1.25  # skewness threshold to consider log transform
-    outlier_ratio_hi: float = 25.0  # max(|x|)/p95(|x|) threshold for winsor
-    scale_cv_hi: float = 0.80  # cross-pair scale dispersion threshold
-    near_zero_mean: float = 0.15  # |mean| / (std+eps) small => centered-ish
-    min_unique: int = 10  # ignore near-constant features
+    skew_hi: float = 1.25
+    outlier_ratio_hi: float = 25.0
+    scale_cv_hi: float = 0.80
+    near_zero_mean: float = 0.15
+    min_unique: int = 10
 
     winsor_low_q: float = 0.01
     winsor_high_q: float = 0.99
 
-    keep_original: bool = False  # if False -> only normalized features
-    always_include: tuple[str, ...] = ("robust",)  # base channels for each feature: "robust"|"z"|"rank"|"none"
-    allow_multi: bool = True  # allow multiple channels per feature
+    keep_original: bool = False
+    always_include: tuple[str, ...] = ("robust",)
+    allow_multi: bool = True
 
     artifact: dict[str, Any] | None = None
 
@@ -119,8 +117,7 @@ class AutoFeatureNormalizer:
             return result
 
     def _decide_plan_for_col(self, s: dict[str, Any]) -> dict[str, Any]:
-        """
-        Decide which normalization methods to add for a feature.
+        """Decide which normalization methods to add for a feature.
 
         Methods (all strictly-causal rolling, start-invariant after warmup):
           - signed_log1p: sign(x)*log1p(|x|)
@@ -218,8 +215,7 @@ class AutoFeatureNormalizer:
         raise ValueError(f"Unknown method: {method}")
 
     def _compute_feature_stats(self, df: pl.DataFrame, feature_cols: list[str]) -> dict[str, dict[str, Any]]:
-        """
-        Compute robust-enough per-feature stats to drive decisions.
+        """Compute robust-enough per-feature stats to drive decisions.
 
         We compute stats per (pair, feature) and then summarize across pairs:
           - skew_median

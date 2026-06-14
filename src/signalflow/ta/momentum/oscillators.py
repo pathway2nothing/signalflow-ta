@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import cci_kernel as _cci_kernel
 from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 from signalflow.ta._numba_kernels import rolling_max as _rolling_max
@@ -47,7 +47,6 @@ class StochMom(Feature):
 
         stoch_k, stoch_d = _stoch_kernel(high, low, close, self.k_period, self.smooth_k, self.d_period)
 
-        # Normalization: [0, 100] → [0, 1] for both outputs
         if self.normalized:
             stoch_k = stoch_k / 100
             stoch_d = stoch_d / 100
@@ -105,7 +104,6 @@ class StochRsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Calculate RSI with reproducible initialization
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
 
@@ -117,7 +115,6 @@ class StochRsiMom(Feature):
 
         rsi = 100 - (100 / (1 + avg_gain / (avg_loss + 1e-10)))
 
-        # Stochastic of RSI using rolling min/max + SMA kernels
         rsi_min = _rolling_min(rsi, self.stoch_period)
         rsi_max = _rolling_max(rsi, self.stoch_period)
 
@@ -130,11 +127,9 @@ class StochRsiMom(Feature):
                 else:
                     raw_stoch[i] = 50.0
 
-        # Smoothed %K and %D
         stoch_k = _sma_nb(raw_stoch, self.k_period)
         stoch_d = _sma_nb(stoch_k, self.d_period)
 
-        # Normalization: [0, 100] → [0, 1] for both outputs
         if self.normalized:
             stoch_k = stoch_k / 100
             stoch_d = stoch_d / 100
@@ -206,7 +201,6 @@ class WillrMom(Feature):
         willr = np.where(diff != 0, -100 * (hh - close) / diff, -50.0)
         willr[: self.period - 1] = np.nan
 
-        # Normalization: [-100, 0] → [0, 1]
         if self.normalized:
             willr = (willr + 100) / 100
 
@@ -264,7 +258,6 @@ class CciMom(Feature):
 
         cci = _cci_kernel(tp, self.period, self.constant)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -344,7 +337,6 @@ class UoMom(Feature):
             self.slow_weight,
         )
 
-        # Normalization: [0, 100] → [0, 1]
         if self.normalized:
             uo = uo / 100
 
@@ -401,7 +393,6 @@ class AoMom(Feature):
         slow_sma = _sma_nb(median, self.slow)
         ao = fast_sma - slow_sma
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

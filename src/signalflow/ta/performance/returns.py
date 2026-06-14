@@ -5,8 +5,8 @@ from typing import ClassVar
 
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -21,25 +21,14 @@ class LogReturn(Feature):
         - Approximately equal to simple return for small changes
         - Symmetric: +10% and -10% have equal magnitude
         - Better statistical properties (closer to normal distribution)
-
-    Parameters:
-        source: Column name (must exist in df)
-        period: Lookback period (default 1)
-
-    Outputs:
-        logret_{period}_{source}: Log returns
-
-    Example:
-        >>> LogReturn(source="close", period=1)
-        # Output: logret_1_close
     """
 
     source: str = "close"
     period: int = 1
 
     def __post_init__(self) -> None:
-        self.requires = [self.source]  # type: ignore[misc]
-        self.outputs = [f"logret_{self.period}_{self.source}"]  # type: ignore[misc]
+        self.requires = [self.source]
+        self.outputs = [f"logret_{self.period}_{self.source}"]
 
         if self.period < 1:
             raise ValueError("period must be >= 1")
@@ -67,21 +56,14 @@ class PctReturn(Feature):
 
     Percentage return = (price_t - price_{t-period}) / price_{t-period}
                   = price_t / price_{t-period} - 1
-
-    Parameters:
-        source: Column name
-        period: Lookback period
-
-    Outputs:
-        pct_ret_{period}_{source}: Simple returns
     """
 
     source: str = "close"
     period: int = 1
 
     def __post_init__(self) -> None:
-        self.requires = [self.source]  # type: ignore[misc]
-        self.outputs = [f"pct_ret_{self.period}_{self.source}"]  # type: ignore[misc]
+        self.requires = [self.source]
+        self.outputs = [f"pct_ret_{self.period}_{self.source}"]
 
         if self.period < 1:
             raise ValueError("period must be >= 1")

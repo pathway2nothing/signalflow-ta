@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import cmo_kernel as _cmo_kernel
 from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 
@@ -41,8 +41,6 @@ class RsiMom(Feature):
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["rsi_{period}"]
 
-    # Recursive: avg_gain/avg_loss use rma_sma_init (Wilder's RMA seeded from the SMA
-    # of the first `period` bars). Converges within warmup. Entry-point invariant.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -50,22 +48,18 @@ class RsiMom(Feature):
         close = df["close"].to_numpy()
         len(close)
 
-        # Price changes
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
 
         gains = np.where(diff > 0, diff, 0)
         losses = np.where(diff < 0, -diff, 0)
 
-        # RMA with SMA initialization for reproducibility
         avg_gain = _rma_sma_init(gains, self.period)
         avg_loss = _rma_sma_init(losses, self.period)
 
-        # RSI calculation
         rs = avg_gain / (avg_loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))
 
-        # Normalization: [0, 100] → [0, 1]
         if self.normalized:
             rsi = rsi / 100
 
@@ -121,7 +115,6 @@ class RocMom(Feature):
             if close[i - self.period] != 0:
                 roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -185,7 +178,6 @@ class MomMom(Feature):
         for i in range(self.period, n):
             mom[i] = close[i] - close[i - self.period]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -251,7 +243,6 @@ class CmoMom(Feature):
 
         cmo = _cmo_kernel(gains, losses, self.period)
 
-        # Normalization: [-100, 100] → [-1, 1]
         if self.normalized:
             cmo = cmo / 100
 

@@ -30,7 +30,6 @@ from signalflow.ta.microstructure.ranges import (
 )
 
 __all__ = [
-    # candles
     "BodyToRangeRatio",
     "ClosePositionInBar",
     "HiLoMedianGap",
@@ -43,7 +42,6 @@ __all__ = [
     "WickToBodyRatioCausal",
     "WickToBodyUpper",
     "WickToBodyUpperCausal",
-    # ranges
     "HighLowImbalance",
     "RangeExpansion",
     "RangeFragmentation",

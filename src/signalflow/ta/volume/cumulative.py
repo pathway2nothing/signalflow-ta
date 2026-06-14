@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_compat import njit
 
 
@@ -55,7 +55,7 @@ class ObvVolume(Feature):
     https://www.investopedia.com/terms/o/onbalancevolume.asp
     """
 
-    period: int = 20  # Rolling window size
+    period: int = 20
     normalized: bool = False
     norm_period: int | None = None
 
@@ -66,17 +66,13 @@ class ObvVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
 
-        # Direction: +1 if up, -1 if down, 0 if unchanged
         direction = np.sign(np.diff(close, prepend=np.nan))
         direction[0] = 0
 
-        # Signed volume
         signed_volume = direction * volume
 
-        # Fast rolling sum using numpy
         obv = rolling_sum_numpy(signed_volume, self.period)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -136,7 +132,7 @@ class AdVolume(Feature):
     https://school.stockcharts.com/doku.php?id=technical_indicators:accumulation_distribution_line
     """
 
-    period: int = 20  # Rolling window size
+    period: int = 20
     normalized: bool = False
     norm_period: int | None = None
 
@@ -149,17 +145,13 @@ class AdVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
 
-        # Close Location Value
         hl_range = high - low
         clv = np.where(hl_range > 0, ((close - low) - (high - close)) / hl_range, 0)
 
-        # Money Flow Volume
         mfv = clv * volume
 
-        # Fast rolling sum using numpy
         ad = rolling_sum_numpy(mfv, self.period)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -213,7 +205,7 @@ class PvtVolume(Feature):
     Reference: https://www.investopedia.com/terms/p/pvtrend.asp
     """
 
-    period: int = 20  # Rolling window size
+    period: int = 20
     normalized: bool = False
     norm_period: int | None = None
 
@@ -224,17 +216,13 @@ class PvtVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
 
-        # Rate of change
         roc = np.diff(close, prepend=np.nan) / np.roll(close, 1)
         roc[0] = 0
 
-        # Price-volume product
         pv = roc * volume
 
-        # Fast rolling sum using numpy
         pvt = rolling_sum_numpy(pv, self.period)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -289,7 +277,7 @@ class NviVolume(Feature):
     https://school.stockcharts.com/doku.php?id=technical_indicators:negative_volume_inde
     """
 
-    period: int = 255  # Standard NVI period
+    period: int = 255
     normalized: bool = False
     norm_period: int | None = None
 
@@ -300,19 +288,15 @@ class NviVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
 
-        # Rate of change
         roc = np.diff(close, prepend=np.nan) / np.roll(close, 1)
         roc[0] = 0
 
-        # Only on volume-down days
         vol_down = volume < np.roll(volume, 1)
         vol_down[0] = False
         nvi_change = np.where(vol_down, roc * 100, 0)
 
-        # Fast rolling sum using numpy
         nvi = rolling_sum_numpy(nvi_change, self.period)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -367,7 +351,7 @@ class PviVolume(Feature):
     https://www.investopedia.com/terms/p/pvi.asp
     """
 
-    period: int = 255  # Standard PVI period
+    period: int = 255
     normalized: bool = False
     norm_period: int | None = None
 
@@ -378,20 +362,16 @@ class PviVolume(Feature):
         close = df["close"].to_numpy()
         volume = df["volume"].to_numpy()
 
-        # Rate of change
         roc = np.diff(close, prepend=np.nan) / np.roll(close, 1)
         roc[0] = 0
 
-        # Only on volume-up days
         vol_up = volume > np.roll(volume, 1)
         vol_up[0] = False
 
         pvi_change = np.where(vol_up, roc * 100, 0)
 
-        # Fast rolling sum using numpy
         pvi = rolling_sum_numpy(pvi_change, self.period)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

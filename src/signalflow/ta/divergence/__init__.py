@@ -1,5 +1,4 @@
-"""
-Divergence Detection Module
+"""Divergence Detection Module
 
 Automatic detection of price-indicator divergences for trading signals.
 

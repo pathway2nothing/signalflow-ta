@@ -6,8 +6,8 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_compat import njit
 from signalflow.ta._numba_kernels import (
     ema_sma_init as _ema_sma_init,
@@ -57,8 +57,6 @@ class KamaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_kama_{period}"]
 
-    # Recursive: kama_kernel seeds from SMA of the first `period` bars and converges
-    # within warmup. Entry-point invariant (SMA-init contract).
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -70,7 +68,6 @@ class KamaSmooth(Feature):
 
         kama = _kama_kernel(source, self.period, fast_sc, slow_sc)
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -141,7 +138,6 @@ class AlmaSmooth(Feature):
             window = source[i - self.period + 1 : i + 1]
             alma[i] = np.dot(window, weights) / weights.sum()
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -192,14 +188,12 @@ class JmaSmooth(Feature):
 
     source_col: str = "close"
     period: int = 7
-    phase: float = 0  # -100 to 100
+    phase: float = 0
     normalized: bool = False
 
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_jma_{period}"]
 
-    # Recursive: jma_kernel seeds from SMA of the first `period` bars and converges
-    # within warmup. Entry-point invariant (SMA-init contract).
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -208,7 +202,6 @@ class JmaSmooth(Feature):
 
         jma = _jma_kernel(source, self.period, float(self.phase))
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -258,8 +251,6 @@ class VidyaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_vidya_{period}"]
 
-    # Recursive: vidya_kernel seeds from SMA of the first (period+1) bars and converges
-    # within warmup. Entry-point invariant (SMA-init contract).
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -274,7 +265,6 @@ class VidyaSmooth(Feature):
 
         vidya = _vidya_kernel(source, pos, neg, self.period, alpha)
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -326,8 +316,6 @@ class T3Smooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_t3_{period}"]
 
-    # Recursive: cascaded EMAs all use ema_sma_init (SMA-seeded). Converges within
-    # warmup. Entry-point invariant (SMA-init contract).
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -340,7 +328,6 @@ class T3Smooth(Feature):
         c3 = -6 * a**2 - 3 * a - 3 * a**3
         c4 = 1 + 3 * a + a**3 + 3 * a**2
 
-        # Calculate 6 cascaded EMAs with SMA initialization
         e1 = _ema_sma_init(source, self.period)
         e2 = _ema_sma_init(e1, self.period)
         e3 = _ema_sma_init(e2, self.period)
@@ -350,7 +337,6 @@ class T3Smooth(Feature):
 
         t3 = c1 * e6 + c2 * e5 + c3 * e4 + c4 * e3
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -402,9 +388,6 @@ class ZlmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_zlma_{period}"]
 
-    # Recursive in the default ma_type="ema" mode: polars ewm_mean(adjust=False),
-    # single-value seed (NOT SMA-init). Not entry-point invariant in the canonical
-    # sense. (ma_type="sma" mode is windowed/invariant, but the default is ema.)
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -422,7 +405,6 @@ class ZlmaSmooth(Feature):
 
         zlma_array = zlma.to_numpy()
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -473,8 +455,6 @@ class McGinleySmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_mcg_{period}"]
 
-    # Recursive: mcginley_kernel seeds from the single first observation
-    # (md[0] = source[0], NOT SMA-init). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -483,7 +463,6 @@ class McGinleySmooth(Feature):
 
         md = _mcginley_kernel(source, self.period, float(self.k))
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -534,8 +513,6 @@ class FramaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_frama_{period}"]
 
-    # Recursive: frama_kernel seeds from a single price (source[period-1], NOT an
-    # SMA mean). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -548,7 +525,6 @@ class FramaSmooth(Feature):
 
         frama = _frama_kernel(source, self.period)
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -579,16 +555,7 @@ class FramaSmooth(Feature):
 def _kalman_filter_single_window(
     data: np.ndarray, process_noise: float, measurement_noise: float
 ) -> tuple[float, float]:
-    """Apply Kalman filter to a single window segment.
-
-    Args:
-        data: Input price segment.
-        process_noise: Initial process noise (adapts during filtering).
-        measurement_noise: Measurement noise variance.
-
-    Returns:
-        Tuple of (filtered_value, updated_process_noise).
-    """
+    """Apply Kalman filter to a single window segment."""
     n = len(data)
     estimate = data[0]
     estimate_covariance = 1.0
@@ -612,17 +579,7 @@ def _kalman_filter_single_window(
 def _kalman_filter_series(
     data: np.ndarray, window: int, process_noise_init: float, measurement_noise: float
 ) -> np.ndarray:
-    """Apply Kalman filter across a rolling window.
-
-    Args:
-        data: Full input array.
-        window: Rolling window size.
-        process_noise_init: Initial process noise.
-        measurement_noise: Measurement noise variance.
-
-    Returns:
-        Filtered array with NaN for warmup period.
-    """
+    """Apply Kalman filter across a rolling window."""
     n = len(data)
     result = np.full(n, np.nan)
     process_noise = process_noise_init

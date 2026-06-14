@@ -1,11 +1,10 @@
-"""Numba compatibility layer — provides fallback when Numba is not installed.
+"""Numba compatibility layer - provides fallback when Numba is not installed.
 
 When Numba is available, exports the real @njit decorator.
 When Numba is absent, exports a no-op decorator that lets functions
 run at normal Python speed.
 """
 
-from __future__ import annotations
 
 from typing import Any
 

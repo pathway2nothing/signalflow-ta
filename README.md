@@ -1,14 +1,14 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../logo-dark.svg" width="120">
-  <source media="(prefers-color-scheme: light)" srcset="../logo.svg" width="120">
-  <img alt="SignalFlow" src="../logo.png" width="120">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg" width="120">
+  <source media="(prefers-color-scheme: light)" srcset="assets/logo.svg" width="120">
+  <img alt="SignalFlow" src="assets/logo.png" width="120">
 </picture>
 
 # signalflow-ta
 
-**Technical analysis extension for SignalFlow — 290+ indicators + 24 signal detectors**
+**Technical analysis extension for SignalFlow - 290+ indicators + 24 signal detectors**
 
 <p>
 <a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.6.0-7c3aed" alt="Version"></a>
@@ -223,10 +223,10 @@ signals = detector.run(raw_data_view)
 | `RsiDivergence` | `divergence/rsi` | RSI Divergence (regular & hidden) |
 | `MacdDivergence` | `divergence/macd` | MACD Divergence (regular & hidden) |
 
-### Microstructure (14) — NEW
+### Microstructure (14) - NEW
 
 Candle geometry features added from sf-profit feature research.
-Strongest single-axis tested — `BodyToRangeRatio` and `WickToBodyRatio` rank in the top-10 of walk-forward IV pool.
+Strongest single-axis tested - `BodyToRangeRatio` and `WickToBodyRatio` rank in the top-10 of walk-forward IV pool.
 
 | Class | Module | Description |
 |-------|--------|-------------|
@@ -245,13 +245,13 @@ Strongest single-axis tested — `BodyToRangeRatio` and `WickToBodyRatio` rank i
 | `RangeNormalizedReturn` | `microstructure/ranges` | `return / prev_bar_range`, rolling mean |
 | `SignedRollingRange` | `microstructure/ranges` | signed position by ATR |
 
-### Path-shape (15) — NEW
+### Path-shape (15) - NEW
 
 Geometric properties of price path: roughness, efficiency, streaks, entropy.
 
 | Class | Module | Description |
 |-------|--------|-------------|
-| `PathRoughness` | `path_shape/shape` | `std(\|return\|) / mean(\|return\|)` — CV of move size |
+| `PathRoughness` | `path_shape/shape` | `std(\|return\|) / mean(\|return\|)` - CV of move size |
 | `PathEfficiency` | `path_shape/shape` | Kaufman ER: net move / total path |
 | `PathTortuosity` | `path_shape/shape` | total path / (max - min) |
 | `PathSimplicity` | `path_shape/shape` | `\|net_return\| / sum_abs_returns ∈ [0,1]` |
@@ -264,10 +264,10 @@ Geometric properties of price path: roughness, efficiency, streaks, entropy.
 | `DirectionalEntropy` | `path_shape/entropy` | entropy of (sign × magnitude_quintile) joint |
 | `VolumeEntropy` | `path_shape/entropy` | entropy of volume distribution (10 quantized bins) |
 | `ReturnAutocorrShort` | `path_shape/autocorr` | rolling autocorr(returns, lag) |
-| `VolatilityClusterScore` | `path_shape/autocorr` | autocorr(\|returns\|) — GARCH proxy |
+| `VolatilityClusterScore` | `path_shape/autocorr` | autocorr(\|returns\|) - GARCH proxy |
 | `ErrorAutoCorrelation` | `path_shape/autocorr` | rolling autocorr of `close - SMA(period)` |
 
-### Filters (7) — NEW
+### Filters (7) - NEW
 
 `close - filter(close)` residuals across various filters. Useful in mean-reversion and PID-style control strategies.
 
@@ -281,7 +281,7 @@ Geometric properties of price path: roughness, efficiency, streaks, entropy.
 | `PIDIntegralTerm` | `filters/pid` | Rolling sum of `(close - SMA)`. PID-I |
 | `PIDDerivativeTerm` | `filters/pid` | Derivative of `(close - SMA)`. PID-D |
 
-### Cross-sectional (15) — NEW
+### Cross-sectional (15) - NEW
 
 Operate on full multi-pair DataFrames. Rank-based variants work robustly on 3+ pairs; distributional variants (skew, breadth) benefit from 5+ pairs.
 
@@ -296,7 +296,7 @@ Operate on full multi-pair DataFrames. Rank-based variants work robustly on 3+ p
 | `CrossSectionalReturnAccelRank` | Rank of pair's return acceleration |
 | `CrossSectionalBeta` | Rolling β to market median |
 | `AvgPairwiseCorrMarket` | Rolling corr(pair, market_median) |
-| `PairLeadLagCorr` | Rolling corr(pair_t, market_{t-lag}) — leads/lags |
+| `PairLeadLagCorr` | Rolling corr(pair_t, market_{t-lag}) - leads/lags |
 | `CrossSectionalDispersion` | Mean `\|pair_ret - market_mean\|` across pairs |
 | `CrossSectionalRetSkew` | Skewness of returns across pairs (needs 5+) |
 | `MarketBreadth` | Fraction of pairs with positive return ∈ [0,1] |
@@ -308,22 +308,22 @@ Operate on full multi-pair DataFrames. Rank-based variants work robustly on 3+ p
 
 Each existing module gained new classes from sf-profit feature research. Selected highlights:
 
-**Regression (sf-profit iter-15/18/20)** — in `stat`:
+**Regression (sf-profit iter-15/18/20)** - in `stat`:
 `LinRegSlopeWindow`, `LinRegR2`, `LinRegResidualStd`, `LinRegSlopeChange`, `LinRegSlopeAcceleration`, `Poly2ResidualStd`, `LinRegResidualSkew/Kurtosis`, `LinRegSlopeRatio`, `LinRegSlopeNormalized`, `LinRegInterceptNormalized`, `LinRegFitQuality`.
 
-**Distribution (sf-profit iter-20)** — in `stat`:
+**Distribution (sf-profit iter-20)** - in `stat`:
 `ReturnSkewWindow`, `ReturnKurtosisWindow`, `ReturnTailRatio`.
 
-**Volatility (sf-profit iter-3.1/15/16/20)** — in `volatility`:
+**Volatility (sf-profit iter-3.1/15/16/20)** - in `volatility`:
 `NatrRatio`, `NatrPctRank`, `VolOfVol`, `RealizedVolPctRank`, `RealizedVolRatio`, `ParkinsonZScore`, `ParkinsonAccel`, `ParkinsonVolRatio`, `AltVolDeviation`, `GarmanKlassRatio`, `GarmanKlassPctRank`, `PriceZAtr`.
 
-**Volume×price coupling (sf-profit iter-15/16/18/20)** — in `volume`:
+**Volume×price coupling (sf-profit iter-15/16/18/20)** - in `volume`:
 `PriceImpactPerUnit`, `VWAPDeviation`, `SignedVolumeAccumulation`, `AbsReturnVolumeCorr`, `PriceVolumeCorrelation`, `VolumePerRange`, `VolumeImbalance`, `VolumeWeightedReturn`, `VolumeSpike`, `VolumeAcceleration`, `VolumeZScore`, `VolumeMomentumRatio`, `VolPctRankSignedTrend`.
 
-**Momentum (sf-profit feature_research_lib + iter-15/16/18/20)** — in `momentum`:
+**Momentum (sf-profit feature_research_lib + iter-15/16/18/20)** - in `momentum`:
 `MomPosNeg`, `RocSignedLog`, `MacdNorm`, `RsiSpread`, `PriceMomentumConfirmation`, `VolPriceConfirmation`, `TrendPersistence`, `PriceAcceleration`, `MomentumOfMomentum`.
 
-**Trend (sf-profit feature_research_lib + iter-15/16/18)** — in `trend`:
+**Trend (sf-profit feature_research_lib + iter-15/16/18)** - in `trend`:
 `DiBalance`, `NatrXDiBalance`, `UpDownEntropyAsymmetry`, `EntropyRatio`, `RsiDivPolarity`, `HilbertAmplitudeSlope`.
 
 > **Provenance.** All ~100 new classes were extracted from the sf-profit feature research pipeline (iter-3 → iter-21). They were validated through walk-forward IV scoring on 6 monthly folds and Spearman-correlation dedup at \|corr\| ≥ 0.85. 370 features survived to the final pool. See sf-profit's `docs/feature_catalog.md` for per-feature scores and walk-forward stability.

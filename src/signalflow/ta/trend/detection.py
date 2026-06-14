@@ -6,8 +6,8 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     ema_sma_init as _ema_sma_init,
 )
@@ -80,7 +80,6 @@ class IchimokuTrend(Feature):
         senkou_b = np.full(n, np.nan)
         senkou_b[self.kijun :] = span_b[: -self.kijun]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -168,7 +167,6 @@ class DpoTrend(Feature):
         for i in range(shift + self.period - 1, n):
             dpo[i] = close[i] - sma[i - shift]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -238,7 +236,6 @@ class QstickTrend(Feature):
 
         qstick = _ema_sma_init(diff, self.period) if self.ma_type == "ema" else _sma_nb(diff, self.period)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -308,7 +305,6 @@ class TtmTrend(Feature):
         trend = np.where(close > avg_hl2, 1, -1).astype(float)
         trend[: self.period - 1] = np.nan
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -390,7 +386,6 @@ class AtrTrailingTrend(Feature):
         trail_long = hc - self.multiplier * atr
         trail_short = lc + self.multiplier * atr
 
-        # Direction requires stateful logic
         direction = np.zeros(n)
         for i in range(self.period - 1, n):
             if close[i] > trail_short[i]:
@@ -400,7 +395,6 @@ class AtrTrailingTrend(Feature):
             elif i > 0:
                 direction[i] = direction[i - 1]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

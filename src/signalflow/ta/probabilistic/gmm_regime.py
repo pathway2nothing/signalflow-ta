@@ -1,10 +1,9 @@
-"""GMM vol-regime posteriors — soft regime membership probabilities.
+"""GMM vol-regime posteriors - soft regime membership probabilities.
 
 Two variants:
-    GMMVolRegime3State — 3 components (low / mid / high)
-    GMMVolRegime5State — 5 components anchored at vol quantiles
+    GMMVolRegime3State - 3 components (low / mid / high)
+    GMMVolRegime5State - 5 components anchored at vol quantiles
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -12,8 +11,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.probabilistic._helpers import causal_rolling_logvol, log_returns
 
 
@@ -72,11 +71,6 @@ class GMMVolRegime3State(Feature):
         iter-34 (sf-profit) reported soft MI ≈ 0.114 against
         ``soft_F1_tail_anomaly`` (best of 5 tested soft-native features
         on a top-30 validated pool subset).
-
-    Attributes:
-        price_col: Source price column. Default: ``"close"``.
-        window: Trailing window for quantile / sigma estimation. Default: 1440.
-        smoother: Realised-vol smoothing window. Default: 60.
     """
 
     price_col: str = "close"
@@ -118,13 +112,13 @@ class GMMVolRegime3State(Feature):
 @dataclass
 @feature("probabilistic/gmm_vol_regime_5state")
 class GMMVolRegime5State(Feature):
-    """5-component GMM vol regime posterior — finer granularity than 3-state.
+    """5-component GMM vol regime posterior - finer granularity than 3-state.
 
     Centres at 0.10 / 0.30 / 0.50 / 0.70 / 0.90 quantiles. Captures vol
     bands that the 3-state version groups together.
 
     Research provenance:
-        iter-35 (sf-profit) — best soft-native feature for the
+        iter-35 (sf-profit) - best soft-native feature for the
         ``hmm_vol_2state`` label (soft MI = 0.391 on ``volreg5_q90`` and
         0.385 on ``volreg5_q10``).
     """

@@ -29,7 +29,6 @@ from signalflow.ta.global_features.cross_sectional import (
 )
 
 __all__ = [
-    # Cross-pair contagion (sf-profit iter-31)
     "BTCStressContagionStat",
     "MarketIndexFeature",
     "MarketRollingMinFeature",
@@ -37,7 +36,6 @@ __all__ = [
     "MarketVolatilityFeature",
     "MarketZscoreFeature",
     "compute_global_features",
-    # Cross-sectional (sf-profit iter-15/16/18/20)
     "AvgPairwiseCorrMarket",
     "CrossSectionalAdxRank",
     "CrossSectionalAtrRank",

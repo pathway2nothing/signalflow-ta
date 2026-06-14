@@ -1,8 +1,7 @@
 """Preset pipes for statistical indicators."""
 
-from __future__ import annotations
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.stat import (
     AadStat,
     AboveMeanRatioStat,
@@ -21,16 +20,13 @@ from signalflow.ta.stat import (
     EscapeVelocityStat,
     FisherInformationStat,
     GarmanKlassVolStat,
-    # Memory & Diffusion
     HurstStat,
-    # Cycle
     InstAmplitudeStat,
     InstFrequencyStat,
     InstPhaseStat,
     IqrStat,
     JarqueBeraStat,
     JSDivergenceStat,
-    # Information Theory
     KLDivergenceStat,
     KurtosisStat,
     LempelZivStat,
@@ -38,7 +34,6 @@ from signalflow.ta.stat import (
     LinRegResidualStat,
     LinRegSlopeStat,
     MadStat,
-    # Distribution
     MedianStat,
     MFCCBandEnergyStat,
     MinMaxStat,
@@ -47,20 +42,17 @@ from signalflow.ta.stat import (
     NaturalFrequencyStat,
     ParkinsonVolStat,
     PctRankStat,
-    # Complexity
     PermutationEntropyStat,
     PhaseAccelerationStat,
     PlasticStrainStat,
     PowerCepstrumStat,
     QuantileStat,
     RangeStat,
-    # Realized Volatility
     RealizedVolStat,
     RelativeInfoGainStat,
     RenyiEntropyStat,
     RobustZscoreStat,
     RogersSatchellVolStat,
-    # Regression
     RSquaredStat,
     SampleEntropyStat,
     SkewStat,
@@ -69,7 +61,6 @@ from signalflow.ta.stat import (
     SpectralContrastStat,
     SpectralEntropyStat,
     SpectralFlatnessStat,
-    # DSP / Acoustics
     SpectralFluxStat,
     SpectralKurtosisStat,
     SpectralRolloffStat,
@@ -78,7 +69,6 @@ from signalflow.ta.stat import (
     StandingWaveRatioStat,
     StdStat,
     VarianceRatioStat,
-    # Dispersion
     VarianceStat,
     YangZhangVolStat,
     ZeroCrossingRateStat,

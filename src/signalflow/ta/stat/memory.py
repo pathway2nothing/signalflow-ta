@@ -1,4 +1,3 @@
-# src/signalflow/ta/stat/memory.py
 """Time series memory measures - persistence, mean-reversion, diffusion, oscillator dynamics."""
 
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -194,9 +193,6 @@ class VarianceRatioStat(Feature):
         return (self.period + self.k) * 5
 
 
-# --- Diffusion features ---
-
-
 @dataclass
 @feature("stat/diffusion_coeff")
 class DiffusionCoeffStat(Feature):
@@ -313,11 +309,9 @@ class AnomalousDiffusionStat(Feature):
             window = log_values[i - self.period + 1 : i + 1]
             len(window)
 
-            # MSD for tau_short
             displacements_short = window[self.tau_short :] - window[: -self.tau_short]
             msd_short = np.mean(displacements_short**2) if len(displacements_short) > 0 else 0
 
-            # MSD for tau_long
             displacements_long = window[self.tau_long :] - window[: -self.tau_long]
             msd_long = np.mean(displacements_long**2) if len(displacements_long) > 0 else 0
 
@@ -390,11 +384,9 @@ class MsdRatioStat(Feature):
         for i in range(self.period + tau2 - 1, n):
             window = log_values[i - self.period + 1 : i + 1]
 
-            # MSD for tau
             disp_tau = window[self.tau :] - window[: -self.tau]
             msd_tau = np.mean(disp_tau**2)
 
-            # MSD for 2*tau
             disp_2tau = window[tau2:] - window[:-tau2]
             msd_2tau = np.mean(disp_2tau**2)
 
@@ -427,9 +419,6 @@ class MsdRatioStat(Feature):
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
-
-
-# --- Oscillator dynamics ---
 
 
 @dataclass
@@ -465,28 +454,24 @@ class SpringConstantStat(Feature):
         values = df[self.source_col].to_numpy()
         n = len(values)
 
-        # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
             ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
-        # Log displacement
         log_values = np.log(np.maximum(values, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         displacement = log_values - log_ma
 
-        # Change in displacement
         d_displacement = np.full(n, np.nan)
         for i in range(1, n):
             if not np.isnan(displacement[i]) and not np.isnan(displacement[i - 1]):
                 d_displacement[i] = displacement[i] - displacement[i - 1]
 
-        # Rolling regression: Δdisp = -k * disp[t-1] + c
         spring_k = np.full(n, np.nan)
         start = max(self.ma_period, self.period)
         for i in range(start, n):
-            x = displacement[i - self.period + 1 : i]  # displacement[t-1]
-            y = d_displacement[i - self.period + 2 : i + 1]  # Δdisplacement[t]
+            x = displacement[i - self.period + 1 : i]
+            y = d_displacement[i - self.period + 2 : i + 1]
 
             valid = ~(np.isnan(x) | np.isnan(y))
             x_v = x[valid]
@@ -498,7 +483,7 @@ class SpringConstantStat(Feature):
                 ss_xx = np.sum((x_v - x_mean) ** 2)
                 if ss_xx > 1e-20:
                     slope = np.sum((x_v - x_mean) * (y_v - y_mean)) / ss_xx
-                    spring_k[i] = -slope  # k = -slope (restoring force convention)
+                    spring_k[i] = -slope
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
@@ -563,12 +548,10 @@ class DampingRatioStat(Feature):
         values = df[self.source_col].to_numpy()
         n = len(values)
 
-        # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
             ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
-        # Displacement
         log_values = np.log(np.maximum(values, 1e-10))
         log_ma = np.log(np.maximum(ma, 1e-10))
         displacement = log_values - log_ma
@@ -582,7 +565,6 @@ class DampingRatioStat(Feature):
             if len(valid) < 10:
                 continue
 
-            # Find peaks (local maxima of |displacement|)
             abs_disp = np.abs(valid)
             peaks = []
             for j in range(1, len(abs_disp) - 1):
@@ -590,7 +572,6 @@ class DampingRatioStat(Feature):
                     peaks.append(abs_disp[j])
 
             if len(peaks) >= 2:
-                # Average logarithmic decrement across successive peaks
                 decrements = []
                 for j in range(len(peaks) - 1):
                     if peaks[j + 1] > 1e-10 and peaks[j] > 1e-10:
@@ -598,7 +579,6 @@ class DampingRatioStat(Feature):
 
                 if len(decrements) > 0:
                     delta = np.mean(decrements)
-                    # ζ = δ / sqrt(4π² + δ²)
                     damping[i] = delta / np.sqrt(4 * np.pi**2 + delta**2)
 
         if self.normalized:
@@ -662,12 +642,10 @@ class NaturalFrequencyStat(Feature):
         values = df[self.source_col].to_numpy()
         n = len(values)
 
-        # MA equilibrium
         ma = np.full(n, np.nan)
         for i in range(self.ma_period - 1, n):
             ma[i] = np.mean(values[i - self.ma_period + 1 : i + 1])
 
-        # Displacement
         displacement = values - ma
 
         natfreq = np.full(n, np.nan)
@@ -679,11 +657,9 @@ class NaturalFrequencyStat(Feature):
             if len(valid) < 4:
                 continue
 
-            # Count zero crossings
             signs = np.sign(valid)
             crossings = np.sum(np.abs(np.diff(signs)) > 0)
 
-            # ω₀ = π x crossings / N
             natfreq[i] = np.pi * crossings / len(valid)
 
         if self.normalized:
@@ -712,9 +688,6 @@ class NaturalFrequencyStat(Feature):
             norm_window = self.norm_period or get_norm_window(self.period)
             return base + norm_window
         return base
-
-
-# --- Elasticity & Material Science ---
 
 
 @dataclass
@@ -860,7 +833,6 @@ class EscapeVelocityStat(Feature):
         start = max(self.ma_period, self.period)
 
         for i in range(start, n):
-            # Estimate spring constant k
             x = displacement[i - self.period + 1 : i]
             y = d_displacement[i - self.period + 2 : i + 1]
             valid = ~(np.isnan(x) | np.isnan(y))
@@ -950,7 +922,6 @@ class CorrelationLengthStat(Feature):
             if len(valid) < self.max_lag + 5:
                 continue
 
-            # Find first zero-crossing of ACF
             found = False
             for lag in range(1, self.max_lag + 1):
                 x = valid[lag:]

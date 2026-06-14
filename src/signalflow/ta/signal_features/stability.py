@@ -1,6 +1,5 @@
 """Signal stability and consistency features."""
 
-from __future__ import annotations
 
 import math
 from dataclasses import dataclass
@@ -8,7 +7,7 @@ from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -33,14 +32,12 @@ class SignalFlipRate(SignalFeature):
         col = self.output_cols()[0]
         df = signals.sort([self.group_col, self.ts_col])
 
-        # 1 if signal_type differs from previous row, 0 otherwise
         df = df.with_columns(
             (pl.col("signal_type") != pl.col("signal_type").shift(1).over(self.group_col))
             .cast(pl.Int32)
             .alias("_flip"),
         )
 
-        # Rolling mean of flips = flip rate
         df = df.with_columns(
             pl.col("_flip")
             .rolling_mean(window_size=self.window, min_samples=1)
@@ -74,19 +71,16 @@ class SignalStreak(SignalFeature):
     ) -> pl.DataFrame:
         df = signals.sort([self.group_col, self.ts_col])
 
-        # Mark where signal_type changes
         df = df.with_columns(
             (pl.col("signal_type") != pl.col("signal_type").shift(1).over(self.group_col))
             .fill_null(True)
             .alias("_change"),
         )
 
-        # Group id for each streak
         df = df.with_columns(
             pl.col("_change").cum_sum().over(self.group_col).alias("_group"),
         )
 
-        # Streak length = row number within each streak group
         df = df.with_columns(
             pl.col(self.ts_col)
             .cum_count()
@@ -94,7 +88,6 @@ class SignalStreak(SignalFeature):
             .alias("streak_len"),
         )
 
-        # Direction encoding
         df = df.with_columns(
             pl.when(pl.col("signal_type") == "rise")
             .then(pl.lit(1))
@@ -130,12 +123,10 @@ class SignalEntropy(SignalFeature):
         col = self.output_cols()[0]
         df = signals.sort([self.group_col, self.ts_col])
 
-        # Get unique signal types for encoding
         types = df["signal_type"].unique().drop_nulls().sort().to_list()
         n_types = len(types) if len(types) > 1 else 2
         log_n = math.log(n_types)
 
-        # One-hot encode each type and compute rolling proportion
         entropy_parts: list[pl.Expr] = []
         for t in types:
             indicator_col = f"_is_{t}"
@@ -147,12 +138,10 @@ class SignalEntropy(SignalFeature):
                 .rolling_mean(window_size=self.window, min_samples=1)
                 .over(self.group_col)
             )
-            # -p * log(p), handling p=0
             entropy_parts.append(
                 pl.when(p > 0).then(-p * p.log()).otherwise(pl.lit(0.0))
             )
 
-        # Sum parts and normalise
         if entropy_parts:
             total = entropy_parts[0]
             for part in entropy_parts[1:]:

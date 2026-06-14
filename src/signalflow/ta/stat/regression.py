@@ -1,4 +1,3 @@
-# src/signalflow/ta/stat/regression.py
 """Linear regression and correlation measures."""
 
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -155,7 +154,6 @@ class RSquaredStat(Feature):
             y = values[i - self.period + 1 : i + 1]
 
             if not np.any(np.isnan(y)):
-                # Linear regression
                 coeffs = np.polyfit(x, y, 1)
                 y_pred = np.polyval(coeffs, x)
 

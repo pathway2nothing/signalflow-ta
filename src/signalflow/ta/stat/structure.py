@@ -6,28 +6,19 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_compat import njit
 
 
 @njit
 def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray:
-    """Calculate number of reverse points (direction changes) in sliding window.
-
-    Args:
-        close: Price array.
-        window_size: Size of sliding window.
-
-    Returns:
-        Array with count of reverse points in each window.
-    """
+    """Calculate number of reverse points (direction changes) in sliding window."""
     n = len(close)
     reverse_counts = np.zeros(n, dtype=np.int32)
     tail_idx = 0
     reverse_count = 0
 
-    # First window
     for i in range(2, min(window_size, n)):
         if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (
             close[i] < close[i - 1] and close[i - 1] > close[i - 2]
@@ -37,7 +28,6 @@ def _calculate_reverse_points(close: np.ndarray, window_size: int) -> np.ndarray
 
     tail_idx = 1
 
-    # Rolling window
     for i in range(window_size, n):
         if (close[i] > close[i - 1] and close[i - 1] < close[i - 2]) or (
             close[i] < close[i - 1] and close[i - 1] > close[i - 2]
@@ -106,14 +96,7 @@ class ReversePointsStat(Feature):
 
 @njit
 def _count_consecutive_zeros(values: np.ndarray) -> np.ndarray:
-    """Count consecutive zeros (time since spike).
-
-    Args:
-        values: Binary array where non-zero indicates spike.
-
-    Returns:
-        Array of counts since last non-zero value.
-    """
+    """Count consecutive zeros (time since spike)."""
     n = len(values)
     result = np.zeros(n, dtype=np.int32)
 
@@ -154,8 +137,6 @@ class TimeSinceSpikeStat(Feature):
 
         return df.with_columns(pl.Series(name=col_name, values=time_since))
 
-    # This is a dependent indicator - requires pre-computed spike column.
-    # Tested manually or via integration tests.
     test_params: ClassVar[list[dict]] = []
 
     @property

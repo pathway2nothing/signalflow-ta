@@ -1,13 +1,12 @@
 """Probability-based signal features."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -38,7 +37,6 @@ class ProbabilityMoments(SignalFeature):
         mean_col, std_col, slope_col = cols[0], cols[1], cols[2]
         df = signals.sort([self.group_col, self.ts_col])
 
-        # If no probability column, return nulls
         if "probability" not in df.columns:
             return df.select([self.group_col, self.ts_col]).with_columns(
                 pl.lit(None, dtype=pl.Float64).alias(mean_col),
@@ -56,7 +54,6 @@ class ProbabilityMoments(SignalFeature):
             .alias(std_col),
         )
 
-        # Slope approximation: difference of two half-window means
         half = max(self.window // 2, 1)
         df = df.with_columns(
             (
@@ -98,7 +95,6 @@ class CalibrationError(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Hit = signal_type matches label (causal only)
         df = df.with_columns(
             pl.when(pl.col("label").is_not_null())
             .then((pl.col("signal_type") == pl.col("label")).cast(pl.Float64))
@@ -106,14 +102,12 @@ class CalibrationError(SignalFeature):
             .alias("_hit"),
         )
 
-        # Rolling empirical accuracy
         rolling_acc = (
             pl.col("_hit")
             .rolling_mean(window_size=self.window, min_samples=1)
             .over(self.group_col)
         )
 
-        # Probability column (default 0.5 if missing)
         prob_expr = pl.col("probability").cast(pl.Float64) if "probability" in df.columns else pl.lit(0.5)
 
         rolling_prob = (
@@ -163,7 +157,6 @@ class BayesianPosterior(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Hit flag
         df = df.with_columns(
             pl.when(pl.col("label").is_not_null())
             .then((pl.col("signal_type") == pl.col("label")).cast(pl.Float64))
@@ -171,17 +164,14 @@ class BayesianPosterior(SignalFeature):
             .alias("_hit"),
         )
 
-        # Base rate = rolling accuracy (prior)
         base = (
             pl.col("_hit")
             .rolling_mean(window_size=self.window, min_samples=1)
             .over(self.group_col)
         )
 
-        # Detector probability (likelihood)
         p = pl.col("probability").cast(pl.Float64).clip(0.01, 0.99) if "probability" in df.columns else pl.lit(0.5)
 
-        # Bayes update
         numerator = p * base
         denominator = numerator + (1.0 - p) * (1.0 - base)
 

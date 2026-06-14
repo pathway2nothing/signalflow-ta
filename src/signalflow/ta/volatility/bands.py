@@ -6,8 +6,8 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     ema_sma_init as _ema_sma_init,
 )
@@ -72,7 +72,6 @@ class BollingerVol(Feature):
         close = df["close"].to_numpy().astype(np.float64)
         from signalflow.ta._numba_kernels import rolling_std as _rolling_std
 
-        # Rolling std (ddof=1) → correct to ddof=0 for Bollinger
         std_raw = _rolling_std(close, self.period)
         factor = np.sqrt((self.period - 1) / self.period)
         std = std_raw * factor
@@ -84,7 +83,6 @@ class BollingerVol(Feature):
         width = 100 * (upper - lower) / (middle + 1e-10)
         pct = (close - lower) / (upper - lower + 1e-10)
 
-        # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -113,7 +111,7 @@ class BollingerVol(Feature):
             f"bb_middle_{self.period}{suffix}",
             f"bb_lower_{self.period}{suffix}",
             f"bb_width_{self.period}{suffix}",
-            f"bb_pct_{self.period}",  # %B is already [0,1], not normalized
+            f"bb_pct_{self.period}",
         ]
 
     test_params: ClassVar[list[dict]] = [
@@ -198,7 +196,6 @@ class KeltnerVol(Feature):
             upper = basis + self.multiplier * atr
             lower = basis - self.multiplier * atr
 
-        # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -290,7 +287,6 @@ class DonchianVol(Feature):
         lower = _rolling_min(low, self.period)
         middle = (upper + lower) / 2
 
-        # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -403,7 +399,6 @@ class AccBandsVol(Feature):
                 middle[i] = np.mean(close[i - self.period + 1 : i + 1])
                 lower[i] = np.mean(lower_raw[i - self.period + 1 : i + 1])
 
-        # Normalization for unbounded outputs
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

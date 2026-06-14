@@ -1,4 +1,3 @@
-# src/signalflow/ta/volatility/__init__.py
 """Volatility indicators - measure price variability.
 
 Modules:
@@ -52,7 +51,6 @@ from signalflow.ta.volatility.extensions import (
 __all__ = [
     "AccBandsVol",
     "AtrVol",
-    # Bands
     "BollingerVol",
     "DonchianVol",
     "ElasticStrainVol",
@@ -61,19 +59,15 @@ __all__ = [
     "GapVol",
     "HeatCapacityVol",
     "KeltnerVol",
-    # Energy
     "KineticEnergyVol",
-    # Measures
     "MassIndexVol",
     "NatrVol",
     "PotentialEnergyVol",
     "RviVol",
     "TemperatureVol",
     "TotalEnergyVol",
-    # Range
     "TrueRangeVol",
     "UlcerIndexVol",
-    # Extensions (sf-profit iter-3.1/15/16/20)
     "AltVolDeviation",
     "GarmanKlassPctRank",
     "GarmanKlassRatio",

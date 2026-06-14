@@ -4,7 +4,6 @@ FOCuS-style window-free CUSUM (Romano-Eckley-Fearnhead-Rigaill 2023): the
 maximum of `cum_z[t] - cum_z[s]` over `s ∈ [t-W, t]` gives the largest
 recent positive drift, a regime-shift indicator.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -13,8 +12,8 @@ import numpy as np
 import polars as pl
 from numpy.lib.stride_tricks import sliding_window_view
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -57,9 +56,6 @@ class FocusMaxStatStat(Feature):
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
         wins = sliding_window_view(z, w)
-        # Suffix sums per row: cumulative sum from end to start
-        # max(suffix_sums) = max over s of Σ_{k=s..end} z[k]
-        # Vectorise: reverse, cumsum, max
         rev_cumsum = np.cumsum(wins[:, ::-1], axis=1)
         max_stat = rev_cumsum.max(axis=1)
         pad = np.full(w - 1, np.nan, dtype=np.float64)

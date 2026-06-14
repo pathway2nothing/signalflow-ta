@@ -1,18 +1,8 @@
-# src/signalflow/ta/stat/dsp.py
 """Digital signal processing measures for financial time series.
 
 Indicators adapted from audio/acoustics signal processing that capture
 spectral dynamics, frequency content changes, and signal characteristics
 in financial time series. All computations are causal (no lookahead).
-
-References:
-    - Scheirer & Slaney (1997) - Spectral Flux
-    - Kedem (1986) - Zero-Crossing Rate
-    - Peeters (2004) - Spectral Rolloff, Spectral Bandwidth, Spectral Slope, Spectral Kurtosis
-    - Dubnov (2004) - Spectral Flatness (Wiener Entropy)
-    - Bogert et al. (1963) - Power Cepstrum
-    - Jiang et al. (2002) - Spectral Contrast
-    - Davis & Mermelstein (1980) - MFCC Band Energy
 """
 
 from dataclasses import dataclass
@@ -21,12 +11,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 def _detrend_window(window: np.ndarray) -> np.ndarray | None:
@@ -47,18 +33,7 @@ def _detrend_window(window: np.ndarray) -> np.ndarray | None:
 
 
 def _power_spectrum(detrended: np.ndarray, skip_dc: bool = True) -> tuple[np.ndarray, np.ndarray]:
-    """Compute power spectrum and frequency bins from a detrended window.
-
-    Args:
-        detrended: Already-detrended signal (use _detrend_window first).
-        skip_dc: If True, remove DC component (index 0).
-
-    Returns:
-        (power, freqs) where power = |FFT|^2 and freqs = normalized
-        frequency bins from np.fft.rfftfreq.
-
-    Complexity: O(n log n).
-    """
+    """Compute power spectrum and frequency bins from a detrended window."""
     fft_vals = np.fft.rfft(detrended)
     power = np.abs(fft_vals) ** 2
     freqs = np.fft.rfftfreq(len(detrended))
@@ -75,16 +50,6 @@ def _log_filterbank(n_filters: int, freqs: np.ndarray) -> np.ndarray:
     frequencies are log-spaced across the range of *freqs*.  Suitable for
     financial time series where octave-spaced grouping is more meaningful
     than mel (perceptual) spacing.
-
-    Args:
-        n_filters: Number of triangular filters (typically 10-30).
-        freqs: Actual frequency bin values from ``np.fft.rfftfreq``
-            (DC component already removed).
-
-    Returns:
-        Filterbank matrix of shape ``(n_filters, len(freqs))``.
-
-    Complexity: O(n_filters * len(freqs)).
     """
     f_min = max(freqs[0], 1e-6)
     f_max = freqs[-1]
@@ -119,11 +84,6 @@ def _dct_ii(x: np.ndarray) -> np.ndarray:
     return result
 
 
-# ---------------------------------------------------------------------------
-# Indicators
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 @feature("stat/spectral_flux")
 class SpectralFluxStat(Feature):
@@ -142,15 +102,6 @@ class SpectralFluxStat(Feature):
         - High flux: rapid spectral change (regime transition)
         - Flux spike: abrupt change in frequency structure
         - Rising flux: increasing market instability
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Scheirer, E. & Slaney, M. (1997). Construction and
-    evaluation of a robust multifeature speech/music discriminator.
-    ICASSP, 1331-1334.
     """
 
     source_col: str = "close"
@@ -182,7 +133,6 @@ class SpectralFluxStat(Feature):
                 prev_power_norm = None
                 continue
 
-            # L2-normalize the power spectrum
             norm = np.sqrt(np.sum(power**2))
             if norm < 1e-10:
                 prev_power_norm = None
@@ -241,14 +191,6 @@ class ZeroCrossingRateStat(Feature):
         - ZCR is inversely related to dominant cycle wavelength
 
     Output is bounded [0, 1].
-
-    Parameters:
-        source_col: Price column to analyze
-        period: Rolling window size
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Kedem, B. (1986). Spectral Analysis and Discrimination
-    by Zero-Crossings. Proceedings of the IEEE, 74(11), 1477-1493.
     """
 
     source_col: str = "close"
@@ -271,7 +213,6 @@ class ZeroCrossingRateStat(Feature):
             if detrended is None:
                 continue
 
-            # Count sign changes (treat zero as non-negative)
             signs = np.sign(detrended)
             signs[signs == 0] = 1.0
             crossings = np.sum(signs[1:] != signs[:-1])
@@ -323,15 +264,6 @@ class SpectralRolloffStat(Feature):
         - Falling rolloff: low-frequency (trend) dominance increasing
 
     Output is in normalized frequency units [0, 0.5].
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        rolloff_pct: Percentage threshold (default: 0.85)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Peeters, G. (2004). A Large Set of Audio Features for
-    Sound Description. IRCAM Technical Report.
     """
 
     source_col: str = "close"
@@ -364,7 +296,6 @@ class SpectralRolloffStat(Feature):
             if total_power < 1e-10:
                 continue
 
-            # Find frequency where cumulative power exceeds threshold
             threshold = self.rolloff_pct * total_power
             cumulative = np.cumsum(power)
             idx = np.searchsorted(cumulative, threshold)
@@ -422,15 +353,6 @@ class SpectralFlatnessStat(Feature):
           peak-to-average ratio, entropy on overall distribution shape)
 
     Output is bounded [0, 1].
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Dubnov, S. (2004). Generalization of Spectral Flatness
-    Measure for Non-Gaussian Linear Processes. IEEE Signal Processing
-    Letters, 11(8), 698-701.
     """
 
     source_col: str = "close"
@@ -461,8 +383,6 @@ class SpectralFlatnessStat(Feature):
             if arith_mean < 1e-20:
                 continue
 
-            # Geometric mean via log to avoid overflow/underflow
-            # Add epsilon to avoid log(0)
             log_power = np.log(power + 1e-20)
             geom_mean = np.exp(np.mean(log_power))
 
@@ -519,17 +439,6 @@ class PowerCepstrumStat(Feature):
         - Peak falling: cycle structure weakening
         - The quefrency of the peak indicates the pseudo-period of
           the dominant spectral pattern
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        min_quefrency: Minimum quefrency to consider (skip very short
-            pseudo-periods, default: 2)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Bogert, B.P., Healy, M.J.R. & Tukey, J.W. (1963).
-    The Quefrency Alanysis of Time Series for Echoes. Proceedings of
-    the Symposium on Time Series Analysis, 209-243.
     """
 
     source_col: str = "close"
@@ -561,21 +470,17 @@ class PowerCepstrumStat(Feature):
             if detrended is None:
                 continue
 
-            # Full FFT power spectrum (include DC for proper cepstrum)
             fft_vals = np.fft.rfft(detrended)
             power = np.abs(fft_vals) ** 2
 
             if np.sum(power) < 1e-10:
                 continue
 
-            # Log power spectrum (add epsilon to avoid log(0))
             log_power = np.log(power + 1e-20)
 
-            # Inverse FFT of log power spectrum = cepstrum
             cepstrum = np.fft.irfft(log_power)
             cepstrum_mag = np.abs(cepstrum)
 
-            # Find dominant peak in valid quefrency range
             max_quefrency = self.period // 2
             if self.min_quefrency < max_quefrency:
                 search_range = cepstrum_mag[self.min_quefrency : max_quefrency]
@@ -615,7 +520,7 @@ class PowerCepstrumStat(Feature):
 class SpectralBandwidthStat(Feature):
     """Rolling Spectral Bandwidth (Peeters, 2004).
 
-    The second central moment of the power spectrum — the standard deviation
+    The second central moment of the power spectrum - the standard deviation
     of the spectral distribution when treating the normalized power spectrum
     as a probability density over frequency.
 
@@ -635,14 +540,6 @@ class SpectralBandwidthStat(Feature):
     WHERE the energy is; bandwidth tells you how SPREAD OUT it is.
 
     Output is in normalized frequency units [0, ~0.5].
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Peeters, G. (2004). A Large Set of Audio Features for
-    Sound Description. IRCAM Technical Report.
     """
 
     source_col: str = "close"
@@ -713,21 +610,13 @@ class SpectralSlopeStat(Feature):
     log(P_i + eps) = a * f_i + b   →   output = a
 
     Interpretation:
-        - Large negative slope: low frequencies dominate strongly —
+        - Large negative slope: low frequencies dominate strongly -
           smooth, trending price action
-        - Slope near zero / positive: energy extends to high frequencies —
+        - Slope near zero / positive: energy extends to high frequencies -
           choppy, mean-reverting, noisy price action
         - Increasingly negative slope: trend strengthening
         - Slope becoming less negative: high-frequency activity increasing,
           trend may be breaking down
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Peeters, G. (2004). A Large Set of Audio Features for
-    Sound Description. IRCAM Technical Report.
     """
 
     source_col: str = "close"
@@ -807,14 +696,6 @@ class SpectralKurtosisStat(Feature):
         - Low kurtosis (~ 2-3): multiple competing frequencies, flat spectrum
         - Rising kurtosis: a dominant cycle is emerging
         - Falling kurtosis: dominant cycle dissolving into noise
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Peeters, G. (2004). A Large Set of Audio Features for
-    Sound Description. IRCAM Technical Report.
     """
 
     source_col: str = "close"
@@ -885,7 +766,7 @@ class SpectralContrastStat(Feature):
 
     Divides the power spectrum into *n_bands* sub-bands and computes the
     mean log-ratio of peak to valley energy within each band.  Captures
-    harmonic texture — how pronounced the peaks are relative to the noise
+    harmonic texture - how pronounced the peaks are relative to the noise
     floor in each frequency region.
 
     For each sub-band k:
@@ -896,22 +777,12 @@ class SpectralContrastStat(Feature):
     output = mean(contrast_k)
 
     Interpretation:
-        - High contrast: clear peaks and valleys across sub-bands —
+        - High contrast: clear peaks and valleys across sub-bands -
           strong harmonic structure, well-defined cycles at multiple
           timescales
-        - Low contrast (~ 0): flat within each sub-band — noise-like
+        - Low contrast (~ 0): flat within each sub-band - noise-like
         - Rising contrast: harmonic structure strengthening
         - Falling contrast: harmonic structure dissolving
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        n_bands: Number of sub-bands to split the spectrum into
-        alpha: Fraction of top/bottom power values used (default 0.2)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Jiang, D.-N. et al. (2002). Music Type Classification
-    by Spectral Contrast Feature. ICME, 113-116.
     """
 
     source_col: str = "close"
@@ -1013,17 +884,6 @@ class MFCCBandEnergyStat(Feature):
         - Low: simple / flat spectral shape
         - Rising: spectral structure becoming more complex
         - Falling: spectral structure simplifying
-
-    Parameters:
-        source_col: Price column to analyze
-        period: FFT window size (power-of-2 recommended)
-        n_filters: Number of triangular filters in the log-filterbank
-        n_coeffs: Number of cepstral coefficients to use (excl. c_0)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Davis, S.B. & Mermelstein, P. (1980). Comparison of
-    Parametric Representations for Monosyllabic Word Recognition in
-    Continuously Spoken Sentences. IEEE TASSP, 28(4), 357-366.
     """
 
     source_col: str = "close"
@@ -1048,14 +908,12 @@ class MFCCBandEnergyStat(Feature):
 
         result = np.full(n, np.nan)
 
-        # Pre-compute filterbank (depends only on period, not data)
-        dummy_freqs = np.fft.rfftfreq(self.period)[1:]  # DC removed
+        dummy_freqs = np.fft.rfftfreq(self.period)[1:]
         effective_filters = self.n_filters
         if len(dummy_freqs) < self.n_filters:
             effective_filters = max(2, len(dummy_freqs) // 2)
         effective_coeffs = min(self.n_coeffs, effective_filters - 1)
         if effective_coeffs < 1:
-            # Not enough resolution for meaningful cepstral analysis
             suffix = "_norm" if self.normalized else ""
             col_name = f"{self.source_col}_mfccbe_{self.period}{suffix}"
             return df.with_columns(pl.Series(name=col_name, values=result))
@@ -1074,12 +932,10 @@ class MFCCBandEnergyStat(Feature):
             if total_power < 1e-10:
                 continue
 
-            # Filterbank energies → log → DCT
             fb_energies = fb @ power
             log_fb = np.log(fb_energies + 1e-20)
             dct_coeffs = _dct_ii(log_fb)
 
-            # L2 norm of coefficients 1..n_coeffs (skip c_0 = overall energy)
             selected = dct_coeffs[1 : effective_coeffs + 1]
             result[i] = float(np.sqrt(np.sum(selected**2)))
 

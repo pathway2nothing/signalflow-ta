@@ -3,14 +3,13 @@
 All scale-invariant or stationary transforms of existing ATR/Parkinson/GarmanKlass measures.
 Added from sf-profit iter-3.1, iter-15, iter-16, iter-20 research.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 def _tr(h, l, c):
@@ -114,7 +113,7 @@ class RealizedVolRatio(Feature):
 
 @dataclass
 class ParkinsonZScore(Feature):
-    """ParkinsonVol z-score over lookback — vol regime deviation."""
+    """ParkinsonVol z-score over lookback - vol regime deviation."""
     requires: ClassVar[list[str]] = ["high", "low"]
     outputs: ClassVar[list[str]] = ["pk_zscore_{period}_{lookback}"]
     period: int = 240

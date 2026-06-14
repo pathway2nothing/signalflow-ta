@@ -12,7 +12,6 @@ Empirically validated in iter-27 of sf-profit (target encoding research):
 mean MI_normalised across 6 walk-forward folds = 0.18 on the forward
 realized-volatility regime label, std 0.02.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -20,8 +19,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -41,15 +40,6 @@ class OmoriAftershockRateStat(Feature):
 
     High rate indicates active aftershock sequence; persistent high rate
     over many bars = prolonged regime instability.
-
-    Attributes:
-        period: window for the rolling σ baseline.
-        lookforward: max bars after main shock for which the rate is defined.
-        source_col: input column.
-
-    References:
-        - Omori, F. (1894). On the after-shocks of earthquakes.
-        - Utsu, T. (1961). A statistical study on the occurrence of aftershocks.
     """
 
     period: int = 480
@@ -75,15 +65,12 @@ class OmoriAftershockRateStat(Feature):
         z = np.where(np.isfinite(s) & (s > 0), rets / np.maximum(s, 1e-12), 0.0)
         big = (np.abs(z) > 3.0).astype(np.int8)
         small = (np.abs(z) > 1.0).astype(np.int8)
-        # For each bar i: find last big-event in [i-lookforward, i-1]. If none → NaN.
-        # Then count fraction of "small" events in (lb, i].
         out = np.full(n, np.nan, dtype=np.float64)
         lf = int(self.lookforward)
         for i in range(lf, n):
             win_big = big[i - lf:i]
             if not win_big.any():
                 continue
-            # last big index within window (relative offset from i-lf)
             rel_lb = int(np.where(win_big)[0][-1])
             lb = (i - lf) + rel_lb
             seg = small[lb + 1:i + 1]
@@ -145,7 +132,7 @@ class OmoriRateBroadStat(Feature):
 @dataclass
 @feature("stat/foreshock_buildup")
 class ForeshockBuildupStat(Feature):
-    """OLS slope of |z| over last `period` bars — building intensity precedes events.
+    """OLS slope of |z| over last `period` bars - building intensity precedes events.
 
     Earthquake seismology shows foreshocks of slowly increasing magnitude
     precede some main shocks. This feature fits a line to recent stress

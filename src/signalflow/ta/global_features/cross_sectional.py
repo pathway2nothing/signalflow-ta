@@ -6,18 +6,13 @@ these are richer compositions tested in sf-profit iter-15/16/18/20.
 
 All features expect a DataFrame with `pair` and `timestamp` columns.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
-
-# ════════════════════════════════════════════════════════════════════════
-# Rank-based (work with 3+ pairs; most robust)
-# ════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class CrossSectionalReturnRank(Feature):
@@ -157,10 +152,6 @@ class CrossSectionalReturnAccelRank(Feature):
         ).drop("_accel")
 
 
-# ════════════════════════════════════════════════════════════════════════
-# Distributional (need 5+ pairs to be robust; weak on 3 pairs)
-# ════════════════════════════════════════════════════════════════════════
-
 @dataclass
 class CrossSectionalDispersion(Feature):
     """Mean of |pair_ret − market_mean_ret| across pairs at each timestamp."""
@@ -266,10 +257,6 @@ class PairExcessReturn(Feature):
         m = pl.col("_ret").mean().over("timestamp")
         return df.with_columns((pl.col("_ret") - m).alias(out)).drop("_ret")
 
-
-# ════════════════════════════════════════════════════════════════════════
-# Beta / correlation (rolling regression vs market)
-# ════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class CrossSectionalBeta(Feature):

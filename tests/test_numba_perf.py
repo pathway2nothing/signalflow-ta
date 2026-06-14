@@ -1,11 +1,10 @@
-"""Numba performance benchmarks — correctness and speedup verification.
+"""Numba performance benchmarks - correctness and speedup verification.
 
 Each migrated indicator is tested for:
 1. Correctness: Numba kernel output matches reference (np.allclose)
 2. Speedup: >= 2x faster than pure Python baseline on 100k rows
 """
 
-from __future__ import annotations
 
 import time
 
@@ -25,13 +24,9 @@ def medium_ohlcv() -> pl.DataFrame:
     return generate_test_ohlcv(50_000)
 
 
-# ── Helpers ─────────────────────────────────────────────────
-
-
 def _time_indicator(cls, params: dict, df: pl.DataFrame, runs: int = 3) -> float:
     """Time indicator computation (median of N runs). First call is warmup."""
     indicator = cls(**params)
-    # Warmup (JIT compilation)
     indicator.compute_pair(df)
 
     times = []
@@ -39,7 +34,7 @@ def _time_indicator(cls, params: dict, df: pl.DataFrame, runs: int = 3) -> float
         t0 = time.perf_counter()
         indicator.compute_pair(df)
         times.append(time.perf_counter() - t0)
-    return sorted(times)[len(times) // 2]  # median
+    return sorted(times)[len(times) // 2]
 
 
 def _rma_sma_init_python(values: np.ndarray, period: int) -> np.ndarray:
@@ -68,9 +63,6 @@ def _normalize_zscore_python(values: np.ndarray, window: int) -> np.ndarray:
             if std > 1e-10:
                 result[i] = (values[i] - mean) / std
     return result
-
-
-# ── Kernel Correctness Tests ────────────────────────────────
 
 
 class TestKernelCorrectness:
@@ -107,9 +99,7 @@ class TestKernelCorrectness:
         period = 20
 
         result = ema_sma_init(close, period)
-        # EMA should have values after period-1
         assert not np.isnan(result[period - 1])
-        # Should be monotonic-ish (no wild jumps)
         valid = result[~np.isnan(result)]
         assert len(valid) > 0
 
@@ -125,7 +115,6 @@ class TestKernelCorrectness:
 
         result = cmo_kernel(gains, losses, period)
 
-        # Reference: O(n*period) loop
         ref = np.full(len(close), np.nan)
         for i in range(period - 1, len(close)):
             sg = np.sum(gains[i - period + 1 : i + 1])
@@ -157,7 +146,6 @@ class TestKernelCorrectness:
 
         adx, _dmp, _dmn = adx_kernel(tr, pdm, ndm, 14)
 
-        # ADX values should be bounded [0, 100]
         valid_adx = adx[~np.isnan(adx)]
         assert len(valid_adx) > 0
         assert valid_adx.min() >= -0.01
@@ -184,7 +172,6 @@ class TestKernelCorrectness:
         period = 14
         result = rolling_sum(close, period)
 
-        # Reference: manual rolling sum
         for i in [period - 1, period, 500, 1000]:
             expected = np.sum(close[i - period + 1 : i + 1])
             assert abs(result[i] - expected) < 1e-6, f"Mismatch at {i}"
@@ -196,7 +183,6 @@ class TestKernelCorrectness:
         period = 20
         result = rolling_std(close, period)
 
-        # Reference: manual rolling std (ddof=1)
         for i in [period - 1, 500, 1000]:
             expected = np.std(close[i - period + 1 : i + 1], ddof=1)
             assert abs(result[i] - expected) < 1e-6, f"Mismatch at {i}"
@@ -207,7 +193,6 @@ class TestKernelCorrectness:
         close = medium_ohlcv["close"].to_numpy().astype(np.float64)
         result = velocity_kernel(close)
 
-        # Index 1+ should match log-returns
         for i in [1, 100, 500]:
             expected = np.log(close[i] / close[i - 1])
             assert abs(result[i] - expected) < 1e-12
@@ -220,7 +205,6 @@ class TestKernelCorrectness:
 
         _psar, direction = psar_kernel(high, low, 0.02, 0.2)
 
-        # Direction should be +1 or -1
         valid_dir = direction[~np.isnan(direction)]
         assert set(np.unique(valid_dir)).issubset({-1.0, 1.0})
 
@@ -237,9 +221,6 @@ class TestKernelCorrectness:
         assert set(np.unique(valid_dir)).issubset({-1.0, 1.0})
 
 
-# ── Indicator-Level Speedup Tests ────────────────────────────
-
-
 class TestSpeedup:
     """Verify migrated indicators run fast enough (sanity check, not strict 2x)."""
 
@@ -247,7 +228,6 @@ class TestSpeedup:
         from signalflow.ta.momentum.core import RsiMom
 
         t = _time_indicator(RsiMom, {"period": 14}, large_ohlcv)
-        # Should complete 100k rows in under 0.1s with Numba
         assert t < 0.5, f"RSI took {t:.3f}s on 100k rows"
 
     def test_stoch_runs_fast(self, large_ohlcv):
@@ -295,11 +275,9 @@ class TestSpeedup:
     def test_zscore_normalization_runs_fast(self, large_ohlcv):
         from signalflow.ta.momentum.core import RsiMom
 
-        # RSI with normalized=True uses zscore kernel
         t = _time_indicator(RsiMom, {"period": 14, "normalized": True}, large_ohlcv)
         assert t < 1.0, f"RSI+zscore took {t:.3f}s on 100k rows"
 
-    # ── Phase 4b: Batch A-F benchmarks ─────────────────────
 
     def test_cci_runs_fast(self, large_ohlcv):
         from signalflow.ta.momentum.oscillators import CciMom

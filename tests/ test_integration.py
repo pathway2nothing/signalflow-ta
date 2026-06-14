@@ -1,5 +1,4 @@
-"""
-SignalFlow-TA Indicator Tests
+"""SignalFlow-TA Indicator Tests
 
 Parametrized tests for all technical analysis indicators from signalflow.ta.
 Each indicator is tested for:
@@ -9,7 +8,6 @@ Each indicator is tested for:
 4. Output validation
 """
 
-from __future__ import annotations
 
 import numpy as np
 import polars as pl
@@ -29,10 +27,6 @@ from indicator_registry import (
     get_configs_by_category,
 )
 
-# =============================================================================
-# Helper for skipping tests when no indicators available
-# =============================================================================
-
 
 def _ensure_config(config):
     """Skip test if config is None (no indicators loaded)."""
@@ -41,39 +35,22 @@ def _ensure_config(config):
     return config
 
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-
 def run_indicator(config: IndicatorConfig, df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Run an indicator on the given data.
-
-    Args:
-        config: Indicator configuration
-        df: Input OHLCV DataFrame
-
-    Returns:
-        DataFrame with computed features
-    """
+    """Run an indicator on the given data."""
     indicator = config.cls(**config.params)
     return indicator.compute_pair(df)
 
 
 def get_output_columns(result: pl.DataFrame, config: IndicatorConfig) -> list[str]:
     """Get actual output columns from result that match expected outputs."""
-    # Try exact match first
     exact_matches = [c for c in config.outputs if c in result.columns]
     if exact_matches:
         return exact_matches
 
-    # Try partial match (indicator name prefix)
     name_lower = config.name.lower()
     partial_matches = []
     for col in result.columns:
         col_lower = col.lower()
-        # Skip standard columns
         if col in (
             "pair",
             "timestamp",
@@ -85,7 +62,6 @@ def get_output_columns(result: pl.DataFrame, config: IndicatorConfig) -> list[st
             "resample_offset",
         ):
             continue
-        # Check if column seems related to this indicator
         for pattern in [
             name_lower,
             name_lower.replace("stat", ""),
@@ -100,7 +76,6 @@ def get_output_columns(result: pl.DataFrame, config: IndicatorConfig) -> list[st
     if partial_matches:
         return partial_matches
 
-    # Return all non-standard columns
     return [
         c
         for c in result.columns
@@ -118,11 +93,6 @@ def get_output_columns(result: pl.DataFrame, config: IndicatorConfig) -> list[st
     ]
 
 
-# =============================================================================
-# Test Classes
-# =============================================================================
-
-
 @pytest.mark.parametrize("config", _CONFIGS_FOR_PARAM, ids=_IDS_FOR_PARAM)
 class TestIndicatorEmptyColumn:
     """Test empty column handling for all indicators."""
@@ -134,19 +104,15 @@ class TestIndicatorEmptyColumn:
         for required_col in config.requires:
             df = generate_empty_column_df(n_rows=100, empty_columns=[required_col])
 
-            # Should not raise exception (or raise clear error)
             try:
                 result = run_indicator(config, df)
 
-                # Should have output columns
                 out_cols = get_output_columns(result, config)
                 assert len(out_cols) > 0 or len(result.columns) > 7, f"No output columns from {config.name}"
 
-                # Output length should match input
                 assert len(result) == len(df), f"{config.name} changed row count"
 
             except (ValueError, KeyError, ZeroDivisionError) as e:
-                # Acceptable to raise clear error about missing/null data
                 error_msg = str(e).lower()
                 acceptable_errors = [
                     "missing",
@@ -167,15 +133,12 @@ class TestIndicatorEmptyColumn:
         try:
             result = run_indicator(config, df_nulls)
 
-            # Should produce output
             out_cols = get_output_columns(result, config)
             assert len(out_cols) > 0 or len(result.columns) > 7
 
-            # Should have same length
             assert len(result) == len(df_nulls)
 
         except (ValueError, KeyError, ZeroDivisionError):
-            # Some indicators may not support partial nulls
             pytest.skip(f"{config.name} doesn't support partial null data")
 
 
@@ -189,25 +152,20 @@ class TestIndicatorLookAhead:
     def test_no_lookahead_bias(self, config: IndicatorConfig):
         """Indicator should not use future data."""
         config = _ensure_config(config)
-        # Need enough data for warmup + truncate + comparison
         n_rows = max(500, config.warmup * 3 + self.TRUNCATE_BARS * 2)
         df = generate_sinusoidal_ohlcv(n_rows=n_rows, seed=SEED)
 
         try:
-            # Compute on full data
             result_full = run_indicator(config, df)
 
-            # Compute on truncated data
             df_trunc = df.head(len(df) - self.TRUNCATE_BARS)
             result_trunc = run_indicator(config, df_trunc)
 
-            # Get output columns
             out_cols = get_output_columns(result_full, config)
 
             if not out_cols:
                 pytest.skip(f"No output columns from {config.name}")
 
-            # Compare overlapping region
             n_compare = len(result_trunc)
 
             for out_col in out_cols:
@@ -217,7 +175,6 @@ class TestIndicatorLookAhead:
                 full_vals = result_full[out_col][:n_compare].to_numpy()
                 trunc_vals = result_trunc[out_col].to_numpy()
 
-                # NaN patterns should match
                 full_nan = np.isnan(full_vals)
                 trunc_nan = np.isnan(trunc_vals)
 
@@ -227,7 +184,6 @@ class TestIndicatorLookAhead:
                     err_msg=f"Look-ahead bias in {config.name}.{out_col}: NaN patterns differ",
                 )
 
-                # Values should match where valid
                 valid = ~full_nan & ~trunc_nan
                 if valid.any():
                     np.testing.assert_allclose(
@@ -291,7 +247,6 @@ class TestIndicatorReproducibility:
     - Feature store reliability
     """
 
-    # Maximum acceptable difference: 0.0001% = 1e-6
     TOLERANCE = 1e-6
 
     def test_same_result_different_entry_points(self, config: IndicatorConfig):
@@ -304,16 +259,12 @@ class TestIndicatorReproducibility:
         """
         config = _ensure_config(config)
 
-        # Realistic scenario: 1000 bars total, start comparison from bar 200
-        # This is like having 1 year of data vs 6 months of data
         n_rows = max(1000, config.warmup * 3 + 500)
         df = generate_sinusoidal_ohlcv(n_rows=n_rows, seed=SEED)
 
         try:
-            # Compute from start (full history)
             result_full = run_indicator(config, df)
 
-            # Compute from bar 200 (partial history - like starting from July)
             offset = 200
             df_late = df.slice(offset, len(df) - offset)
             result_late = run_indicator(config, df_late)
@@ -323,10 +274,8 @@ class TestIndicatorReproducibility:
             if not out_cols:
                 pytest.skip(f"No output columns from {config.name}")
 
-            # Compare after standard warmup (2x period for safety)
             warmup = config.warmup * 2
 
-            # Start comparison after warmup in the "late" dataset
             compare_start = offset + warmup
             compare_len = min(len(result_late) - warmup, 500)
 
@@ -345,12 +294,11 @@ class TestIndicatorReproducibility:
                 valid = ~np.isnan(full_vals) & ~np.isnan(late_vals)
 
                 if valid.sum() < 10:
-                    continue  # Not enough valid data to compare
+                    continue
 
                 full_valid = full_vals[valid]
                 late_valid = late_vals[valid]
 
-                # Calculate relative difference
                 with np.errstate(divide="ignore", invalid="ignore"):
                     scale = np.maximum(np.abs(full_valid), np.abs(late_valid))
                     scale = np.where(scale < 1e-10, 1.0, scale)
@@ -433,7 +381,6 @@ class TestIndicatorReproducibility:
                 vals1 = result1[out_col].to_numpy()
                 vals2 = result2[out_col].to_numpy()
 
-                # Handle NaN comparison
                 nan1 = np.isnan(vals1)
                 nan2 = np.isnan(vals2)
 
@@ -507,14 +454,12 @@ class TestIndicatorOutputValidation:
 
                 values = values[valid]
 
-                # Check min bound
                 if min_bound is not None:
                     violations = values < min_bound - 1e-6
                     if violations.any():
                         min_val = values[violations].min()
                         pytest.fail(f"{config.name}.{out_col} below min bound {min_bound}: min value = {min_val}")
 
-                # Check max bound
                 if max_bound is not None and max_bound != float("inf"):
                     violations = values > max_bound + 1e-6
                     if violations.any():
@@ -558,16 +503,13 @@ class TestIndicatorMultiPair:
     def test_pairs_independent(self, config: IndicatorConfig):
         """Pairs should be computed independently."""
         config = _ensure_config(config)
-        # Create two pairs with very different price levels
         df1 = generate_static_ohlcv(n_rows=200, base_price=100, pair="BTCUSDT")
         df2 = generate_static_ohlcv(n_rows=200, base_price=50000, pair="ETHUSDT")
 
         try:
-            # Compute separately
             result1 = run_indicator(config, df1)
             run_indicator(config, df2)
 
-            # Compute together (simulating grouped computation)
             df_combined = pl.concat([df1, df2])
 
             results_combined = {}
@@ -575,7 +517,6 @@ class TestIndicatorMultiPair:
                 pair_df = df_combined.filter(pl.col("pair") == pair)
                 results_combined[pair] = run_indicator(config, pair_df)
 
-            # Results should match
             out_cols = get_output_columns(result1, config)
 
             for out_col in out_cols:
@@ -608,7 +549,6 @@ class TestIndicatorDataTypes:
             result = run_indicator(config, df)
             assert len(result) == len(df)
         except (ValueError, ZeroDivisionError) as e:
-            # Some indicators may fail on zero variance data
             pytest.skip(f"{config.name} requires non-constant data: {e}")
 
     def test_sinusoidal_data(self, config: IndicatorConfig):
@@ -636,7 +576,6 @@ class TestIndicatorDataTypes:
             result = run_indicator(config, df)
             assert len(result) == 5
         except (ValueError, IndexError) as e:
-            # Acceptable if raises clear error about insufficient data
             error_msg = str(e).lower()
             acceptable = [
                 "length",
@@ -647,7 +586,6 @@ class TestIndicatorDataTypes:
                 "at least",
             ]
             if not any(kw in error_msg for kw in acceptable):
-                # Still pass if it's just array indexing issue due to short data
                 pass
 
     def test_performance(self, config: IndicatorConfig):
@@ -663,11 +601,6 @@ class TestIndicatorDataTypes:
 
         assert len(result) == 10000
         assert elapsed < 10.0, f"{config.name} too slow: {elapsed:.2f}s for 10k rows"
-
-
-# =============================================================================
-# Category-Specific Tests
-# =============================================================================
 
 
 class TestMomentumIndicators:
@@ -697,7 +630,6 @@ class TestMomentumIndicators:
                     values = result[col].drop_nulls().to_numpy()
                     if len(values) > 100:
                         mean_rsi = np.mean(values)
-                        # RSI should oscillate around 50 (±15)
                         assert 35 < mean_rsi < 65, f"{config.name} mean RSI = {mean_rsi:.1f}, expected ~50"
             except Exception:
                 continue
@@ -731,11 +663,6 @@ class TestVolatilityIndicators:
 
                 if valid.any():
                     assert np.all(values[valid] >= 0), f"{config.name}.{col} has negative values"
-
-
-# =============================================================================
-# Run Tests
-# =============================================================================
 
 
 if __name__ == "__main__":

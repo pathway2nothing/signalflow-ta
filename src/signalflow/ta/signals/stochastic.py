@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.momentum import StochMom
 from signalflow.ta.signals.filters import SignalFilter
 
@@ -22,28 +22,6 @@ class StochasticDetector1(SignalDetector):
     Signal logic:
         - LONG: %K crosses above %D in oversold zone (< oversold_threshold)
         - SHORT: %K crosses below %D in overbought zone (> overbought_threshold)
-
-    Attributes:
-        stoch_period: Stochastic %K period.
-        stoch_smooth_k: %K smoothing period.
-        stoch_smooth_d: %D smoothing period.
-        oversold_threshold: Oversold zone threshold (default 20).
-        overbought_threshold: Overbought zone threshold (default 80).
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import StochasticDetector1
-
-        detector = StochasticDetector1(
-            stoch_period=14,
-            oversold_threshold=20,
-            overbought_threshold=80,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     stoch_period: int = 14
@@ -69,15 +47,7 @@ class StochasticDetector1(SignalDetector):
         ]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on Stochastic crossovers.
-
-        Args:
-            features: DataFrame with computed Stochastic values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected crossover signals.
-        """
+        """Generate signals based on Stochastic crossovers."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -105,21 +75,17 @@ class StochasticDetector1(SignalDetector):
         stoch_d = features[self.stoch_d_col].to_numpy()
         n = len(stoch_k)
 
-        # Previous values for crossover detection
         stoch_k_prev = np.roll(stoch_k, 1)
         stoch_d_prev = np.roll(stoch_d, 1)
         stoch_k_prev[0] = np.nan
         stoch_d_prev[0] = np.nan
 
-        # Crossover conditions
         k_crosses_above_d = (stoch_k_prev <= stoch_d_prev) & (stoch_k > stoch_d)
         k_crosses_below_d = (stoch_k_prev >= stoch_d_prev) & (stoch_k < stoch_d)
 
-        # Zone conditions
         in_oversold = stoch_k < self.oversold_threshold
         in_overbought = stoch_k > self.overbought_threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -139,7 +105,6 @@ class StochasticDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -181,15 +146,6 @@ class StochasticDetector2(SignalDetector):
         - Computes z-score of %K
         - LONG: %K z-score < -threshold AND %K < oversold
         - SHORT: %K z-score > threshold AND %K > overbought
-
-    Attributes:
-        stoch_period: Stochastic %K period.
-        zscore_window: Window for z-score calculation.
-        zscore_threshold: Z-score threshold for signal.
-        oversold_threshold: Oversold zone threshold.
-        overbought_threshold: Overbought zone threshold.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
     """
 
     stoch_period: int = 14
@@ -243,7 +199,6 @@ class StochasticDetector2(SignalDetector):
         stoch_k = features[self.stoch_k_col].to_numpy()
         n = len(stoch_k)
 
-        # Compute z-score of Stochastic %K
         zscore = np.full(n, np.nan)
         for i in range(self.zscore_window - 1, n):
             window_vals = stoch_k[i - self.zscore_window + 1 : i + 1]
@@ -254,11 +209,9 @@ class StochasticDetector2(SignalDetector):
                 if std > 1e-10:
                     zscore[i] = (stoch_k[i] - mean) / std
 
-        # Signal conditions
         oversold_extreme = (zscore < -self.zscore_threshold) & (stoch_k < self.oversold_threshold)
         overbought_extreme = (zscore > self.zscore_threshold) & (stoch_k > self.overbought_threshold)
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -276,7 +229,6 @@ class StochasticDetector2(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

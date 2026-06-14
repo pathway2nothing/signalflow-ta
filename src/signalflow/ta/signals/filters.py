@@ -12,14 +12,7 @@ class SignalFilter(ABC):
 
     @abstractmethod
     def apply(self, df: pl.DataFrame) -> pl.Series:
-        """Apply filter and return boolean mask.
-
-        Args:
-            df: DataFrame with OHLCV data.
-
-        Returns:
-            Boolean Series where True = signal passes filter.
-        """
+        """Apply filter and return boolean mask."""
         raise NotImplementedError
 
     @property
@@ -223,7 +216,7 @@ class MeanExtensionFilter(SignalFilter):
         return self.window
 
 
-from signalflow.ta.signals._utils import _rma_sma_init  # noqa: E402
+from signalflow.ta.signals._utils import _rma_sma_init
 
 
 @dataclass
@@ -231,12 +224,6 @@ class RsiZscoreFilter(SignalFilter):
     """Filter signals based on RSI z-score threshold.
 
     Computes RSI, then z-score normalizes it, and filters based on threshold.
-
-    Attributes:
-        rsi_period: RSI calculation period.
-        zscore_window: Rolling window for z-score.
-        threshold: Z-score threshold (negative for oversold, positive for overbought).
-        condition: "<" for z-score below threshold, ">" for above.
     """
 
     rsi_period: int = 720
@@ -248,7 +235,6 @@ class RsiZscoreFilter(SignalFilter):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Calculate RSI
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
 
@@ -261,7 +247,6 @@ class RsiZscoreFilter(SignalFilter):
         rs = avg_gain / (avg_loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))
 
-        # Calculate z-score
         zscore = np.full(n, np.nan)
         for i in range(self.zscore_window - 1, n):
             window_vals = rsi[i - self.zscore_window + 1 : i + 1]
@@ -350,13 +335,6 @@ class CciZscoreFilter(SignalFilter):
     """Filter signals based on CCI z-score threshold.
 
     Computes CCI, then z-score normalizes it, and filters based on threshold.
-
-    Attributes:
-        cci_period: CCI calculation period.
-        cci_constant: CCI constant (default 0.015).
-        zscore_window: Rolling window for z-score.
-        threshold: Z-score threshold.
-        condition: "<" for z-score below threshold, ">" for above.
     """
 
     cci_period: int = 180
@@ -381,7 +359,6 @@ class CciZscoreFilter(SignalFilter):
             if mad > 0:
                 cci[i] = (tp[i] - sma) / (self.cci_constant * mad)
 
-        # Calculate z-score
         zscore = np.full(n, np.nan)
         for i in range(self.zscore_window - 1, n):
             window_vals = cci[i - self.zscore_window + 1 : i + 1]
@@ -416,14 +393,12 @@ class MacdBelowSignalFilter(SignalFilter):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Calculate EMAs
         fast_ema = np.full(n, np.nan)
         slow_ema = np.full(n, np.nan)
 
         fast_alpha = 2 / (self.fast_period + 1)
         slow_alpha = 2 / (self.slow_period + 1)
 
-        # Initialize with SMA
         if n >= self.fast_period:
             fast_ema[self.fast_period - 1] = np.mean(close[: self.fast_period])
         if n >= self.slow_period:
@@ -436,7 +411,6 @@ class MacdBelowSignalFilter(SignalFilter):
 
         macd_line = fast_ema - slow_ema
 
-        # Signal line (EMA of MACD)
         signal_line = np.full(n, np.nan)
         signal_alpha = 2 / (self.signal_period + 1)
 
@@ -474,7 +448,6 @@ class MacdAboveSignalFilter(SignalFilter):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Calculate EMAs
         fast_ema = np.full(n, np.nan)
         slow_ema = np.full(n, np.nan)
 

@@ -4,7 +4,6 @@ Reuses the same convention as ``ta/stat/_causal_helpers.py``: every helper
 guarantees length-preserving, causal output (NaN during warmup, then
 warmup-invariant values for the rest of the series).
 """
-from __future__ import annotations
 
 import numpy as np
 

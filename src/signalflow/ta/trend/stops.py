@@ -6,8 +6,8 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     ema_sma_init as _ema_sma_init,
 )
@@ -68,11 +68,9 @@ class PsarTrend(Feature):
 
         psar, direction = _psar_kernel(high, low, self.af_step, self.af_max)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
-            # Use a reasonable default period (20) since PSAR doesn't have an explicit period
             norm_window = self.norm_period or get_norm_window(20)
             psar = normalize_zscore(psar, window=norm_window)
             direction = normalize_zscore(direction, window=norm_window)
@@ -100,7 +98,7 @@ class PsarTrend(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        base_warmup = 100  # PSAR needs time to stabilize
+        base_warmup = 100
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
 
@@ -144,7 +142,6 @@ class SupertrendTrend(Feature):
 
         supertrend, direction = _supertrend_kernel(high, low, close, self.period, self.multiplier)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -231,7 +228,6 @@ class ChandelierTrend(Feature):
         chandelier_long = hh - self.multiplier * atr_sma
         chandelier_short = ll + self.multiplier * atr_sma
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -332,7 +328,6 @@ class HiloTrend(Feature):
                 hilo[i] = hilo[i - 1]
                 direction[i] = direction[i - 1]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -420,11 +415,9 @@ class CkspTrend(Feature):
         long_stop_init = hh - self.x * atr
         short_stop_init = ll + self.x * atr
 
-        # Second smoothing: rolling max/min over q periods
         cksp_long = _rolling_max(long_stop_init, self.q)
         cksp_short = _rolling_min(short_stop_init, self.q)
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

@@ -9,14 +9,13 @@ Goes beyond the basic LinRegSlopeStat/InterceptStat/ResidualStat (in regression.
 
 All features added from sf-profit iter-15/18/20 feature research.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 def _linreg_slope_intercept(c: np.ndarray, w: int):
@@ -264,7 +263,7 @@ class LinRegSlopeRatio(Feature):
 class LinRegInterceptNormalized(Feature):
     """LinReg intercept normalized by close.
 
-    (intercept_N − close) / close — scale-invariant offset from trend line.
+    (intercept_N − close) / close - scale-invariant offset from trend line.
     """
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["intercept_norm_{period}"]

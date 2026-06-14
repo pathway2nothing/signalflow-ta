@@ -1,5 +1,4 @@
-"""
-Tests for newly added indicators.
+"""Tests for newly added indicators.
 
 This module contains specific tests for:
 - KalmanSmooth (overlap/adaptive.py)
@@ -7,20 +6,16 @@ This module contains specific tests for:
 - Structure Statistics (stat/structure.py)
 """
 
-from __future__ import annotations
 
 import numpy as np
 import polars as pl
 import pytest
 from conftest import generate_random_walk_ohlcv, generate_sinusoidal_ohlcv
 
-# Import new indicators
 from signalflow.ta import (
-    # Overlap
     KalmanSmooth,
     LinRegDirection,
     LinRegPriceDiff,
-    # Structure Statistics
     ReversePointsStat,
     RollingMaxStat,
     RollingMinStat,
@@ -29,13 +24,8 @@ from signalflow.ta import (
     TwoMaRegime,
     VolatilitySpikeStat,
     VolumeSpikeStat,
-    # Trend Regime
     WilliamsAlligatorRegime,
 )
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
 
 
 def run_indicator(indicator, df: pl.DataFrame) -> pl.DataFrame:
@@ -49,11 +39,6 @@ def get_feature_columns(df: pl.DataFrame) -> list[str]:
     return [c for c in df.columns if c not in exclude]
 
 
-# =============================================================================
-# Test: KalmanSmooth
-# =============================================================================
-
-
 class TestKalmanSmooth:
     """Tests for Kalman Filter smoothing indicator."""
 
@@ -64,7 +49,6 @@ class TestKalmanSmooth:
         result = run_indicator(indicator, df)
 
         assert "close_kalman_60" in result.columns
-        # After warmup, should have valid values
         valid = result["close_kalman_60"].drop_nulls()
         assert len(valid) > 0
 
@@ -77,12 +61,10 @@ class TestKalmanSmooth:
         close = result["close"].to_numpy()
         kalman = result["close_kalman_120"].to_numpy()
 
-        # Compare variance after warmup
         warmup = 200
         close_var = np.nanvar(close[warmup:])
         kalman_var = np.nanvar(kalman[warmup:])
 
-        # Smoothed signal should have lower variance
         assert kalman_var < close_var
 
     def test_normalized_output(self):
@@ -103,17 +85,11 @@ class TestKalmanSmooth:
         result1 = run_indicator(ind1, df)
         result2 = run_indicator(ind2, df)
 
-        # Different window sizes should give different results
         col1 = "close_kalman_60"
         col2 = "close_kalman_120"
 
         assert col1 in result1.columns
         assert col2 in result2.columns
-
-
-# =============================================================================
-# Test: Trend Regime Indicators
-# =============================================================================
 
 
 class TestWilliamsAlligatorRegime:
@@ -235,11 +211,6 @@ class TestLinRegPriceDiff:
         assert "close_linreg_price_dir_15" in result.columns
 
 
-# =============================================================================
-# Test: Structure Statistics
-# =============================================================================
-
-
 class TestReversePointsStat:
     """Tests for reverse points counter."""
 
@@ -278,13 +249,11 @@ class TestTimeSinceSpikeStat:
 
     def test_basic_computation(self):
         """Should count bars since last spike."""
-        # Create a dataframe with a known spike column
         df = generate_sinusoidal_ohlcv(n_rows=100)
 
-        # Add a spike column
         spike = np.zeros(100)
-        spike[10] = 1  # Spike at bar 10
-        spike[50] = 1  # Spike at bar 50
+        spike[10] = 1
+        spike[50] = 1
         df = df.with_columns(pl.Series(name="spike", values=spike))
 
         indicator = TimeSinceSpikeStat(source_col="spike")
@@ -294,12 +263,11 @@ class TestTimeSinceSpikeStat:
 
         time_since = result["time_since_spike"].to_numpy()
 
-        # After bar 10, time_since should increment
-        assert time_since[10] == 0  # Spike at bar 10
-        assert time_since[11] == 1  # 1 bar since spike
-        assert time_since[49] == 39  # 39 bars since bar 10 spike
-        assert time_since[50] == 0  # New spike at bar 50
-        assert time_since[51] == 1  # 1 bar since spike
+        assert time_since[10] == 0
+        assert time_since[11] == 1
+        assert time_since[49] == 39
+        assert time_since[50] == 0
+        assert time_since[51] == 1
 
 
 class TestVolatilitySpikeStat:
@@ -365,7 +333,6 @@ class TestRollingMinMaxStat:
         min_val = result["close_min_14"].to_numpy()
         valid = ~np.isnan(min_val)
 
-        # Rolling min should be <= close at each point
         assert np.all(min_val[valid] <= close[valid])
 
     def test_rolling_max(self):
@@ -380,13 +347,7 @@ class TestRollingMinMaxStat:
         max_val = result["close_max_14"].to_numpy()
         valid = ~np.isnan(max_val)
 
-        # Rolling max should be >= close at each point
         assert np.all(max_val[valid] >= close[valid])
-
-
-# =============================================================================
-# Test: Look-Ahead Bias for New Indicators
-# =============================================================================
 
 
 class TestNoLookAheadBias:
@@ -405,7 +366,6 @@ class TestNoLookAheadBias:
         full_values = result_full[feature_col][:n_compare].to_numpy()
         trunc_values = result_truncated[feature_col].to_numpy()
 
-        # Handle NaN
         valid = ~np.isnan(full_values) & ~np.isnan(trunc_values)
         if valid.sum() > 0:
             np.testing.assert_allclose(full_values[valid], trunc_values[valid], rtol=self.TOLERANCE)
@@ -433,11 +393,6 @@ class TestNoLookAheadBias:
         df = generate_sinusoidal_ohlcv(n_rows=500)
         indicator = ReversePointsStat(window=20)
         self._test_no_lookahead(indicator, df, "close_reverse_points_20")
-
-
-# =============================================================================
-# Main Entry Point
-# =============================================================================
 
 
 if __name__ == "__main__":

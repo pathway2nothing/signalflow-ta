@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 
 
@@ -16,18 +16,10 @@ def _hampel_filter(values: np.ndarray, window: int, n_sigmas: float) -> np.ndarr
 
     The Hampel filter uses rolling median and MAD (median absolute deviation)
     to identify outliers and replace them with the median.
-
-    Args:
-        values: Input array.
-        window: Rolling window size.
-        n_sigmas: Number of MAD units for outlier threshold.
-
-    Returns:
-        Filtered array with outliers replaced by median.
     """
     n = len(values)
     result = values.copy()
-    k = 1.4826  # Scale factor for MAD to approximate std dev
+    k = 1.4826
 
     for i in range(window - 1, n):
         window_vals = values[i - window + 1 : i + 1]
@@ -50,15 +42,6 @@ def _adaptive_hampel_filter(
 
     Similar to standard Hampel but uses a separate volatility window
     to compute the MAD, making it more responsive to changing conditions.
-
-    Args:
-        values: Input array.
-        window: Rolling window for median calculation.
-        n_sigmas: Number of MAD units for outlier threshold.
-        volatility_window: Window for volatility (MAD) calculation.
-
-    Returns:
-        Filtered array with outliers replaced by median.
     """
     n = len(values)
     result = values.copy()
@@ -67,11 +50,9 @@ def _adaptive_hampel_filter(
     start_idx = max(window, volatility_window) - 1
 
     for i in range(start_idx, n):
-        # Median from main window
         window_vals = values[i - window + 1 : i + 1]
         median = np.median(window_vals)
 
-        # MAD from volatility window
         vol_window_vals = values[i - volatility_window + 1 : i + 1]
         vol_median = np.median(vol_window_vals)
         mad = k * np.median(np.abs(vol_window_vals - vol_median))
@@ -94,26 +75,6 @@ class HampelFilterDetector1(SignalDetector):
         - Calculates deviation score: (close - filtered) / close
         - LONG: score < -threshold (price below filtered baseline)
         - SHORT: score > threshold (price above filtered baseline)
-
-    Attributes:
-        window: Hampel filter window size.
-        n_sigmas: Number of MAD units for outlier detection.
-        threshold: Minimum score deviation for signal.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import HampelFilterDetector1
-
-        detector = HampelFilterDetector1(
-            window=240,
-            n_sigmas=3.0,
-            threshold=0.0000001,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     window: int = 240
@@ -129,15 +90,7 @@ class HampelFilterDetector1(SignalDetector):
         self.features = []
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on Hampel filter deviation.
-
-        Args:
-            features: DataFrame with OHLCV data.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on Hampel filter deviation."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -164,17 +117,13 @@ class HampelFilterDetector1(SignalDetector):
         close = features["close"].to_numpy()
         n = len(close)
 
-        # Apply Hampel filter
         filtered = _hampel_filter(close, self.window, self.n_sigmas)
 
-        # Calculate deviation score
         score = (close - filtered) / (close + 1e-10)
 
-        # Signal conditions
         oversold = score < -self.threshold
         overbought = score > self.threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -192,7 +141,6 @@ class HampelFilterDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -236,28 +184,6 @@ class HampelFilterDetector2(SignalDetector):
         - Calculates deviation score: (close - filtered) / close
         - LONG: score < -threshold (price below filtered baseline)
         - SHORT: score > threshold (price above filtered baseline)
-
-    Attributes:
-        window: Hampel filter window for median.
-        volatility_window: Window for MAD calculation.
-        n_sigmas: Number of MAD units for outlier detection.
-        threshold: Minimum score deviation for signal.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import HampelFilterDetector2
-
-        detector = HampelFilterDetector2(
-            window=240,
-            volatility_window=30,
-            n_sigmas=3.0,
-            threshold=0.0000001,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     window: int = 240
@@ -274,15 +200,7 @@ class HampelFilterDetector2(SignalDetector):
         self.features = []
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on adaptive Hampel filter deviation.
-
-        Args:
-            features: DataFrame with OHLCV data.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on adaptive Hampel filter deviation."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -309,17 +227,13 @@ class HampelFilterDetector2(SignalDetector):
         close = features["close"].to_numpy()
         n = len(close)
 
-        # Apply adaptive Hampel filter
         filtered = _adaptive_hampel_filter(close, self.window, self.n_sigmas, self.volatility_window)
 
-        # Calculate deviation score
         score = (close - filtered) / (close + 1e-10)
 
-        # Signal conditions
         oversold = score < -self.threshold
         overbought = score > self.threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -337,7 +251,6 @@ class HampelFilterDetector2(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

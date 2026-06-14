@@ -1,16 +1,8 @@
-# src/signalflow/ta/stat/complexity.py
 """Complexity and information-theoretic measures for time series.
 
 Indicators from nonlinear dynamics, information theory, and complexity science
 that capture predictability, regularity, and regime transitions in financial
 time series. All computations are causal (no lookahead) and reproducible.
-
-References:
-    - Bandt & Pompe (2002) - Permutation Entropy
-    - Richman & Moorman (2000) - Sample Entropy
-    - Lempel & Ziv (1976) - Lempel-Ziv Complexity
-    - Frieden (2004) - Fisher Information
-    - Peng et al. (1994) - Detrended Fluctuation Analysis
 """
 
 from dataclasses import dataclass
@@ -20,12 +12,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 def _log_returns(values: np.ndarray) -> np.ndarray:
@@ -53,7 +41,6 @@ def _permutation_entropy(x: np.ndarray, m: int) -> float:
     total = 0
 
     for i in range(n - m + 1):
-        # Ordinal pattern: rank of each element in the sub-sequence
         window = x[i : i + m]
         if np.any(np.isnan(window)):
             continue
@@ -64,14 +51,12 @@ def _permutation_entropy(x: np.ndarray, m: int) -> float:
     if total == 0:
         return np.nan
 
-    # Shannon entropy of the pattern distribution
     h = 0.0
     for c in counts.values():
         p = c / total
         if p > 0:
             h -= p * np.log2(p)
 
-    # Normalize by max possible entropy: log2(m!)
     h_max = log2(factorial(m))
     if h_max < 1e-10:
         return np.nan
@@ -87,23 +72,19 @@ def _sample_entropy(x: np.ndarray, m: int, r: float) -> float:
     Lower SampEn = more regular/predictable.
     Higher SampEn = more complex/random.
 
-    Complexity: O(n^2) within window — acceptable for typical windows (50-200).
+    Complexity: O(n^2) within window - acceptable for typical windows (50-200).
     """
     n = len(x)
     if n < m + 2:
         return np.nan
 
-    # Build templates
-    # Count B (matches of length m) and A (matches of length m+1)
     b_count = 0
     a_count = 0
 
     for i in range(n - m):
         for j in range(i + 1, n - m):
-            # Check m-length match
             if np.max(np.abs(x[i : i + m] - x[j : j + m])) <= r:
                 b_count += 1
-                # Check (m+1)-length match
                 if i + m < n and j + m < n and abs(x[i + m] - x[j + m]) <= r:
                     a_count += 1
 
@@ -111,7 +92,6 @@ def _sample_entropy(x: np.ndarray, m: int, r: float) -> float:
         return np.nan
 
     if a_count == 0:
-        # Convention: return large value (no m+1 matches found)
         return float(np.log(b_count))
 
     return float(-np.log(a_count / b_count))
@@ -131,12 +111,11 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
 
     s = binary_seq.astype(int).tolist()
     complexity = 1
-    prefix_len = 1  # current prefix length
-    k = 1  # current component length
+    prefix_len = 1
+    k = 1
     k_max = 1
 
     while prefix_len + k <= n:
-        # Check if s[prefix_len:prefix_len+k] is in s[0:prefix_len+k-1]
         sub = s[prefix_len : prefix_len + k]
         found = False
         for start in range(prefix_len + k - k):
@@ -154,7 +133,6 @@ def _lempel_ziv_complexity(binary_seq: np.ndarray) -> float:
             k = 1
             k_max = 1
 
-    # Normalize
     if n < 2:
         return np.nan
     norm = n / np.log2(n)
@@ -214,11 +192,9 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
     if max_box < min_box + 2 or n < min_box * 4:
         return np.nan
 
-    # Cumulative sum of deviations from mean (profile)
     mean_x = np.nanmean(x)
     profile = np.nancumsum(x - mean_x)
 
-    # Generate box sizes (log-spaced)
     box_sizes = np.unique(
         np.logspace(np.log10(min_box), np.log10(max_box), num=min(15, max_box - min_box + 1)).astype(int)
     )
@@ -239,9 +215,7 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
         count = 0
         for b in range(n_boxes):
             segment = profile[b * box_size : (b + 1) * box_size]
-            # Linear detrending
             x_axis = np.arange(box_size)
-            # Fast linear fit: slope = (n*sum(xy) - sum(x)*sum(y)) / (n*sum(x^2) - sum(x)^2)
             sx = np.sum(x_axis)
             sy = np.sum(segment)
             sxy = np.dot(x_axis, segment)
@@ -265,11 +239,9 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
     if len(valid_boxes) < 3:
         return np.nan
 
-    # Log-log regression: F(n) ~ n^alpha
     log_n = np.log(np.array(valid_boxes, dtype=float))
     log_f = np.log(np.array(fluctuations, dtype=float))
 
-    # Linear regression for slope (alpha)
     n_pts = len(log_n)
     sx = np.sum(log_n)
     sy = np.sum(log_f)
@@ -281,11 +253,6 @@ def _dfa_exponent(x: np.ndarray, min_box: int = 4, max_box: int | None = None) -
 
     alpha = (n_pts * sxy - sx * sy) / denom
     return float(alpha)
-
-
-# ---------------------------------------------------------------------------
-# Indicators
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -313,16 +280,6 @@ class PermutationEntropyStat(Feature):
         - High PE: complex, noisy dynamics (random walk, choppy market)
         - Dropping PE: emerging pattern / trend formation
         - Rising PE: increasing randomness / regime breakdown
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size for computing entropy
-        m: Embedding dimension (pattern length, typically 3-5)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Bandt, C. & Pompe, B. (2002). Permutation Entropy:
-    A Natural Complexity Measure for Time Series.
-    Physical Review Letters, 88(17), 174102.
     """
 
     source_col: str = "close"
@@ -401,17 +358,6 @@ class SampleEntropyStat(Feature):
         - High SampEn: complex, irregular (unpredictable)
         - Dropping SampEn: market becoming more predictable (pattern forming)
         - Rising SampEn: market becoming more random
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        m: Template length (embedding dimension, typically 2)
-        r_mult: Tolerance as multiple of std(window) (typically 0.2)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Richman, J.S. & Moorman, J.R. (2000). Physiological
-    time-series analysis using approximate entropy and sample entropy.
-    American Journal of Physiology, 278(6), H2039-H2049.
     """
 
     source_col: str = "close"
@@ -443,7 +389,6 @@ class SampleEntropyStat(Feature):
             if len(valid) < self.m + 10:
                 continue
 
-            # Tolerance = r_mult * std of window
             std = np.std(valid, ddof=1)
             if std < 1e-10:
                 continue
@@ -499,14 +444,6 @@ class LempelZivStat(Feature):
         - LZC << 1.0: structured, repetitive (easy to compress, exploitable)
         - Dropping LZC: emerging structure (pattern, trend)
         - Rising LZC: increasing randomness (breakdown of pattern)
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size for computing complexity
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Lempel, A. & Ziv, J. (1976). On the Complexity of Finite
-    Sequences. IEEE Transactions on Information Theory, 22(1), 75-81.
     """
 
     source_col: str = "close"
@@ -534,7 +471,6 @@ class LempelZivStat(Feature):
             if len(valid) < 20:
                 continue
 
-            # Binarize: positive return = 1, non-positive = 0
             binary = (valid > 0).astype(int)
             lzc[i] = _lempel_ziv_complexity(binary)
 
@@ -590,15 +526,6 @@ class FisherInformationStat(Feature):
         - Low FI: diffuse distribution (mixed behaviors, uncertainty)
         - FI spike: regime transition (distribution shifting rapidly)
         - Stable FI: stationary regime
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        bins: Number of histogram bins for PDF estimation
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Frieden, B.R. (2004). Science from Fisher Information.
-    Cambridge University Press.
     """
 
     source_col: str = "close"
@@ -685,15 +612,6 @@ class DfaExponentStat(Feature):
         - Handles non-stationarity (detrending removes local trends)
         - More accurate for short time series
         - Less sensitive to outliers
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        min_box: Smallest box size for DFA (default: 4)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Peng, C.K. et al. (1994). Mosaic organization of DNA
-    nucleotides. Physical Review E, 49(2), 1685-1689.
     """
 
     source_col: str = "close"

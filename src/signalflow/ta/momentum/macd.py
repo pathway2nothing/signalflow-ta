@@ -6,23 +6,15 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
-    """
-    Calculate EMA with SMA initialization for reproducibility.
+    """Calculate EMA with SMA initialization for reproducibility.
 
     Instead of ema[0] = values[0], we initialize with SMA of first `period` values.
     This makes EMA independent of the starting point after warmup.
-
-    Args:
-        values: Input array
-        period: EMA period (also used for SMA initialization)
-
-    Returns:
-        EMA array with first (period-1) values as NaN
     """
     n = len(values)
     alpha = 2 / (period + 1)
@@ -31,10 +23,8 @@ def _ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     if n < period:
         return ema
 
-    # Initialize with SMA of first `period` values
     ema[period - 1] = np.mean(values[:period])
 
-    # Continue with standard EMA
     for i in range(period, n):
         ema[i] = alpha * values[i] + (1 - alpha) * ema[i - 1]
 
@@ -74,24 +64,18 @@ class MacdMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # EMA with SMA initialization for reproducibility
         ema_fast = _ema_sma_init(close, self.fast)
         ema_slow = _ema_sma_init(close, self.slow)
 
-        # MACD line (valid after slow period)
         macd = ema_fast - ema_slow
 
-        # Signal line - EMA of MACD with SMA init
-        # Start after slow period where MACD becomes valid
         alpha_sig = 2 / (self.signal + 1)
         signal_line = np.full(n, np.nan)
 
-        # Find first valid MACD index
         start_idx = self.slow - 1
         signal_start = start_idx + self.signal - 1
 
         if signal_start < n:
-            # Initialize signal with SMA of first `signal` valid MACD values
             signal_line[signal_start] = np.mean(macd[start_idx : signal_start + 1])
 
             for i in range(signal_start + 1, n):
@@ -99,10 +83,8 @@ class MacdMom(Feature):
 
         histogram = macd - signal_line
 
-        # Clear invalid values
         macd[:start_idx] = np.nan
 
-        # Normalization: z-score for all 3 outputs independently
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -177,14 +159,11 @@ class PpoMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # EMA with SMA initialization
         ema_fast = _ema_sma_init(close, self.fast)
         ema_slow = _ema_sma_init(close, self.slow)
 
-        # PPO as percentage
         ppo = 100 * (ema_fast - ema_slow) / (ema_slow + 1e-10)
 
-        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         signal_line = np.full(n, np.nan)
 
@@ -200,7 +179,6 @@ class PpoMom(Feature):
         histogram = ppo - signal_line
         ppo[:start_idx] = np.nan
 
-        # Normalization: z-score for all 3 outputs independently
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -276,31 +254,25 @@ class TsiMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Price change
         pc = np.diff(close, prepend=close[0])
         pc[0] = 0
         abs_pc = np.abs(pc)
 
-        # Double smooth with SMA initialization
         pc_ema1 = _ema_sma_init(pc, self.slow)
         pc_ema2 = _ema_sma_init(pc_ema1, self.fast)
 
         abs_pc_ema1 = _ema_sma_init(abs_pc, self.slow)
         abs_pc_ema2 = _ema_sma_init(abs_pc_ema1, self.fast)
 
-        # TSI calculation
         tsi = 100 * pc_ema2 / (abs_pc_ema2 + 1e-10)
 
-        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         tsi_signal = np.full(n, np.nan)
 
-        # Find first valid TSI index
         start_idx = self.slow + self.fast - 2
         signal_start = start_idx + self.signal - 1
 
         if signal_start < n:
-            # Find valid values for initialization
             valid_tsi = tsi[start_idx : signal_start + 1]
             valid_tsi = valid_tsi[~np.isnan(valid_tsi)]
             if len(valid_tsi) > 0:
@@ -310,7 +282,6 @@ class TsiMom(Feature):
                     if not np.isnan(tsi[i]) and not np.isnan(tsi_signal[i - 1]):
                         tsi_signal[i] = alpha_sig * tsi[i] + (1 - alpha_sig) * tsi_signal[i - 1]
 
-        # Normalization: z-score for both outputs independently
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -383,22 +354,18 @@ class TrixMom(Feature):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Triple EMA with SMA initialization
         ema1 = _ema_sma_init(close, self.period)
         ema2 = _ema_sma_init(ema1, self.period)
         ema3 = _ema_sma_init(ema2, self.period)
 
-        # TRIX = rate of change of triple EMA
         trix = np.full(n, np.nan)
         for i in range(1, n):
             if not np.isnan(ema3[i]) and not np.isnan(ema3[i - 1]) and ema3[i - 1] != 0:
                 trix[i] = 100 * (ema3[i] - ema3[i - 1]) / ema3[i - 1]
 
-        # Signal line
         alpha_sig = 2 / (self.signal + 1)
         trix_signal = np.full(n, np.nan)
 
-        # Find first valid TRIX index (3 * period - 2)
         start_idx = 3 * self.period - 2
         signal_start = start_idx + self.signal - 1
 
@@ -412,7 +379,6 @@ class TrixMom(Feature):
                     if not np.isnan(trix[i]) and not np.isnan(trix_signal[i - 1]):
                         trix_signal[i] = alpha_sig * trix[i] + (1 - alpha_sig) * trix_signal[i - 1]
 
-        # Normalization: z-score for both outputs independently
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

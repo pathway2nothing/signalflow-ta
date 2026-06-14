@@ -1,4 +1,3 @@
-# src/signalflow/ta/momentum/kinematics.py
 """Kinematic indicators - higher-order derivatives of price movement."""
 
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     rolling_mean_nan as _rolling_mean_nan,
 )
@@ -51,12 +50,10 @@ class AccelerationMom(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Velocity: log-return over lag (vectorized)
         velocity = np.full(n, np.nan)
         safe = (values[self.lag :] > 0) & (values[: -self.lag] > 0)
         velocity[self.lag :] = np.where(safe, np.log(values[self.lag :] / values[: -self.lag]), np.nan)
 
-        # Acceleration: change in velocity (vectorized)
         accel = np.full(n, np.nan)
         valid_mask = ~np.isnan(velocity[self.lag :]) & ~np.isnan(velocity[: -self.lag])
         accel[2 * self.lag :] = np.where(
@@ -65,7 +62,6 @@ class AccelerationMom(Feature):
             np.nan,
         )
 
-        # Optional smoothing via SMA
         if self.smooth > 1:
             accel = _rolling_mean_nan(accel, self.smooth)
 
@@ -130,19 +126,16 @@ class JerkMom(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Velocity (vectorized)
         velocity = np.full(n, np.nan)
         safe = (values[self.lag :] > 0) & (values[: -self.lag] > 0)
         velocity[self.lag :] = np.where(safe, np.log(values[self.lag :] / values[: -self.lag]), np.nan)
 
-        # Acceleration (vectorized)
         accel = np.full(n, np.nan)
         vm = ~np.isnan(velocity)
         for i in range(2 * self.lag, n):
             if vm[i] and vm[i - self.lag]:
                 accel[i] = velocity[i] - velocity[i - self.lag]
 
-        # Jerk (vectorized)
         jerk = np.full(n, np.nan)
         am = ~np.isnan(accel)
         for i in range(3 * self.lag, n):
@@ -295,7 +288,6 @@ class TorqueMom(Feature):
         L_raw = displacement * velocity
         L = _rolling_mean_nan(L_raw, self.period)
 
-        # Torque = dL/dt (vectorized with lag)
         torque = np.full(n, np.nan)
         valid_L = ~np.isnan(L)
         for i in range(self.torque_lag, n):

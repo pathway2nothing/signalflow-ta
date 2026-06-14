@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
@@ -24,30 +24,6 @@ class RsiAnomalyDetector1(SignalDetector):
     Signal logic:
         - LONG (RISE): RSI z-score < -threshold (oversold extreme)
         - SHORT (FALL): RSI z-score > threshold (overbought extreme)
-
-    Attributes:
-        rsi_period: RSI calculation period.
-        zscore_window: Rolling window for z-score normalization.
-        threshold: Z-score threshold for signal generation.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply. All filters must pass.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import RsiAnomalyDetector1
-        from signalflow.ta.signals.filters import PriceUptrendFilter
-
-        # Basic usage
-        detector = RsiAnomalyDetector1(rsi_period=14, threshold=1.0)
-
-        # With filters
-        detector = RsiAnomalyDetector1(
-            rsi_period=720,
-            threshold=1.0,
-            direction="long",
-            filters=[PriceUptrendFilter(window=5)]
-        )
-        ```
     """
 
     rsi_period: int = 720
@@ -65,15 +41,7 @@ class RsiAnomalyDetector1(SignalDetector):
         self.features = [RsiMom(period=self.rsi_period)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on RSI z-score anomalies.
-
-        Args:
-            features: DataFrame with computed RSI values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected anomaly signals.
-        """
+        """Generate signals based on RSI z-score anomalies."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -102,7 +70,6 @@ class RsiAnomalyDetector1(SignalDetector):
 
         df = features.with_columns(pl.Series(name=self.zscore_col, values=zscore))
 
-        # Base signal conditions
         long_cond = pl.col(self.zscore_col) < -self.threshold
         short_cond = pl.col(self.zscore_col) > self.threshold
 
@@ -112,7 +79,7 @@ class RsiAnomalyDetector1(SignalDetector):
             signal_expr = pl.when(short_cond).then(pl.lit(SignalType.FALL.value))
         else:
             signal_expr = (
-                pl.when(long_cond)  # type: ignore[assignment]
+                pl.when(long_cond)
                 .then(pl.lit(SignalType.RISE.value))
                 .when(short_cond)
                 .then(pl.lit(SignalType.FALL.value))
@@ -127,7 +94,6 @@ class RsiAnomalyDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -141,7 +107,6 @@ class RsiAnomalyDetector1(SignalDetector):
                 .alias("signal_type")
             )
 
-        # Filter out NONE signals
         out = out.filter(pl.col("signal_type") != SignalType.NONE.value)
 
         return Signals(out)

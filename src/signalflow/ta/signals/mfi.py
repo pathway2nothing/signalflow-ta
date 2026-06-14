@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volume import MfiVolume
 
@@ -23,26 +23,6 @@ class MfiDetector1(SignalDetector):
     Signal logic:
         - LONG: MFI < oversold_threshold (oversold with volume confirmation)
         - SHORT: MFI > overbought_threshold (overbought with volume confirmation)
-
-    Attributes:
-        mfi_period: MFI calculation period.
-        oversold_threshold: Oversold zone threshold (default 20).
-        overbought_threshold: Overbought zone threshold (default 80).
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import MfiDetector1
-
-        detector = MfiDetector1(
-            mfi_period=14,
-            oversold_threshold=20,
-            overbought_threshold=80,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     mfi_period: int = 14
@@ -59,15 +39,7 @@ class MfiDetector1(SignalDetector):
         self.features = [MfiVolume(period=self.mfi_period)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on MFI extreme zones.
-
-        Args:
-            features: DataFrame with computed MFI values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on MFI extreme zones."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -94,11 +66,9 @@ class MfiDetector1(SignalDetector):
         mfi = features[self.mfi_col].to_numpy()
         n = len(mfi)
 
-        # Signal conditions
         oversold = mfi < self.oversold_threshold
         overbought = mfi > self.overbought_threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -116,7 +86,6 @@ class MfiDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -158,15 +127,6 @@ class MfiDetector2(SignalDetector):
     Signal logic:
         - LONG: MFI z-score < -threshold AND MFI starts rising from oversold
         - SHORT: MFI z-score > threshold AND MFI starts falling from overbought
-
-    Attributes:
-        mfi_period: MFI calculation period.
-        zscore_window: Window for z-score calculation.
-        zscore_threshold: Z-score threshold for signal.
-        oversold_threshold: Oversold zone threshold.
-        overbought_threshold: Overbought zone threshold.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
     """
 
     mfi_period: int = 14
@@ -212,7 +172,6 @@ class MfiDetector2(SignalDetector):
         mfi = features[self.mfi_col].to_numpy()
         n = len(mfi)
 
-        # Compute z-score of MFI
         zscore = np.full(n, np.nan)
         for i in range(self.zscore_window - 1, n):
             window_vals = mfi[i - self.zscore_window + 1 : i + 1]
@@ -223,17 +182,14 @@ class MfiDetector2(SignalDetector):
                 if std > 1e-10:
                     zscore[i] = (mfi[i] - mean) / std
 
-        # Detect reversal (MFI direction change)
         mfi_prev = np.roll(mfi, 1)
         mfi_prev[0] = np.nan
         mfi_rising = mfi > mfi_prev
         mfi_falling = mfi < mfi_prev
 
-        # Signal conditions
         long_signal = (zscore < -self.zscore_threshold) & (mfi < self.oversold_threshold) & mfi_rising
         short_signal = (zscore > self.zscore_threshold) & (mfi > self.overbought_threshold) & mfi_falling
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -251,7 +207,6 @@ class MfiDetector2(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

@@ -7,7 +7,6 @@ walks.
 Reference: Katz, M. J. (1988). Fractals and the analysis of waveforms.
 Computers in Biology and Medicine 18(3):145-156.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -16,8 +15,8 @@ import numpy as np
 import polars as pl
 from numpy.lib.stride_tricks import sliding_window_view
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -49,7 +48,6 @@ class KatzFractalDimensionStat(Feature):
         wins_d = sliding_window_view(diffs, w - 1)
         L = wins_d.sum(axis=1)
         wins = sliding_window_view(c, w)
-        # diameter = max distance from first point
         d = np.abs(wins - wins[:, 0:1]).max(axis=1)
         ratio = d / np.maximum(L, 1e-12)
         katz = np.log(w) / (np.log(w) + np.log(np.maximum(ratio, 1e-12)))

@@ -91,10 +91,8 @@ __all__ = [
     "MfiDetector2",
     "PriceDowntrendFilter",
     "PriceUptrendFilter",
-    # Detectors
     "RsiAnomalyDetector1",
     "RsiZscoreFilter",
-    # Filters
     "SignalFilter",
     "StochasticDetector1",
     "StochasticDetector2",

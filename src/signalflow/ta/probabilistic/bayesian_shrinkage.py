@@ -1,5 +1,4 @@
 """Bayesian-shrinkage z-score → calibrated probability via Φ."""
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -8,8 +7,8 @@ import numpy as np
 import polars as pl
 from scipy.stats import norm
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.probabilistic._helpers import log_returns
 
 
@@ -31,7 +30,7 @@ class BayesianShrinkageZscore(Feature):
         output  = Φ(z)
 
     The prior mean and variance are estimated from the entire history of
-    the pair as a fixed bias — equivalent to having observed
+    the pair as a fixed bias - equivalent to having observed
     ``prior_strength`` historical bars.
 
     Output is closer to 0.5 (uninformative) on short noisy windows and
@@ -39,13 +38,6 @@ class BayesianShrinkageZscore(Feature):
 
     Research provenance: iter-35 (sf-profit) reference soft-native
     feature for the iter-33 ``soft_D3_*`` family.
-
-    Attributes:
-        price_col: Source price column. Default: ``"close"``.
-        window: Trailing window for sample-mean / sample-var. Default: 240.
-        prior_strength: Effective number of pseudo-observations for the
-            prior. Higher = more shrinkage toward long-run mean / var.
-            Default: 60.
     """
 
     price_col: str = "close"

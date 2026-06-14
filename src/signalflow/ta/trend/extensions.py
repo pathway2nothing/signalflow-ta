@@ -2,13 +2,12 @@
 
 Added from sf-profit feature_research_lib + iter-15/16/18.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 def _tr(h, l, c):
@@ -71,12 +70,10 @@ class UpDownEntropyAsymmetry(Feature):
     period: int = 480
 
     def compute_pair(self, df):
-        # Approximate version: fraction up - fraction down weighted by variability
         out = f"ud_entropy_asym_{self.period}"
         ret = pl.col("close").diff()
         up_frac = (ret > 0).cast(pl.Float32).rolling_mean(self.period)
         dn_frac = (ret < 0).cast(pl.Float32).rolling_mean(self.period)
-        # Shannon entropy contribution: -p*log(p) per side
         eps = 1e-9
         ent_up = -up_frac * (up_frac + eps).log()
         ent_dn = -dn_frac * (dn_frac + eps).log()
@@ -96,7 +93,6 @@ class EntropyRatio(Feature):
         ret = pl.col("close").diff()
         up_s = (ret > 0).cast(pl.Float32).rolling_mean(self.short)
         up_l = (ret > 0).cast(pl.Float32).rolling_mean(self.long)
-        # Binary entropy H(p) = -p*log(p) - (1-p)*log(1-p)
         eps = 1e-9
         h_s = -(up_s * (up_s + eps).log() + (1 - up_s) * (1 - up_s + eps).log())
         h_l = -(up_l * (up_l + eps).log() + (1 - up_l) * (1 - up_l + eps).log())
