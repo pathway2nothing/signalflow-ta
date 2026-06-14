@@ -11,7 +11,7 @@
 **Technical analysis plugin for SignalFlow - 250+ indicator features + 30 signal detectors**
 
 <p>
-<a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.8.1-7c3aed" alt="Version"></a>
+<a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.8.2-7c3aed" alt="Version"></a>
 <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12+-3b82f6?logo=python&logoColor=white" alt="Python 3.12+"></a>
 <a href="https://signalflow-trading.com"><img src="https://img.shields.io/badge/docs-signalflow--trading.com-7c3aed" alt="Docs"></a>
 </p>
@@ -22,7 +22,7 @@
 
 Part of the [SignalFlow](https://github.com/pathway2nothing/sf-project) ecosystem.
 
-A V5 plugin that registers 250+ technical-analysis indicator features and 30
+A plugin that registers 250+ technical-analysis indicator features and 30
 signal detectors with configurable filters, plus `AutoFeatureNormalizer` for
 automatic normalization. Installing it auto-registers every component with the
 core `signalflow` registry via entry points - no imports or wiring needed.

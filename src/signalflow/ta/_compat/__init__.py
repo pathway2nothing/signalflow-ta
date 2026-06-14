@@ -1,39 +1,39 @@
-"""Compatibility shim mapping the OLD signalflow core API onto the V5 core.
+"""Compatibility shim mapping the OLD signalflow core API onto the core.
 
 The 130 ``signalflow.ta`` indicator / detector / signal-feature files were written
-against the pre-V5 core (``signalflow.core``, ``signalflow.feature``,
-``signalflow.detector``, ``signalflow.signal_feature``). V5 deleted those modules
-and unified everything onto a single :class:`signalflow.transform.base.Transform`
-contract.
+against the old core (``signalflow.core``, ``signalflow.feature``,
+``signalflow.detector``, ``signalflow.signal_feature``). The rewrite deleted those
+modules and unified everything onto a single
+:class:`signalflow.transform.base.Transform` contract.
 
 This module reproduces the OLD public surface the ta files import - without
-rewriting a single indicator - by subclassing the V5 ``Transform`` and replaying
+rewriting a single indicator - by subclassing the ``Transform`` base and replaying
 the OLD ``compute_pair`` / ``detect`` / ``compute(signals, labels)`` semantics.
 
 Exported names (the 11 the sweep redirects to here):
 
 * ``Feature``            - per-pair indicator base (OLD ``feature.base.Feature``)
 * ``GlobalFeature``      - cross-pair feature base
-* ``FeaturePipeline``    - ordered feature composition (alias of V5 ``FeaturePipe``)
-* ``SignalDetector``     - OLD detector surface mapped onto V5 ``signal`` column
+* ``FeaturePipeline``    - ordered feature composition (alias of ``FeaturePipe``)
+* ``SignalDetector``     - OLD detector surface mapped onto the ``signal`` column
 * ``SignalFeature``      - meta-features over signal history
-* ``feature`` / ``detector`` - registration decorators (re-export of V5 decorators)
+* ``feature`` / ``detector`` - registration decorators (re-export of core decorators)
 * ``Signals``            - immutable long-format signal container
-* ``SignalType``         - alias of V5 ``Signal`` (RISE / FALL / NONE)
-* ``SignalCategory``     - V5 enum (re-export)
+* ``SignalType``         - alias of ``Signal`` (RISE / FALL / NONE)
+* ``SignalCategory``     - core enum (re-export)
 
-Key V5 adaptations:
+Key adaptations:
 
-* V5 datasets key time on ``ts`` (not ``timestamp``); the shim defaults
+* Datasets key time on ``ts`` (not ``timestamp``); the shim defaults
   ``ts_col="ts"``.
-* The OLD ``Feature.outputs`` was a *class-level list of templates*; V5 makes
+* The OLD ``Feature.outputs`` was a *class-level list of templates*; the core makes
   ``outputs`` an abstract *property*. The :class:`FeatureMeta` metaclass relocates
   any class-level ``outputs`` list to ``_output_templates`` so the property
   (returning :meth:`Feature.output_cols`) is not shadowed.
 * OLD detectors emit a filtered long-format ``Signals`` frame keyed on
-  ``(pair, ts, signal_type)``; V5 wants a ``signal`` column appended to *every*
+  ``(pair, ts, signal_type)``; the core wants a ``signal`` column appended to *every*
   row. :class:`SignalDetector.compute` runs the OLD ``detect`` then left-joins the
-  ``signal_type`` back onto the full frame as the V5 ``signal`` column.
+  ``signal_type`` back onto the full frame as the ``signal`` column.
 """
 
 
@@ -70,7 +70,7 @@ _ACTIVE = {Signal.RISE.value, Signal.FALL.value}
 
 
 def _tolerant(v5_decorator):
-    """Wrap a V5 decorator so OLD-style extra kwargs (e.g. ``override=``) are accepted and ignored."""
+    """Wrap a core decorator so OLD-style extra kwargs (e.g. ``override=``) are accepted and ignored."""
 
     def factory(name: str, *_args: Any, **_kwargs: Any):
         return v5_decorator(name)
@@ -86,7 +86,7 @@ class FeatureMeta(ABCMeta):
     """Relocate a class-level ``outputs`` list to ``_output_templates``.
 
     The OLD ``Feature`` declared ``outputs: ClassVar[list[str]]`` of templates.
-    V5's ``Transform`` exposes ``outputs`` as an abstract *property*. If a subclass
+    The ``Transform`` base exposes ``outputs`` as an abstract *property*. If a subclass
     sets ``outputs = [...]`` it would shadow the property and break the registry's
     ``outputs`` access. This metaclass moves any class-level list-valued ``outputs``
     into ``_output_templates`` at subclass-creation time, leaving the property
@@ -125,7 +125,7 @@ class Feature(Transform, metaclass=FeatureMeta):
 
     @property
     def outputs(self) -> list[str]:
-        """V5 property: concrete output column names (templates substituted)."""
+        """Concrete output column names (templates substituted)."""
         return self.output_cols()
 
     @property
@@ -164,7 +164,7 @@ class GlobalFeature(Feature):
 
     Global features override :meth:`compute` directly (operating across all pairs
     at once), typically grouping by ``ts_col``. The OLD multi-source ``RawData``
-    accessor (``get_source_data`` / ``iter_sources``) is gone in V5; the few
+    accessor (``get_source_data`` / ``iter_sources``) is gone in the rewrite; the few
     features that need it are guarded at their own import site (see
     ``ta/global_features``).
     """
@@ -177,10 +177,10 @@ class GlobalFeature(Feature):
 
 
 class FeaturePipeline(_V5FeaturePipe):
-    """OLD feature-pipeline surface on top of V5 ``FeaturePipe``.
+    """OLD feature-pipeline surface on top of ``FeaturePipe``.
 
     The OLD API accepted ``FeaturePipeline(features=[...])`` and exposed
-    ``.compute(df, context=None)``. V5 ``FeaturePipe`` takes ``*transforms`` and
+    ``.compute(df, context=None)``. ``FeaturePipe`` takes ``*transforms`` and
     ``.compute(df)``. This subclass bridges both call styles.
     """
 
@@ -206,7 +206,7 @@ class Signals:
 
     Wraps a Polars DataFrame with at least ``(pair, ts, signal_type)`` columns.
     The ta detectors construct ``Signals(df)`` and read back ``.value``; the
-    shim's :class:`SignalDetector` consumes ``.value`` to project the V5 ``signal``
+    shim's :class:`SignalDetector` consumes ``.value`` to project the ``signal``
     column. Only the attributes/methods the ta files actually touch are provided.
     """
 
@@ -234,14 +234,14 @@ class Signals:
 
 @dataclass
 class SignalDetector(_V5SignalDetector):
-    """OLD detector surface on top of V5 ``SignalDetector``.
+    """OLD detector surface on top of the core ``SignalDetector``.
 
     OLD detectors:
       * declare ``self.features`` (a Feature / list / pipeline) in ``__post_init__``,
       * implement ``detect(features, context=None) -> Signals`` where the returned
         frame is *filtered* to active-signal rows keyed on ``(pair, ts, signal_type)``.
 
-    V5 wants ``detect(df) -> df`` appending a ``signal`` column to **every** row.
+    The core wants ``detect(df) -> df`` appending a ``signal`` column to **every** row.
     This shim:
       1. computes ``self.features`` onto the frame (``preprocess``),
       2. runs the OLD ``detect`` to get the filtered ``Signals``,
@@ -269,7 +269,7 @@ class SignalDetector(_V5SignalDetector):
         return self.detect_v5(df.sort([self.pair_col, self.ts_col]), context=context)
 
     def detect_v5(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        """Bridge: run OLD ``detect`` and project onto the V5 ``signal`` column."""
+        """Bridge: run OLD ``detect`` and project onto the ``signal`` column."""
         feats = self.preprocess(df, context=context)
         result = self.detect(feats, context=context)
 
@@ -314,7 +314,7 @@ class SignalFeature(Transform):
 
     Subclasses implement ``compute(signals, labels=None, context=None)`` returning a
     frame keyed on ``(pair, ts)`` with only the produced feature columns. These
-    operate on the *signal* stream rather than raw OHLCV, so the V5 ``compute(df)``
+    operate on the *signal* stream rather than raw OHLCV, so the ``compute(df)``
     just forwards ``df`` as the ``signals`` argument.
     """
 
