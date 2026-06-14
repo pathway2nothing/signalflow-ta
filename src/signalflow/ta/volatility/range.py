@@ -6,8 +6,8 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import ema_sma_init, rma_sma_init, sma_nb
 
 
@@ -43,7 +43,6 @@ class TrueRangeVol(Feature):
         tr = np.maximum(high - low, np.maximum(np.abs(high - prev_close), np.abs(low - prev_close)))
         tr[0] = high[0] - low[0]
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -101,8 +100,6 @@ class AtrVol(Feature):
     requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = ["atr_{period}"]
 
-    # Recursive: every ma_type (rma/ema/sma) uses an SMA-seeded kernel
-    # (rma_sma_init / ema_sma_init / sma_nb). Converges within warmup. Entry-point invariant.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -126,7 +123,6 @@ class AtrVol(Feature):
         else:
             atr = rma_sma_init(tr_f, self.period)
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -184,8 +180,6 @@ class NatrVol(Feature):
     requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = ["natr_{period}"]
 
-    # Recursive: every ma_type (rma/ema/sma) uses an SMA-seeded kernel
-    # (rma_sma_init / ema_sma_init / sma_nb). Converges within warmup. Entry-point invariant.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -211,7 +205,6 @@ class NatrVol(Feature):
 
         natr = 100 * atr / close
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

@@ -1,20 +1,19 @@
 """Rolling accuracy and false signal rate features."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
 class RollingAccuracy(SignalFeature):
     """Hit rate over the last ``window`` resolved signals.
 
-    The most fundamental supervised signal feature — tells the validator
+    The most fundamental supervised signal feature - tells the validator
     whether the detector is currently reliable.
     """
 
@@ -87,7 +86,6 @@ class TypeConditionalAccuracy(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Per-type hit (null if not that type or label unresolved)
         df = df.with_columns(
             pl.when(
                 (pl.col("signal_type") == "rise") & pl.col("label").is_not_null()
@@ -148,7 +146,6 @@ class FalseSignalRate(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # False positive: predicted rise but label is fall
         df = df.with_columns(
             pl.when(
                 (pl.col("signal_type") == "rise") & pl.col("label").is_not_null()
@@ -156,7 +153,6 @@ class FalseSignalRate(SignalFeature):
             .then((pl.col("label") != "rise").cast(pl.Float64))
             .otherwise(pl.lit(None, dtype=pl.Float64))
             .alias("_fp"),
-            # False negative: predicted fall but label is rise
             pl.when(
                 (pl.col("signal_type") == "fall") & pl.col("label").is_not_null()
             )

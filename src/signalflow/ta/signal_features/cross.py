@@ -1,13 +1,12 @@
 """Cross-signal features (between pairs / detectors)."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -37,8 +36,6 @@ class SignalCrowding(SignalFeature):
         ratio_col, zscore_col = cols[0], cols[1]
         df = signals.sort([self.group_col, self.ts_col])
 
-        # Count total pairs and same-type pairs per timestamp
-        # For each (timestamp, signal_type): how many pairs fired that type?
         type_counts = (
             df.group_by([self.ts_col, "signal_type"])
             .agg(pl.col(self.group_col).count().alias("_type_count"))
@@ -48,7 +45,6 @@ class SignalCrowding(SignalFeature):
             .agg(pl.col(self.group_col).count().alias("_total_count"))
         )
 
-        # Join back
         df = df.join(type_counts, on=[self.ts_col, "signal_type"], how="left")
         df = df.join(total_counts, on=self.ts_col, how="left")
 
@@ -57,7 +53,6 @@ class SignalCrowding(SignalFeature):
             .alias(ratio_col),
         )
 
-        # Rolling z-score of crowding ratio
         df = df.sort([self.group_col, self.ts_col])
         rolling_mean = (
             pl.col(ratio_col)
@@ -119,7 +114,6 @@ class CrossPairSpillover(SignalFeature):
                 pl.lit(None, dtype=pl.Float64).alias(col),
             )
 
-        # Average return across ALL pairs per timestamp
         avg_ret = (
             ohlcv.sort([self.group_col, self.ts_col])
             .with_columns(
@@ -131,7 +125,6 @@ class CrossPairSpillover(SignalFeature):
 
         df = df.join(avg_ret, on=self.ts_col, how="left")
 
-        # Causal: only use market ret where label is resolved
         sig = pl.col("signal").cast(pl.Float64)
         mkt = (
             pl.when(pl.col("label").is_not_null())
@@ -141,7 +134,6 @@ class CrossPairSpillover(SignalFeature):
 
         df = df.with_columns(mkt.alias("_mkt_causal"))
 
-        # Rolling correlation (Pearson) between signal value and avg market return
         mkt_col = pl.col("_mkt_causal")
         rolling_cov = (
             (sig * mkt_col)
@@ -171,7 +163,7 @@ class CrossPairSpillover(SignalFeature):
 class SignalDisagreement(SignalFeature):
     """Agreement ratio and accuracy when multiple detectors disagree.
 
-    Requires ``context["all_signals"]`` — a DataFrame with signals from
+    Requires ``context["all_signals"]`` - a DataFrame with signals from
     ALL detectors, with an extra ``detector`` column.  Computes the
     fraction of detectors agreeing with the current signal, and tracks
     separate accuracy for high-agreement vs low-agreement situations.
@@ -212,17 +204,13 @@ class SignalDisagreement(SignalFeature):
                 pl.lit(None, dtype=pl.Float64).alias(disagree_acc_col),
             )
 
-        # Per (pair, timestamp): count detectors and how many agree
-        # with the current signal's type
         all_sig = all_signals.sort([self.group_col, self.ts_col])
 
-        # Total detectors per (pair, timestamp)
         det_total = (
             all_sig.group_by([self.group_col, self.ts_col])
             .agg(pl.col("detector").n_unique().alias("_n_detectors"))
         )
 
-        # Count per (pair, timestamp, signal_type)
         det_agree = (
             all_sig.group_by([self.group_col, self.ts_col, "signal_type"])
             .agg(pl.col("detector").n_unique().alias("_n_agree"))
@@ -236,7 +224,6 @@ class SignalDisagreement(SignalFeature):
             .alias(agree_col),
         )
 
-        # Accuracy when agreement < 0.5 (disagreement)
         is_disagree = pl.col(agree_col) < 0.5
         df = df.with_columns(
             pl.when(is_disagree & pl.col("_hit").is_not_null())

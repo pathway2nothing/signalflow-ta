@@ -1,7 +1,7 @@
 """Hawkes self-excitation intensity proxy.
 
 Hawkes processes (Hawkes 1971) model events whose probability of occurrence
-is elevated after recent past events — "self-exciting" dynamics. In
+is elevated after recent past events - "self-exciting" dynamics. In
 markets, large bars cluster: each |z|>2 event raises the conditional
 intensity of the next event with exponential decay.
 
@@ -10,26 +10,19 @@ homogeneous background μ=0 and weights K=α) to an exponential moving
 average of indicator events. This feature computes that EMA.
 
 Iter-28 stability: mean MI_normalised = 0.186 across 14 stable triples,
-mostly on B1_vol_realized labels — high self-excitation precedes / coexists
+mostly on B1_vol_realized labels - high self-excitation precedes / coexists
 with high-volatility regimes.
-
-References:
-    - Hawkes, A. G. (1971). Spectra of some self-exciting and mutually
-      exciting point processes.
-    - Bacry, Mastromatteo, Muzy (2015). Hawkes processes in finance.
 """
-from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
-from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, rolling_sum, truncated_ema
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
+from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, truncated_ema
 
 
 @dataclass
@@ -44,11 +37,6 @@ class HawkesSelfExcitationStat(Feature):
 
     Equivalent to homogeneous Hawkes intensity with exponential kernel
     and unit base rate.
-
-    Attributes:
-        period: window for rolling σ baseline.
-        tau: characteristic decay time of the kernel (bars).
-        source_col: input price column.
     """
 
     period: int = 480
@@ -77,7 +65,7 @@ class HawkesSelfExcitationStat(Feature):
 @dataclass
 @feature("stat/marked_hawkes_jumps")
 class MarkedHawkesJumpsStat(Feature):
-    """Marked Hawkes intensity — EMA of |z|·indicator(|z|>2) (magnitude-weighted).
+    """Marked Hawkes intensity - EMA of |z|·indicator(|z|>2) (magnitude-weighted).
 
     Unlike plain Hawkes (indicator only), this weights events by their
     magnitude, so a 5σ event contributes much more than a 2σ one.
@@ -184,7 +172,7 @@ class PowerLawHawkesStat(Feature):
     long-memory structure observed empirically in financial volatility
     (Hardiman-Bercot-Bouchaud 2013, EPJB 86).
 
-    Iter-30 stability: top mean MI_normalised = 0.218 on B1_vol_realized —
+    Iter-30 stability: top mean MI_normalised = 0.218 on B1_vol_realized -
     best B1 feature among the iter-27/28/29/30 cross-disciplinary set.
 
     Reference: Hardiman, Bercot & Bouchaud (2013). Critical reflexivity in

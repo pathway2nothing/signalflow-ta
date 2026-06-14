@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     historical_vol_kernel as _historical_vol_kernel,
 )
@@ -52,8 +52,6 @@ class MassIndexVol(Feature):
     requires: ClassVar[list[str]] = ["high", "low"]
     outputs: ClassVar[list[str]] = ["massi_{fast}_{slow}"]
 
-    # Recursive: mass_index_kernel seeds its EMAs from the single first observation
-    # (ema1[0] = hl_range[0], NOT SMA-init). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -64,7 +62,6 @@ class MassIndexVol(Feature):
         hl_range = high - low
         massi = _mass_index_kernel(hl_range, self.fast, self.slow)
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -129,7 +126,6 @@ class UlcerIndexVol(Feature):
 
         ui = _ulcer_index_kernel(close, self.period)
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -190,8 +186,6 @@ class RviVol(Feature):
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["rvi_{period}"]
 
-    # Recursive: rvi_kernel smooths up/down std with EMA seeded from the SMA of the
-    # first `period` values. Converges within warmup. Entry-point invariant.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -200,7 +194,6 @@ class RviVol(Feature):
 
         rvi = _rvi_kernel(close, self.period, self.std_period)
 
-        # Normalization for bounded output [0,100] → [0,1]
         if self.normalized:
             rvi = rvi / 100
 
@@ -244,7 +237,7 @@ class HistoricalVol(Feature):
     """
 
     period: int = 20
-    annualize: int = 252  # trading days
+    annualize: int = 252
     normalized: bool = False
     norm_period: int | None = None
 
@@ -256,7 +249,6 @@ class HistoricalVol(Feature):
 
         hv = _historical_vol_kernel(close, self.period, self.annualize)
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -312,8 +304,6 @@ class AtrPercentVol(Feature):
     requires: ClassVar[list[str]] = ["high", "low", "close"]
     outputs: ClassVar[list[str]] = ["atr_pct_{period}"]
 
-    # Recursive: ATR uses rma_sma_init (Wilder's RMA seeded from the SMA of the first
-    # `period` TR values). Converges within warmup. Entry-point invariant.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = True
 
@@ -333,7 +323,6 @@ class AtrPercentVol(Feature):
 
         atr_pct = 100 * atr / close
 
-        # Normalization for unbounded output
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

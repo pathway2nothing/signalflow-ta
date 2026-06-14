@@ -6,10 +6,9 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.momentum import MacdMom, RsiMom
-from signalflow.ta.signals._utils import _rma_sma_init  # noqa: F401
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import KeltnerVol
 
@@ -26,30 +25,6 @@ class KeltnerChannelDetector1(SignalDetector):
     Signal logic:
         - LONG: close < KC lower AND RSI z-score < threshold
         - SHORT: close > KC upper AND RSI z-score > threshold
-
-    Attributes:
-        kc_period: Keltner Channel period.
-        kc_multiplier: KC ATR multiplier (scalar).
-        rsi_period: RSI calculation period.
-        rsi_zscore_window: Window for RSI z-score normalization.
-        rsi_zscore_threshold: Z-score threshold for signal.
-        use_rsi_condition: Whether to require RSI condition.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import KeltnerChannelDetector1
-
-        detector = KeltnerChannelDetector1(
-            kc_period=720,
-            kc_multiplier=2.0,
-            rsi_period=720,
-            rsi_zscore_threshold=-1.0,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     kc_period: int = 720
@@ -75,15 +50,7 @@ class KeltnerChannelDetector1(SignalDetector):
         ]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on Keltner Channel and RSI conditions.
-
-        Args:
-            features: DataFrame with computed KC and RSI values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on Keltner Channel and RSI conditions."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -113,7 +80,6 @@ class KeltnerChannelDetector1(SignalDetector):
         rsi = features[self.rsi_col].to_numpy()
         n = len(close)
 
-        # Compute RSI z-score
         rsi_zscore = np.full(n, np.nan)
         for i in range(self.rsi_zscore_window - 1, n):
             window_vals = rsi[i - self.rsi_zscore_window + 1 : i + 1]
@@ -124,15 +90,12 @@ class KeltnerChannelDetector1(SignalDetector):
                 if std > 1e-10:
                     rsi_zscore[i] = (rsi[i] - mean) / std
 
-        # KC signal conditions
         below_lower = close < kc_lower
         above_upper = close > kc_upper
 
-        # RSI z-score conditions
         rsi_oversold = rsi_zscore < self.rsi_zscore_threshold
         rsi_overbought = rsi_zscore > -self.rsi_zscore_threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -143,7 +106,6 @@ class KeltnerChannelDetector1(SignalDetector):
             short_signal = above_upper & rsi_overbought if self.use_rsi_condition else above_upper
             signal_type = np.where(short_signal, SignalType.FALL.value, signal_type)
 
-        # Use KC difference as signal strength
         kc_diff = kc_lower - close
 
         out = features.select(
@@ -155,7 +117,6 @@ class KeltnerChannelDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -202,34 +163,6 @@ class KeltnerChannelDetector2(SignalDetector):
 
     Signal logic:
         - LONG: close < KC lower AND MACD < signal AND RSI z-score < threshold
-
-    Attributes:
-        kc_period: Keltner Channel period.
-        kc_multiplier: KC ATR multiplier.
-        rsi_period: RSI calculation period.
-        rsi_zscore_window: Window for RSI z-score.
-        rsi_zscore_threshold: Z-score threshold.
-        macd_fast: MACD fast period.
-        macd_slow: MACD slow period.
-        macd_signal: MACD signal period.
-        use_macd_condition: Whether to require MACD condition.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import KeltnerChannelDetector2
-
-        detector = KeltnerChannelDetector2(
-            kc_period=720,
-            kc_multiplier=2.0,
-            macd_fast=12,
-            macd_slow=26,
-            macd_signal=9,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     kc_period: int = 720
@@ -261,15 +194,7 @@ class KeltnerChannelDetector2(SignalDetector):
         ]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on KC, MACD, and RSI conditions.
-
-        Args:
-            features: DataFrame with computed values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on KC, MACD, and RSI conditions."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -301,7 +226,6 @@ class KeltnerChannelDetector2(SignalDetector):
         macd_signal = features[self.macd_signal_col].to_numpy()
         n = len(close)
 
-        # Compute RSI z-score
         rsi_zscore = np.full(n, np.nan)
         for i in range(self.rsi_zscore_window - 1, n):
             window_vals = rsi[i - self.rsi_zscore_window + 1 : i + 1]
@@ -312,19 +236,15 @@ class KeltnerChannelDetector2(SignalDetector):
                 if std > 1e-10:
                     rsi_zscore[i] = (rsi[i] - mean) / std
 
-        # KC signal conditions
         below_lower = close < kc_lower
         above_upper = close > kc_upper
 
-        # MACD conditions
         macd_bearish = macd < macd_signal
         macd_bullish = macd > macd_signal
 
-        # RSI z-score conditions
         rsi_oversold = rsi_zscore < self.rsi_zscore_threshold
         rsi_overbought = rsi_zscore > -self.rsi_zscore_threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -352,7 +272,6 @@ class KeltnerChannelDetector2(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

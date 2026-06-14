@@ -1,7 +1,7 @@
 """Shared Numba-accelerated kernels for technical indicators.
 
 All kernels use @njit(cache=True) for persistent compilation.
-Pure float64[:] arrays in/out — no Python objects inside.
+Pure float64[:] arrays in/out - no Python objects inside.
 """
 
 import numpy as np
@@ -23,13 +23,11 @@ def rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     if n < period:
         return rma
 
-    # SMA init
     s = 0.0
     for j in range(period):
         s += values[j]
     rma[period - 1] = s / period
 
-    # Wilder's smoothing
     for i in range(period, n):
         rma[i] = alpha * values[i] + (1.0 - alpha) * rma[i - 1]
 
@@ -49,7 +47,6 @@ def ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     if n < period:
         return ema
 
-    # Find first non-NaN
     first_valid = -1
     for i in range(n):
         if not np.isnan(values[i]):
@@ -61,14 +58,12 @@ def ema_sma_init(values: np.ndarray, period: int) -> np.ndarray:
     if first_valid + period > n:
         return ema
 
-    # SMA of first `period` valid values
     init_idx = first_valid + period - 1
     s = 0.0
     for j in range(first_valid, first_valid + period):
         s += values[j]
     ema[init_idx] = s / period
 
-    # Standard EMA
     for i in range(init_idx + 1, n):
         if not np.isnan(values[i]):
             ema[i] = alpha * values[i] + (1.0 - alpha) * ema[i - 1]
@@ -83,7 +78,6 @@ def normalize_zscore_nb(values: np.ndarray, window: int) -> np.ndarray:
     result = np.full(n, np.nan)
 
     for i in range(window - 1, n):
-        # Collect valid values in window
         count = 0
         s = 0.0
         for j in range(i - window + 1, i + 1):
@@ -114,7 +108,6 @@ def normalize_zscore_robust_nb(values: np.ndarray, window: int) -> np.ndarray:
     scale = 1.4826
 
     for i in range(window - 1, n):
-        # Collect valid values
         valid = np.empty(window, dtype=np.float64)
         count = 0
         for j in range(i - window + 1, i + 1):
@@ -199,7 +192,6 @@ def adx_kernel(
     smooth_pdm = np.full(n, np.nan)
     smooth_ndm = np.full(n, np.nan)
 
-    # SMA init
     s_tr = 0.0
     s_pdm = 0.0
     s_ndm = 0.0
@@ -211,7 +203,6 @@ def adx_kernel(
     smooth_pdm[period - 1] = s_pdm / period
     smooth_ndm[period - 1] = s_ndm / period
 
-    # RMA smoothing
     for i in range(period, n):
         atr[i] = alpha * tr[i] + (1.0 - alpha) * atr[i - 1]
         smooth_pdm[i] = alpha * pdm[i] + (1.0 - alpha) * smooth_pdm[i - 1]
@@ -228,7 +219,6 @@ def adx_kernel(
             denom = dmp[i] + dmn[i] + 1e-10
             dx[i] = 100.0 * np.abs(dmp[i] - dmn[i]) / denom
 
-    # ADX = RMA of DX
     adx = np.full(n, np.nan)
     start = 2 * period - 1
     if start < n:
@@ -259,7 +249,6 @@ def stoch_kernel(
     """Compute Stochastic %K and %D."""
     n = len(close)
 
-    # Raw %K
     raw_k = np.full(n, np.nan)
     for i in range(k_period - 1, n):
         hh = high[i]
@@ -274,7 +263,6 @@ def stoch_kernel(
         else:
             raw_k[i] = 50.0
 
-    # Smoothed %K (SMA)
     stoch_k = np.full(n, np.nan)
     start_k = k_period + smooth_k - 2
     for i in range(start_k, n):
@@ -287,7 +275,6 @@ def stoch_kernel(
         if cnt > 0:
             stoch_k[i] = s / cnt
 
-    # %D (SMA of %K)
     stoch_d = np.full(n, np.nan)
     start_d = start_k + d_period - 1
     for i in range(start_d, n):
@@ -397,14 +384,13 @@ def kama_kernel(
     fast_sc: float,
     slow_sc: float,
 ) -> np.ndarray:
-    """KAMA kernel — efficiency ratio + adaptive smoothing."""
+    """KAMA kernel - efficiency ratio + adaptive smoothing."""
     n = len(source)
     kama = np.full(n, np.nan)
 
     if n < period:
         return kama
 
-    # SMA init
     s = 0.0
     for j in range(period):
         s += source[j]
@@ -431,14 +417,13 @@ def vidya_kernel(
     period: int,
     alpha: float,
 ) -> np.ndarray:
-    """VIDYA kernel — CMO-based adaptive smoothing."""
+    """VIDYA kernel - CMO-based adaptive smoothing."""
     n = len(source)
     vidya = np.full(n, np.nan)
 
     if n <= period:
         return vidya
 
-    # SMA init
     s = 0.0
     for j in range(period + 1):
         s += source[j]
@@ -486,14 +471,13 @@ def frama_kernel(
     source: np.ndarray,
     period: int,
 ) -> np.ndarray:
-    """FRAMA kernel — fractal adaptive moving average."""
+    """FRAMA kernel - fractal adaptive moving average."""
     n = len(source)
     half = period // 2
     frama = np.full(n, np.nan)
     frama[period - 1] = source[period - 1]
 
     for i in range(period, n):
-        # N1: first half
         max1 = source[i - period + 1]
         min1 = source[i - period + 1]
         for j in range(i - period + 2, i - half + 1):
@@ -503,7 +487,6 @@ def frama_kernel(
                 min1 = source[j]
         n1 = (max1 - min1) / half
 
-        # N2: second half
         max2 = source[i - half + 1]
         min2 = source[i - half + 1]
         for j in range(i - half + 2, i + 1):
@@ -513,7 +496,6 @@ def frama_kernel(
                 min2 = source[j]
         n2 = (max2 - min2) / half
 
-        # N3: full period
         max3 = source[i - period + 1]
         min3 = source[i - period + 1]
         for j in range(i - period + 2, i + 1):
@@ -548,14 +530,12 @@ def aroon_kernel(
     aroon_dn = np.full(n, np.nan)
 
     for i in range(period, n):
-        # Find periods since highest high (looking backward from most recent)
         best_high_idx = i
         for j in range(i - 1, i - period - 1, -1):
             if high[j] > high[best_high_idx]:
                 best_high_idx = j
         periods_from_hh = i - best_high_idx
 
-        # Find periods since lowest low
         best_low_idx = i
         for j in range(i - 1, i - period - 1, -1):
             if low[j] < low[best_low_idx]:
@@ -581,7 +561,6 @@ def cmo_kernel(
     if n < period:
         return cmo
 
-    # Initial sums
     sum_g = 0.0
     sum_l = 0.0
     for j in range(period):
@@ -591,7 +570,6 @@ def cmo_kernel(
     if total > 0.0:
         cmo[period - 1] = 100.0 * (sum_g - sum_l) / total
 
-    # Sliding window
     for i in range(period, n):
         sum_g += gains[i] - gains[i - period]
         sum_l += losses[i] - losses[i - period]
@@ -600,9 +578,6 @@ def cmo_kernel(
             cmo[i] = 100.0 * (sum_g - sum_l) / total
 
     return cmo
-
-
-# ── Batch 2 kernels ─────────────────────────────────────────
 
 
 @njit(cache=True)
@@ -633,7 +608,6 @@ def rolling_std(arr: np.ndarray, period: int) -> np.ndarray:
     if n < period:
         return out
 
-    # Initial window
     mean_val = 0.0
     for j in range(period):
         mean_val += arr[j]
@@ -644,7 +618,6 @@ def rolling_std(arr: np.ndarray, period: int) -> np.ndarray:
         ss += d * d
     out[period - 1] = np.sqrt(ss / (period - 1))
 
-    # Sliding window
     for i in range(period, n):
         old_val = arr[i - period]
         new_val = arr[i]
@@ -717,13 +690,11 @@ def cci_kernel(
     cci = np.full(n, np.nan)
 
     for i in range(period - 1, n):
-        # SMA
         s = 0.0
         for j in range(i - period + 1, i + 1):
             s += tp[j]
         sma = s / period
 
-        # Mean Absolute Deviation
         mad = 0.0
         for j in range(i - period + 1, i + 1):
             mad += abs(tp[j] - sma)
@@ -752,7 +723,6 @@ def uo_kernel(
     if n < slow:
         return uo
 
-    # Rolling sums for each period
     for i in range(slow - 1, n):
         bp_fast = 0.0
         tr_fast = 0.0
@@ -838,7 +808,6 @@ def keltner_kernel(
 
     alpha = 2.0 / (period + 1)
 
-    # SMA init for both EMAs
     sma_c = 0.0
     sma_r = 0.0
     for j in range(period):
@@ -871,12 +840,11 @@ def psar_kernel(
     """Parabolic SAR kernel."""
     n = len(high)
     psar = np.full(n, np.nan)
-    direction = np.full(n, np.nan)  # 1=long, -1=short
+    direction = np.full(n, np.nan)
 
     if n < 2:
         return psar, direction
 
-    # Initialize: start long
     is_long = True
     af = af_step
     ep = high[0]
@@ -888,15 +856,12 @@ def psar_kernel(
     for i in range(1, n):
         prev_sar = sar
 
-        # Update SAR
         sar = prev_sar + af * (ep - prev_sar)
 
         if is_long:
-            # SAR can't be above prior two lows
             sar = min(sar, low[i - 1], low[i - 2]) if i >= 2 else min(sar, low[i - 1])
 
             if low[i] < sar:
-                # Reverse to short
                 is_long = False
                 sar = ep
                 ep = low[i]
@@ -906,11 +871,9 @@ def psar_kernel(
                     ep = high[i]
                     af = min(af + af_step, af_max)
         else:
-            # SAR can't be below prior two highs
             sar = max(sar, high[i - 1], high[i - 2]) if i >= 2 else max(sar, high[i - 1])
 
             if high[i] > sar:
-                # Reverse to long
                 is_long = True
                 sar = ep
                 ep = high[i]
@@ -942,7 +905,6 @@ def supertrend_kernel(
     if n < period:
         return supertrend, direction
 
-    # Compute TR
     tr = np.empty(n)
     tr[0] = high[0] - low[0]
     for i in range(1, n):
@@ -951,7 +913,6 @@ def supertrend_kernel(
         lc = abs(low[i] - close[i - 1])
         tr[i] = max(hl, max(hc, lc))
 
-    # ATR via RMA
     atr = np.full(n, np.nan)
     s = 0.0
     for j in range(period):
@@ -961,7 +922,6 @@ def supertrend_kernel(
     for i in range(period, n):
         atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
 
-    # Supertrend
     upper_band = np.empty(n)
     lower_band = np.empty(n)
 
@@ -974,22 +934,20 @@ def supertrend_kernel(
             upper_band[i] = hl2 + multiplier * atr[i]
             lower_band[i] = hl2 - multiplier * atr[i]
 
-    # Direction tracking
-    dir_val = 1  # 1=up (bullish), -1=down (bearish)
+    dir_val = 1
 
     start = period - 1
     supertrend[start] = upper_band[start]
     direction[start] = 1.0
 
     for i in range(start + 1, n):
-        # Smooth bands
         if lower_band[i] > lower_band[i - 1] or close[i - 1] < lower_band[i - 1]:
-            pass  # keep new lower_band
+            pass
         else:
             lower_band[i] = lower_band[i - 1]
 
         if upper_band[i] < upper_band[i - 1] or close[i - 1] > upper_band[i - 1]:
-            pass  # keep new upper_band
+            pass
         else:
             upper_band[i] = upper_band[i - 1]
 
@@ -1092,7 +1050,6 @@ def ssf_kernel(
             for i in range(2, n):
                 out[i] = c1 * (source[i] + source[i - 1]) / 2.0 + c2 * out[i - 1] + c3 * out[i - 2]
     else:
-        # 3-pole
         a1 = np.exp(-np.pi / period)
         b1 = 2.0 * a1 * np.cos(1.738 * np.pi / period)
         c1_coeff = a1 * a1
@@ -1129,7 +1086,6 @@ def ulcer_index_kernel(
     ui = np.full(n, np.nan)
 
     for i in range(period - 1, n):
-        # Find rolling highest and compute drawdowns
         highest = close[i - period + 1]
         ss_dd = 0.0
         for j in range(i - period + 1, i + 1):
@@ -1152,7 +1108,6 @@ def rvi_kernel(
     n = len(close)
     rvi = np.full(n, np.nan)
 
-    # Rolling std
     std_arr = np.full(n, np.nan)
     for i in range(std_period - 1, n):
         s = 0.0
@@ -1165,7 +1120,6 @@ def rvi_kernel(
             ss += d * d
         std_arr[i] = np.sqrt(ss / (std_period - 1))
 
-    # Directional classification
     diff = np.empty(n)
     diff[0] = 0.0
     for i in range(1, n):
@@ -1182,7 +1136,6 @@ def rvi_kernel(
             up_std[i] = 0.0
             dn_std[i] = sv
 
-    # EMA with SMA init
     alpha = 2.0 / (period + 1)
     init_idx = std_period + period - 2
 
@@ -1229,7 +1182,6 @@ def historical_vol_kernel(
     n = len(close)
     hv = np.full(n, np.nan)
 
-    # Log returns
     log_ret = np.empty(n)
     log_ret[0] = 0.0
     for i in range(1, n):

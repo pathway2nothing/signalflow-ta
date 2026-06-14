@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import BollingerVol
 
@@ -22,29 +22,6 @@ class BollingerBandDetector1(SignalDetector):
     Signal logic:
         - LONG (RISE): close < lower band (oversold)
         - SHORT (FALL): close > upper band (overbought)
-
-    Attributes:
-        period: BB calculation period.
-        std_dev: Number of standard deviations.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import BollingerBandDetector1
-        from signalflow.ta.signals.filters import RsiZscoreFilter
-
-        # Basic usage
-        detector = BollingerBandDetector1(period=720, std_dev=2.0)
-
-        # With RSI z-score filter (Kyoto001 equivalent)
-        detector = BollingerBandDetector1(
-            period=720,
-            std_dev=2.0,
-            direction="long",
-            filters=[RsiZscoreFilter(rsi_period=720, threshold=-1.0)]
-        )
-        ```
     """
 
     period: int = 720
@@ -62,15 +39,7 @@ class BollingerBandDetector1(SignalDetector):
         self.features = [BollingerVol(period=self.period, std_dev=self.std_dev)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on BB band crossings.
-
-        Args:
-            features: DataFrame with computed BB values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected breakout signals.
-        """
+        """Generate signals based on BB band crossings."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -98,11 +67,9 @@ class BollingerBandDetector1(SignalDetector):
         bb_upper = features[self.bb_upper_col].to_numpy()
         bb_lower = features[self.bb_lower_col].to_numpy()
 
-        # Signal conditions
         below_lower = close < bb_lower
         above_upper = close > bb_upper
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(len(features), SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -110,7 +77,6 @@ class BollingerBandDetector1(SignalDetector):
         if self.direction in ("short", "both"):
             signal_type = np.where(above_upper, SignalType.FALL.value, signal_type)
 
-        # Use bb_pct as signal strength
         bb_pct = features[self.bb_pct_col].to_numpy()
 
         df = features.with_columns(
@@ -129,7 +95,6 @@ class BollingerBandDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

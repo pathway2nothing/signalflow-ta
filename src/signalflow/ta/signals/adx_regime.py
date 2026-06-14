@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.trend import AdxTrend
@@ -23,24 +23,6 @@ class AdxRegimeDetector1(SignalDetector):
     Signal logic:
         - LONG: +DI crosses above -DI AND ADX > threshold (strong uptrend)
         - SHORT: -DI crosses above +DI AND ADX > threshold (strong downtrend)
-
-    Attributes:
-        adx_period: ADX calculation period.
-        adx_threshold: Minimum ADX for trend confirmation (default 25).
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import AdxRegimeDetector1
-
-        detector = AdxRegimeDetector1(
-            adx_period=14,
-            adx_threshold=25,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     adx_period: int = 14
@@ -58,15 +40,7 @@ class AdxRegimeDetector1(SignalDetector):
         self.features = [AdxTrend(period=self.adx_period)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on ADX regime and DI crossover.
-
-        Args:
-            features: DataFrame with computed ADX values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected trend signals.
-        """
+        """Generate signals based on ADX regime and DI crossover."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -95,20 +69,16 @@ class AdxRegimeDetector1(SignalDetector):
         minus_di = features[self.minus_di_col].to_numpy()
         n = len(adx)
 
-        # Previous values for crossover detection
         plus_di_prev = np.roll(plus_di, 1)
         minus_di_prev = np.roll(minus_di, 1)
         plus_di_prev[0] = np.nan
         minus_di_prev[0] = np.nan
 
-        # Crossover conditions
         plus_crosses_above = (plus_di_prev <= minus_di_prev) & (plus_di > minus_di)
         minus_crosses_above = (minus_di_prev <= plus_di_prev) & (minus_di > plus_di)
 
-        # Trend strength condition
         strong_trend = adx > self.adx_threshold
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -128,7 +98,6 @@ class AdxRegimeDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -173,16 +142,6 @@ class AdxRegimeDetector2(SignalDetector):
           - LONG: +DI > -DI (uptrend direction)
         - In RANGE regime (ADX < threshold):
           - LONG: RSI < oversold (mean reversion)
-
-    Attributes:
-        adx_period: ADX calculation period.
-        adx_trend_threshold: ADX threshold for trend regime.
-        adx_range_threshold: ADX threshold for range regime.
-        rsi_period: RSI calculation period.
-        rsi_oversold: RSI oversold threshold.
-        rsi_overbought: RSI overbought threshold.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
     """
 
     adx_period: int = 14
@@ -239,28 +198,22 @@ class AdxRegimeDetector2(SignalDetector):
         rsi = features[self.rsi_col].to_numpy()
         n = len(adx)
 
-        # Regime detection
         trend_regime = adx > self.adx_trend_threshold
         range_regime = adx < self.adx_range_threshold
 
-        # Trend regime signals (follow direction)
         uptrend = plus_di > minus_di
         downtrend = minus_di > plus_di
 
-        # Range regime signals (mean reversion)
         rsi_oversold = rsi < self.rsi_oversold
         rsi_overbought = rsi > self.rsi_overbought
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
-            # Trend: follow uptrend, Range: buy oversold
             long_signal = (trend_regime & uptrend) | (range_regime & rsi_oversold)
             signal_type = np.where(long_signal, SignalType.RISE.value, signal_type)
 
         if self.direction in ("short", "both"):
-            # Trend: follow downtrend, Range: sell overbought
             short_signal = (trend_regime & downtrend) | (range_regime & rsi_overbought)
             signal_type = np.where(short_signal, SignalType.FALL.value, signal_type)
 
@@ -273,7 +226,6 @@ class AdxRegimeDetector2(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

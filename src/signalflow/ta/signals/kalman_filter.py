@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 
 
@@ -20,15 +20,6 @@ def _adaptive_kalman_filter(
     """Apply Adaptive Kalman Filter to a time series.
 
     The filter adapts its parameters based on local volatility.
-
-    Args:
-        values: Input array.
-        window: Window for volatility estimation.
-        process_noise: Base process noise (Q).
-        measurement_noise: Base measurement noise (R).
-
-    Returns:
-        Filtered array.
     """
     n = len(values)
     filtered = np.full(n, np.nan)
@@ -36,9 +27,8 @@ def _adaptive_kalman_filter(
     if n < 2:
         return filtered
 
-    # Initialize state
-    x = values[0]  # State estimate
-    p = 1.0  # Error covariance
+    x = values[0]
+    p = 1.0
 
     filtered[0] = x
 
@@ -47,23 +37,19 @@ def _adaptive_kalman_filter(
             filtered[i] = x
             continue
 
-        # Compute local volatility for adaptation
         start_idx = max(0, i - window)
         local_vals = values[start_idx : i + 1]
         valid_vals = local_vals[~np.isnan(local_vals)]
 
         local_vol = np.std(valid_vals, ddof=1) if len(valid_vals) > 1 else 1.0
 
-        # Adaptive noise parameters
         q = process_noise * (1 + local_vol)
         r = measurement_noise * (1 + local_vol)
 
-        # Predict
         x_pred = x
         p_pred = p + q
 
-        # Update
-        k = p_pred / (p_pred + r)  # Kalman gain
+        k = p_pred / (p_pred + r)
         x = x_pred + k * (values[i] - x_pred)
         p = (1 - k) * p_pred
 
@@ -85,30 +71,6 @@ class KalmanFilterDetector1(SignalDetector):
         - Z-score normalizes the score
         - LONG: z-score > threshold (price below filtered high)
         - Optional uptrend filter
-
-    Attributes:
-        kf_window: Kalman filter adaptation window.
-        zscore_window: Window for z-score normalization.
-        process_noise: Kalman filter process noise.
-        measurement_noise: Kalman filter measurement noise.
-        zscore_threshold: Z-score threshold for signal.
-        use_uptrend_filter: Whether to require price uptrend.
-        uptrend_window: Window for uptrend calculation.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import KalmanFilterDetector1
-
-        detector = KalmanFilterDetector1(
-            kf_window=120,
-            zscore_window=720,
-            zscore_threshold=1.0,
-            direction="long"
-        )
-        signals = detector.run(raw_data_view)
-        ```
     """
 
     kf_window: int = 120
@@ -128,15 +90,7 @@ class KalmanFilterDetector1(SignalDetector):
         self.features = []
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on Kalman filter deviation.
-
-        Args:
-            features: DataFrame with OHLCV data.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on Kalman filter deviation."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -164,7 +118,6 @@ class KalmanFilterDetector1(SignalDetector):
         close = features["close"].to_numpy()
         n = len(close)
 
-        # Apply Adaptive Kalman Filter to high
         kf_high = _adaptive_kalman_filter(
             high,
             window=self.kf_window,
@@ -172,10 +125,8 @@ class KalmanFilterDetector1(SignalDetector):
             measurement_noise=self.measurement_noise,
         )
 
-        # Compute score: filtered high minus close
         score = kf_high - close
 
-        # Z-score normalization
         zscore = np.full(n, np.nan)
         for i in range(self.zscore_window - 1, n):
             window_vals = score[i - self.zscore_window + 1 : i + 1]
@@ -186,11 +137,9 @@ class KalmanFilterDetector1(SignalDetector):
                 if std > 1e-10:
                     zscore[i] = (score[i] - mean) / std
 
-        # Signal conditions
         long_signal = zscore > self.zscore_threshold
         short_signal = zscore < -self.zscore_threshold
 
-        # Optional uptrend filter
         if self.use_uptrend_filter:
             sma = np.full(n, np.nan)
             for i in range(self.uptrend_window - 1, n):
@@ -198,7 +147,6 @@ class KalmanFilterDetector1(SignalDetector):
             uptrend = close > sma
             long_signal = long_signal & uptrend
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(n, SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -216,7 +164,6 @@ class KalmanFilterDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

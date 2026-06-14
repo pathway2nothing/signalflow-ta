@@ -1,13 +1,12 @@
 """Information-theoretic signal features."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -37,7 +36,6 @@ class SignalSurprise(SignalFeature):
         col = self.output_cols()[0]
         df = signals.sort([self.group_col, self.ts_col])
 
-        # Rolling proportion of each type
         df = df.with_columns(
             (pl.col("signal_type") == "rise").cast(pl.Float64).alias("_is_rise"),
         )
@@ -48,9 +46,6 @@ class SignalSurprise(SignalFeature):
             .over(self.group_col)
         )
 
-        # Surprise = -log(p) where p is the probability of the observed type
-        # For rise: p = rise_prob; for fall: p = 1 - rise_prob
-        # Clamp to avoid log(0)
         df = df.with_columns(rise_prob.alias("_rise_prob"))
 
         df = df.with_columns(
@@ -109,7 +104,6 @@ class MutualInformation(SignalFeature):
                 pl.lit(None, dtype=pl.Float64).alias(col),
             )
 
-        # Causal ret
         df = df.with_columns(
             pl.when(pl.col("label").is_not_null())
             .then(pl.col("ret").cast(pl.Float64))
@@ -117,13 +111,9 @@ class MutualInformation(SignalFeature):
             .alias("_ret_causal"),
         )
 
-        # Bin signal and return into quantiles (using rolling rank / window)
-        # Approximate: rolling rank within window / window_size
         sig = pl.col("signal").cast(pl.Float64)
         ret = pl.col("_ret_causal")
 
-        # Pearson |correlation| as MI lower bound proxy:
-        # MI >= 0.5 * log(1 / (1 - rho^2))
         rolling_cov = (
             (sig * ret).rolling_mean(window_size=self.window, min_samples=3).over(self.group_col)
             - sig.rolling_mean(window_size=self.window, min_samples=3).over(self.group_col)
@@ -139,7 +129,6 @@ class MutualInformation(SignalFeature):
             .alias("_rho"),
         )
 
-        # MI lower bound: 0.5 * ln(1 / (1 - rho^2)), clamped
         df = df.with_columns(
             pl.when(pl.col("_rho").abs() < 0.99)
             .then(
@@ -193,7 +182,6 @@ class BayesianSurpriseRate(SignalFeature):
             .alias("_hit"),
         )
 
-        # Rolling accuracy (posterior proxy)
         rolling_acc = (
             pl.col("_hit")
             .rolling_mean(window_size=self.window, min_samples=1)
@@ -201,14 +189,12 @@ class BayesianSurpriseRate(SignalFeature):
         )
         df = df.with_columns(rolling_acc.alias("_posterior"))
 
-        # First derivative: absolute change between consecutive posteriors
         df = df.with_columns(
             (pl.col("_posterior") - pl.col("_posterior").shift(1).over(self.group_col))
             .abs()
             .alias("_delta_post"),
         )
 
-        # Rolling mean of absolute delta = surprise rate
         df = df.with_columns(
             pl.col("_delta_post")
             .rolling_mean(window_size=self.window, min_samples=1)

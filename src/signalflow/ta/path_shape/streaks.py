@@ -1,12 +1,11 @@
 """Path streak / reversal features."""
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -34,7 +33,7 @@ class ZeroCrossingRate(Feature):
         out = f"zcr_{self.window}"
         c = pl.col("close")
         ret = c.diff()
-        cross = ret.sign().diff().abs()  # 2 at every flip
+        cross = ret.sign().diff().abs()
         return df.with_columns((cross.rolling_sum(self.window) / (2 * self.window)).alias(out))
 
 
@@ -98,7 +97,7 @@ class MaxConsecutiveLossRun(Feature):
 
 @dataclass
 class LongestStreak(Feature):
-    """max(longest_gain_run, longest_loss_run) per window — directional persistence."""
+    """max(longest_gain_run, longest_loss_run) per window - directional persistence."""
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["longest_streak_{window}"]
     window: int = 240

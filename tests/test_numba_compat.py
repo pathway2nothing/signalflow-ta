@@ -4,15 +4,11 @@ Verifies that the compat shim works correctly and that indicators
 can function without Numba JIT compilation.
 """
 
-from __future__ import annotations
 
 import numpy as np
 import polars as pl
 import pytest
 from conftest import generate_test_ohlcv
-
-
-# ── Compat Module Tests ──────────────────────────────────────
 
 
 class TestNumbaCompat:
@@ -40,7 +36,6 @@ class TestNumbaCompat:
 
         result = decorator(dummy)
         assert callable(result)
-        # Function should still work
         arr = np.array([1.0, 2.0, 3.0])
         np.testing.assert_array_equal(result(arr), arr * 2)
 
@@ -55,9 +50,6 @@ class TestNumbaCompat:
         assert callable(result)
         arr = np.array([1.0, 2.0])
         np.testing.assert_array_equal(result(arr), arr + 1)
-
-
-# ── Kernel Import Tests ──────────────────────────────────────
 
 
 class TestKernelImports:
@@ -94,16 +86,13 @@ class TestKernelImports:
         assert callable(FramaSmooth)
 
     def test_stat_structure_import(self) -> None:
-        import signalflow.ta.stat.structure  # noqa: F401
+        import signalflow.ta.stat.structure
 
     def test_trend_regime_import(self) -> None:
-        import signalflow.ta.trend.regime  # noqa: F401
+        import signalflow.ta.trend.regime
 
     def test_volume_cumulative_import(self) -> None:
-        import signalflow.ta.volume.cumulative  # noqa: F401
-
-
-# ── Indicator Correctness (with Numba) ───────────────────────
+        import signalflow.ta.volume.cumulative
 
 
 class TestIndicatorCorrectness:
@@ -129,7 +118,6 @@ class TestIndicatorCorrectness:
 
         indicator = BollingerVol(period=20, std_dev=2.0)
         result = indicator.compute_pair(ohlcv)
-        # Should have upper, middle, lower bands
         assert any("upper" in c for c in result.columns)
 
     def test_supertrend_output(self, ohlcv: pl.DataFrame) -> None:
@@ -137,7 +125,6 @@ class TestIndicatorCorrectness:
 
         indicator = SupertrendTrend(period=10, multiplier=3.0)
         result = indicator.compute_pair(ohlcv)
-        # Should have direction column
         dir_cols = [c for c in result.columns if "dir" in c.lower()]
         assert len(dir_cols) > 0
 

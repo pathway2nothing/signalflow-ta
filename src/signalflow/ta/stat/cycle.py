@@ -1,4 +1,3 @@
-# src/signalflow/ta/stat/cycle.py
 """Cycle analysis via Hilbert Transform - instantaneous amplitude, phase, frequency."""
 
 from dataclasses import dataclass
@@ -6,22 +5,20 @@ from typing import ClassVar
 
 import numpy as np
 import polars as pl
-from scipy.signal import hilbert  # type: ignore[attr-defined]
+from scipy.signal import hilbert
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 def _detrend_and_hilbert(values: np.ndarray, period: int, idx: int) -> tuple[float, float]:
     """Apply Hilbert transform to a detrended window, return amplitude and phase."""
     window = values[idx - period + 1 : idx + 1]
 
-    # Detrend: remove linear trend to isolate oscillatory component
     x = np.arange(period, dtype=np.float64)
     coeffs = np.polyfit(x, window, 1)
     detrended = window - np.polyval(coeffs, x)
 
-    # Check for near-zero variance
     if np.std(detrended) < 1e-10:
         return np.nan, np.nan
 
@@ -131,7 +128,6 @@ class InstPhaseStat(Feature):
             _, ph = _detrend_and_hilbert(values, self.period, i)
             phase[i] = ph
 
-        # Phase is bounded [-π, π] → normalize to [-1, 1]
         if self.normalized:
             phase = phase / np.pi
 
@@ -183,18 +179,15 @@ class InstFrequencyStat(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Compute phase for full series
         phase = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             _, ph = _detrend_and_hilbert(values, self.period, i)
             phase[i] = ph
 
-        # Instantaneous frequency = d(phase)/dt with unwrapping
         freq = np.full(n, np.nan)
         for i in range(self.period, n):
             if not np.isnan(phase[i]) and not np.isnan(phase[i - 1]):
                 dp = phase[i] - phase[i - 1]
-                # Unwrap: handle ±π boundary
                 if dp > np.pi:
                     dp -= 2 * np.pi
                 elif dp < -np.pi:
@@ -257,13 +250,11 @@ class PhaseAccelerationStat(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Compute phase
         phase = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             _, ph = _detrend_and_hilbert(values, self.period, i)
             phase[i] = ph
 
-        # Frequency (unwrapped phase diff)
         freq = np.full(n, np.nan)
         for i in range(self.period, n):
             if not np.isnan(phase[i]) and not np.isnan(phase[i - 1]):
@@ -274,7 +265,6 @@ class PhaseAccelerationStat(Feature):
                     dp += 2 * np.pi
                 freq[i] = dp
 
-        # Phase acceleration = d(freq)/dt
         phaseaccel = np.full(n, np.nan)
         for i in range(self.period + 1, n):
             if not np.isnan(freq[i]) and not np.isnan(freq[i - 1]):
@@ -343,7 +333,6 @@ class ConstructiveInterferenceStat(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Compute fast and slow Hilbert transforms
         amp_fast = np.full(n, np.nan)
         phase_fast = np.full(n, np.nan)
         amp_slow = np.full(n, np.nan)
@@ -359,7 +348,6 @@ class ConstructiveInterferenceStat(Feature):
             amp_slow[i] = a
             phase_slow[i] = p
 
-        # Interference = amp_fast * amp_slow * cos(phase_diff)
         interf_raw = np.full(n, np.nan)
         start = self.slow_period - 1
         for i in range(start, n):
@@ -372,7 +360,6 @@ class ConstructiveInterferenceStat(Feature):
                 phase_diff = phase_fast[i] - phase_slow[i]
                 interf_raw[i] = amp_fast[i] * amp_slow[i] * np.cos(phase_diff)
 
-        # Smooth
         if self.smooth > 1:
             interf = np.full(n, np.nan)
             for i in range(start + self.smooth - 1, n):
@@ -449,7 +436,6 @@ class BeatFrequencyStat(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Compute instantaneous frequencies for both periods
         phase_fast = np.full(n, np.nan)
         phase_slow = np.full(n, np.nan)
 
@@ -461,7 +447,6 @@ class BeatFrequencyStat(Feature):
             _, p = _detrend_and_hilbert(values, self.slow_period, i)
             phase_slow[i] = p
 
-        # Instantaneous frequencies (unwrapped phase diffs)
         def _inst_freq(phase_arr: np.ndarray, start_idx: int) -> np.ndarray:
             freq = np.full(n, np.nan)
             for i in range(start_idx, n):
@@ -477,7 +462,6 @@ class BeatFrequencyStat(Feature):
         freq_fast = _inst_freq(phase_fast, self.fast_period)
         freq_slow = _inst_freq(phase_slow, self.slow_period)
 
-        # Beat frequency = |freq_fast - freq_slow|
         beat = np.full(n, np.nan)
         start = self.slow_period
         for i in range(start, n):
@@ -550,13 +534,11 @@ class StandingWaveRatioStat(Feature):
         values = df[self.source_col].to_numpy().astype(np.float64)
         n = len(values)
 
-        # Compute instantaneous amplitude
         amplitude = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             amp, _ = _detrend_and_hilbert(values, self.period, i)
             amplitude[i] = amp
 
-        # SWR = max(amp) / min(amp) over rolling window
         swr = np.full(n, np.nan)
         start = self.period - 1 + self.swr_window - 1
         for i in range(start, n):
@@ -633,7 +615,6 @@ class SpectralCentroidStat(Feature):
         for i in range(self.period - 1, n):
             window = values[i - self.period + 1 : i + 1]
 
-            # Detrend
             x = np.arange(self.period, dtype=np.float64)
             coeffs = np.polyfit(x, window, 1)
             detrended = window - np.polyval(coeffs, x)
@@ -641,12 +622,10 @@ class SpectralCentroidStat(Feature):
             if np.std(detrended) < 1e-10:
                 continue
 
-            # FFT power spectrum (positive frequencies only)
             fft_vals = np.fft.rfft(detrended)
             power = np.abs(fft_vals) ** 2
             freqs = np.fft.rfftfreq(self.period)
 
-            # Skip DC component
             power = power[1:]
             freqs = freqs[1:]
 
@@ -717,7 +696,6 @@ class SpectralEntropyStat(Feature):
         for i in range(self.period - 1, n):
             window = values[i - self.period + 1 : i + 1]
 
-            # Detrend
             x = np.arange(self.period, dtype=np.float64)
             coeffs = np.polyfit(x, window, 1)
             detrended = window - np.polyval(coeffs, x)
@@ -725,25 +703,20 @@ class SpectralEntropyStat(Feature):
             if np.std(detrended) < 1e-10:
                 continue
 
-            # FFT power spectrum (positive frequencies, skip DC)
             fft_vals = np.fft.rfft(detrended)
             power = np.abs(fft_vals[1:]) ** 2
 
             total_power = np.sum(power)
             if total_power > 1e-10:
-                # Normalize to probability distribution
                 p = power / total_power
-                # Entropy (avoid log(0))
                 p_safe = p[p > 1e-15]
                 entropy = -np.sum(p_safe * np.log(p_safe))
-                # Normalize by max possible entropy
                 max_entropy = np.log(len(power))
                 if max_entropy > 0:
                     sentropy[i] = entropy / max_entropy
 
-        # Already bounded [0, 1], use bounded normalization
         if self.normalized:
-            sentropy = sentropy  # already [0, 1]
+            sentropy = sentropy
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"{self.source_col}_sentropy_{self.period}{suffix}"

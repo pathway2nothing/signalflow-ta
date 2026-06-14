@@ -1,5 +1,4 @@
-"""Posterior P(reversal | recent z-stretch) — Bayes update on a rare event."""
-from __future__ import annotations
+"""Posterior P(reversal | recent z-stretch) - Bayes update on a rare event."""
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -29,18 +28,9 @@ class PosteriorReversalProb(Feature):
     Output ∈ ``[0, 1]``, with mean ≈ ``base_rate`` on typical bars.
 
     Research provenance:
-        iter-35 (sf-profit) — best soft-native feature for
+        iter-35 (sf-profit) - best soft-native feature for
         ``soft_D3_multi_horizon`` (soft MI = 0.179 on
         ``stretch_threshold=2.5``, ``z_window=240``).
-
-    Attributes:
-        price_col: Source price column. Default: ``"close"``.
-        z_window: Trailing window for z-score computation. Default: 240.
-        stretch_threshold: |z| above which the likelihood crosses 0.5.
-            Default: 2.5.
-        base_rate: Prior probability of a reversal event. Default: 0.05.
-        likelihood_strength: Sigmoid steepness for the likelihood map.
-            Default: 5.0.
     """
 
     price_col: str = "close"

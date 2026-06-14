@@ -1,4 +1,3 @@
-# src/signalflow/ta/volume/__init__.py
 """Volume indicators - analyze buying/selling pressure.
 
 Modules:
@@ -53,18 +52,14 @@ __all__ = [
     "ImpulseVolume",
     "KvoVolume",
     "MarketCapacitanceVolume",
-    # Dynamics
     "MarketForceVolume",
     "MarketMomentumVolume",
     "MarketPowerVolume",
-    # Oscillators
     "MfiVolume",
     "NviVolume",
-    # Cumulative
     "ObvVolume",
     "PviVolume",
     "PvtVolume",
-    # Extensions (sf-profit iter-15/16/18/20)
     "AbsReturnVolumeCorr",
     "PriceImpactPerUnit",
     "PriceVolumeCorrelation",

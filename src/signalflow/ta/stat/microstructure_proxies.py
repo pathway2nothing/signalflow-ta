@@ -4,7 +4,6 @@ Features that approximate quantities measurable from L2 order-book data
 (spread, order-flow imbalance, volume-weighted depth) using only bar-level
 OHLCV. Validated in iter-29 and onwards.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -12,8 +11,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.stat._causal_helpers import log_returns, rolling_mean, rolling_std, truncated_ema
 
 
@@ -148,7 +147,7 @@ class KalmanInnovationVolStat(Feature):
     """
 
     period: int = 60
-    q: int = 10  # q/100 = process noise variance
+    q: int = 10
 
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["f042_kalman_innov_{period}_{q}"]
@@ -169,7 +168,6 @@ class KalmanInnovationVolStat(Feature):
         out_col = f"f042_kalman_innov_{self.period}_{self.q}"
         c = df["close"].to_numpy().astype(np.float64)
         q_val = self.q / 100.0
-        # Steady-state Kalman gain for random-walk model with R=1 observation noise:
         K_star = (q_val + np.sqrt(q_val ** 2 + 4 * q_val)) / 2.0
         tau = max(2, int(2.0 / max(K_star, 1e-6) - 1))
         ema = truncated_ema(c, tau)
@@ -182,7 +180,7 @@ class KalmanInnovationVolStat(Feature):
 @dataclass
 @feature("stat/vwap_parkinson_stretch")
 class VwapParkinsonStretchStat(Feature):
-    """(close - VWAP) / Parkinson vol — volume-weighted fair-value stretch.
+    """(close - VWAP) / Parkinson vol - volume-weighted fair-value stretch.
 
     VWAP anchors to volume-weighted price; Parkinson normalises by range
     rather than std. Combines Family A position stretch with VWAP reference.
@@ -223,7 +221,7 @@ class VwapParkinsonStretchStat(Feature):
 @dataclass
 @feature("stat/fisher_information_returns")
 class FisherInformationReturnsStat(Feature):
-    """Fisher information for normal MLE: n / sigma^2 of returns — inverse variance.
+    """Fisher information for normal MLE: n / sigma^2 of returns - inverse variance.
 
     Iter-27 stability: top mean MI_normalised ≈ 0.126 on C1 market-vol regime.
     Stable for tau-style features but with higher fold-to-fold std.

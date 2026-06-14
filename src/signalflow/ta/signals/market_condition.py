@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import SignalCategory, Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import SignalCategory, Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
@@ -25,30 +25,6 @@ class MarketConditionDetector1(SignalDetector):
     Requires global features in context:
     - market_volatility: mean volatility across market
     - market_volatility_std: std of volatility across market
-
-    Attributes:
-        rsi_period: RSI calculation period.
-        rsi_threshold: RSI threshold for entry (default 20).
-        vol_threshold: Market volatility threshold.
-        vol_std_threshold: Market volatility std threshold.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import MarketConditionDetector1
-        from signalflow.ta.signals import compute_global_features, MarketVolatilityFeature
-
-        # Compute global features first
-        global_feats = compute_global_features(
-            all_pairs_df,
-            features=[MarketVolatilityFeature()]
-        )
-
-        # Run detector with global features in context
-        detector = MarketConditionDetector1(rsi_period=6, rsi_threshold=20)
-        signals = detector.run(raw_data_view, context={"global_features": global_feats})
-        ```
     """
 
     signal_category = SignalCategory.MARKET_WIDE
@@ -68,16 +44,7 @@ class MarketConditionDetector1(SignalDetector):
         self.features = [RsiMom(period=self.rsi_period)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on RSI and market volatility conditions.
-
-        Args:
-            features: DataFrame with computed RSI values.
-            context: Must contain "global_features" DataFrame with
-                     market_volatility and market_volatility_std columns.
-
-        Returns:
-            Signals container with detected signals.
-        """
+        """Generate signals based on RSI and market volatility conditions."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -101,16 +68,13 @@ class MarketConditionDetector1(SignalDetector):
         return self._detect_single(features, context)
 
     def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        # Get global features from context
         if context is None or "global_features" not in context:
             raise ValueError("MarketConditionDetector1 requires 'global_features' in context")
 
         global_feats = context["global_features"]
 
-        # Join global features to pair data
         df = features.join(global_feats, on=self.ts_col, how="left")
 
-        # Check required columns
         required = ["market_volatility", "market_volatility_std"]
         missing = [c for c in required if c not in df.columns]
         if missing:
@@ -120,12 +84,10 @@ class MarketConditionDetector1(SignalDetector):
         market_vol = df["market_volatility"].to_numpy()
         market_vol_std = df["market_volatility_std"].to_numpy()
 
-        # Signal conditions
         rsi_oversold = rsi < self.rsi_threshold
         rsi_overbought = rsi > (100 - self.rsi_threshold)
         vol_condition = (market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(len(df), SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -145,7 +107,6 @@ class MarketConditionDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:
@@ -190,16 +151,6 @@ class MarketConditionDetector2(SignalDetector):
     - market_rsi: RSI of market index
     - market_volatility: mean volatility across market
     - market_volatility_std: std of volatility across market
-
-    Attributes:
-        rsi_period: RSI calculation period.
-        rsi_threshold: RSI threshold for entry.
-        rsi_ratio: Asset RSI must be below market_rsi * ratio.
-        vol_threshold: Market volatility threshold.
-        vol_std_threshold: Market volatility std threshold.
-        sum_vol_threshold: Combined vol + vol_std threshold.
-        direction: Signal direction.
-        filters: List of SignalFilter instances.
     """
 
     signal_category = SignalCategory.MARKET_WIDE
@@ -257,7 +208,6 @@ class MarketConditionDetector2(SignalDetector):
         if missing:
             raise ValueError(f"Missing global feature columns: {missing}")
 
-        # Apply smoothing to RSI
         rsi_raw = df[self.rsi_col].to_numpy()
         n = len(rsi_raw)
         rsi = np.full(n, np.nan)
@@ -271,7 +221,6 @@ class MarketConditionDetector2(SignalDetector):
         market_vol = df["market_volatility"].to_numpy()
         market_vol_std = df["market_volatility_std"].to_numpy()
 
-        # Signal conditions
         rsi_below_threshold = rsi < self.rsi_threshold
         rsi_below_market = rsi < (market_rsi * self.rsi_ratio)
         vol_condition = ((market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)) | (
@@ -411,7 +360,6 @@ class MarketConditionDetector3(SignalDetector):
         close = df["close"].to_numpy()
         n = len(close)
 
-        # Compute smoothed RSI
         rsi_raw = df[self.rsi_col].to_numpy()
         rsi = np.full(n, np.nan)
         for i in range(self.rsi_smoothing - 1, n):
@@ -420,10 +368,8 @@ class MarketConditionDetector3(SignalDetector):
             if len(valid) > 0:
                 rsi[i] = np.mean(valid)
 
-        # Compute asset z-score
         zscore = normalize_zscore(close, window=self.zscore_window)
 
-        # Compute rolling min
         rolling_min = np.full(n, np.nan)
         for i in range(self.rolling_min_window - 1, n):
             rolling_min[i] = np.min(close[i - self.rolling_min_window + 1 : i + 1])
@@ -433,26 +379,20 @@ class MarketConditionDetector3(SignalDetector):
         market_vol_std = df["market_volatility_std"].to_numpy()
         market_zscore = df["market_zscore"].to_numpy()
 
-        # Condition 1: RSI + vol based
         rsi_cond = (rsi < self.rsi_threshold) & (rsi < market_rsi * self.rsi_ratio)
         vol_cond = ((market_vol_std > self.vol_std_threshold) & (market_vol > self.vol_threshold)) | (
             (market_vol + market_vol_std) > self.sum_vol_threshold
         )
         base_signal = rsi_cond & vol_cond
 
-        # Condition 2: Z-score based
         zscore_signal = (zscore < self.zscore_threshold) & (market_zscore > self.market_zscore_threshold)
 
-        # Condition 3: Forced entry on extreme market conditions
         forced_signal = (market_zscore < self.forced_zscore) & (zscore < self.forced_zscore)
 
-        # Condition 4: Extreme volatility
         extreme_vol = (market_vol + market_vol_std) > (self.sum_vol_threshold * self.forced_vol_multiplier)
 
-        # Combine conditions
         main_signal = base_signal | zscore_signal | forced_signal | extreme_vol
 
-        # Must be at rolling minimum
         at_min = close <= rolling_min
         final_signal = main_signal & at_min
 

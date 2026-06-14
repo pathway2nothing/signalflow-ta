@@ -9,7 +9,6 @@ Iter-29 stability: mean MI_normalised = 0.190 on D3 across 10 stable triples.
 Reference: Almgren, R. & Chriss, N. (2001). Optimal execution of portfolio
 transactions. Journal of Risk.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -17,20 +16,15 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, rolling_sum, truncated_ema
 
 
 @dataclass
 @feature("stat/almgren_chriss_impact_decay")
 class AlmgrenChrissImpactDecayStat(Feature):
-    """Order-block impact decay (Almgren-Chriss-style).
-
-    Attributes:
-        ema: short EMA span over r·v (impact accumulation).
-        period: longer window for vol normalisation and total volume sum.
-    """
+    """Order-block impact decay (Almgren-Chriss-style)."""
 
     ema: int = 10
     period: int = 60

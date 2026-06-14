@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.trend import AroonTrend
 
@@ -21,27 +21,6 @@ class AroonCrossDetector1(SignalDetector):
 
     Signal logic:
         - LONG (RISE): aroon_up > aroon_dn AND prev_aroon_up <= prev_aroon_dn
-
-    Attributes:
-        period: Aroon calculation period.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import AroonCrossDetector1
-        from signalflow.ta.signals.filters import RsiZscoreFilter
-
-        # Basic usage
-        detector = AroonCrossDetector1(period=25)
-
-        # With RSI z-score filter
-        detector = AroonCrossDetector1(
-            period=720,
-            direction="long",
-            filters=[RsiZscoreFilter(rsi_period=720, threshold=-0.5)]
-        )
-        ```
     """
 
     period: int = 720
@@ -57,15 +36,7 @@ class AroonCrossDetector1(SignalDetector):
         self.features = [AroonTrend(period=self.period)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on Aroon crossovers.
-
-        Args:
-            features: DataFrame with computed Aroon values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected crossover signals.
-        """
+        """Generate signals based on Aroon crossovers."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -92,17 +63,14 @@ class AroonCrossDetector1(SignalDetector):
         aroon_up = features[self.aroon_up_col].to_numpy()
         aroon_dn = features[self.aroon_dn_col].to_numpy()
 
-        # Previous values for crossover detection
         aroon_up_prev = np.roll(aroon_up, 1)
         aroon_dn_prev = np.roll(aroon_dn, 1)
         aroon_up_prev[0] = np.nan
         aroon_dn_prev[0] = np.nan
 
-        # Crossover conditions
         bull_cross = (aroon_up > aroon_dn) & (aroon_up_prev <= aroon_dn_prev)
         bear_cross = (aroon_up < aroon_dn) & (aroon_up_prev >= aroon_dn_prev)
 
-        # Build signal type array
         signal_type: np.ndarray = np.full(len(features), SignalType.NONE.value)
 
         if self.direction in ("long", "both"):
@@ -121,7 +89,6 @@ class AroonCrossDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

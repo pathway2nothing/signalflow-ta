@@ -6,8 +6,8 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import Signals, SignalType, detector
-from signalflow.detector import SignalDetector
+from signalflow.ta._compat import Signals, SignalType, detector
+from signalflow.ta._compat import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import CciMom
 from signalflow.ta.signals.filters import SignalFilter
@@ -24,31 +24,6 @@ class CciAnomalyDetector1(SignalDetector):
     Signal logic:
         - LONG (RISE): CCI z-score < -threshold (oversold extreme)
         - SHORT (FALL): CCI z-score > threshold (overbought extreme)
-
-    Attributes:
-        cci_period: CCI calculation period.
-        cci_constant: CCI constant (default 0.015).
-        zscore_window: Rolling window for z-score normalization.
-        threshold: Z-score threshold for signal generation.
-        direction: Signal direction - "long", "short", or "both".
-        filters: List of SignalFilter instances to apply.
-
-    Example:
-        ```python
-        from signalflow.ta.signals import CciAnomalyDetector1
-        from signalflow.ta.signals.filters import RsiZscoreFilter
-
-        # Basic usage
-        detector = CciAnomalyDetector1(cci_period=180, threshold=1.5)
-
-        # With RSI z-score filter (Sicily001 equivalent)
-        detector = CciAnomalyDetector1(
-            cci_period=180,
-            threshold=1.0,
-            direction="long",
-            filters=[RsiZscoreFilter(rsi_period=180, threshold=-1.0)]
-        )
-        ```
     """
 
     cci_period: int = 180
@@ -67,15 +42,7 @@ class CciAnomalyDetector1(SignalDetector):
         self.features = [CciMom(period=self.cci_period, constant=self.cci_constant)]
 
     def detect(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
-        """Generate signals based on CCI z-score anomalies.
-
-        Args:
-            features: DataFrame with computed CCI values.
-            context: Optional context dictionary.
-
-        Returns:
-            Signals container with detected anomaly signals.
-        """
+        """Generate signals based on CCI z-score anomalies."""
         pairs = features[self.pair_col].unique().sort().to_list()
         if len(pairs) > 1:
             results = []
@@ -104,7 +71,6 @@ class CciAnomalyDetector1(SignalDetector):
 
         df = features.with_columns(pl.Series(name=self.zscore_col, values=zscore))
 
-        # Base signal conditions
         long_cond = pl.col(self.zscore_col) < -self.threshold
         short_cond = pl.col(self.zscore_col) > self.threshold
 
@@ -114,7 +80,7 @@ class CciAnomalyDetector1(SignalDetector):
             signal_expr = pl.when(short_cond).then(pl.lit(SignalType.FALL.value))
         else:
             signal_expr = (
-                pl.when(long_cond)  # type: ignore[assignment]
+                pl.when(long_cond)
                 .then(pl.lit(SignalType.RISE.value))
                 .when(short_cond)
                 .then(pl.lit(SignalType.FALL.value))
@@ -129,7 +95,6 @@ class CciAnomalyDetector1(SignalDetector):
             ]
         )
 
-        # Apply filters
         if self.filters:
             combined_mask = np.ones(len(out), dtype=bool)
             for flt in self.filters:

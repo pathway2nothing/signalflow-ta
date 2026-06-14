@@ -1,4 +1,4 @@
-"""Probabilistic features — emit calibrated probabilities in ``[0, 1]``.
+"""Probabilistic features - emit calibrated probabilities in ``[0, 1]``.
 
 Unlike conventional TA features (raw z-scores, returns, volatilities) these
 features output values in the probability simplex, suitable for direct use

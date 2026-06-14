@@ -7,7 +7,6 @@ different points. These variants use a strict numpy implementation
 (``sliding_window_view`` + per-window mean) that recomputes every window
 from scratch, giving bit-identical output regardless of input start.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -15,7 +14,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.stat._causal_helpers import rolling_mean
 
 

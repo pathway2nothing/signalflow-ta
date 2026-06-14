@@ -1,12 +1,11 @@
 """Kalman filter residual feature."""
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -15,7 +14,7 @@ class KalmanResidual(Feature):
 
     State = level. Process noise q, measurement variance fixed = 1.
     Lower q → more smoothing; higher q → tracks faster.
-    Output = close_t − x_pred — what the filter didn't anticipate.
+    Output = close_t − x_pred - what the filter didn't anticipate.
     """
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["kalman_res_{q}"]
@@ -38,7 +37,7 @@ class KalmanResidual(Feature):
             k = p_pred / (p_pred + r)
             x[t] = x_pred + k * (c[t] - x_pred)
             p = (1 - k) * p_pred
-            res[t] = c[t] - x_pred  # innovation
+            res[t] = c[t] - x_pred
         out_arr = res.astype(np.float32)
         out_arr[0] = np.nan
         return df.with_columns(pl.Series(out, out_arr))

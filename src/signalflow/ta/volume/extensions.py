@@ -1,15 +1,14 @@
 """Extended volume-price coupling features.
 
-Volume alone has weak signal — these features couple it with price/range/direction.
+Volume alone has weak signal - these features couple it with price/range/direction.
 Added from sf-profit iter-15, iter-16, iter-18, iter-20 research.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass

@@ -3,14 +3,13 @@
 Online change-detector that computes KL(P_short || P_long), where the two
 empirical distributions are histograms of returns over a short recent
 window and a long baseline window. Spikes in KL indicate that the recent
-distribution has departed from the baseline — useful for regime-shift
+distribution has departed from the baseline - useful for regime-shift
 detection.
 
 Empirically validated in iter-27 of sf-profit (target encoding research):
 mean MI_normalised across 6 walk-forward folds = 0.11, std 0.025; 8 of
 the binning × labeling triples crossed the stability threshold.
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -18,8 +17,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -39,15 +38,6 @@ class KullbackLeiblerDriftStat(Feature):
 
     High KL = recent distribution has shifted from baseline (volatility
     regime change, jump in drift, etc.).
-
-    Attributes:
-        short: short window (current distribution).
-        long: long window (baseline distribution).
-        n_bins: histogram bins.
-        source_col: price column.
-
-    Reference:
-        Kullback, S., & Leibler, R. A. (1951). On information and sufficiency.
     """
 
     short: int = 60

@@ -1,11 +1,10 @@
 """Rolling autocorrelation features."""
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 def _rolling_pearson(x: pl.Expr, y: pl.Expr, window: int):
@@ -24,7 +23,7 @@ def _rolling_pearson(x: pl.Expr, y: pl.Expr, window: int):
 
 @dataclass
 class ReturnAutocorrShort(Feature):
-    """Rolling autocorr(returns, lag) over window — mean-reversion vs continuity."""
+    """Rolling autocorr(returns, lag) over window - mean-reversion vs continuity."""
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["ret_acf_{lag}_{window}"]
     lag: int = 1

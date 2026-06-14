@@ -1,17 +1,9 @@
-# src/signalflow/ta/stat/control.py
 """Control theory and systems engineering indicators for time series.
 
 Treats price as the output of a dynamical system and applies control-theoretic
 techniques to detect regime changes, quantify predictability, and track
 changing market dynamics. All computations are causal (no lookahead) and
 reproducible.
-
-References:
-    - Harvey (1989) - Kalman Filter & Structural Time Series
-    - Ljung (1999) - System Identification (AR models)
-    - Rosenstein, Collins & De Luca (1993) - Maximum Lyapunov Exponent
-    - Astrom & Murray (2008) - PID Control / Feedback Systems
-    - Geman, Bienenstock & Doursat (1992) - Bias-Variance Decomposition
 """
 
 from dataclasses import dataclass
@@ -20,12 +12,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 def _log_returns(values: np.ndarray) -> np.ndarray:
@@ -65,21 +53,16 @@ def _kalman_innovation_variance(returns: np.ndarray, process_noise_ratio: float)
     innovation_vars = np.empty(n - 1)
 
     for t in range(1, n):
-        # Predict
         x_pred = x_hat
         P_pred = P + Q
-        # Innovation
         e = returns[t] - x_pred
         S = P_pred + R
-        # Store
         innovations_sq[t - 1] = e * e
         innovation_vars[t - 1] = S
-        # Update
         K = P_pred / S
         x_hat = x_pred + K * e
         P = (1.0 - K) * P_pred
 
-    # NIS over second half (after filter convergence)
     half = (n - 1) // 2
     if half < 5:
         return np.nan
@@ -101,12 +84,10 @@ def _ar_coefficient(returns: np.ndarray, order: int) -> float:
     if n < order + 10:
         return np.nan
 
-    # Build design matrix and target
     y = returns[order:]
     m = len(y)
 
     if order == 1:
-        # Fast scalar path
         x = returns[order - 1 : n - 1]
         xx = np.dot(x, x)
         if abs(xx) < 1e-20:
@@ -114,7 +95,6 @@ def _ar_coefficient(returns: np.ndarray, order: int) -> float:
         xy = np.dot(x, y)
         return float(xy / xx)
 
-    # General case: build X matrix
     X = np.empty((m, order))
     for k in range(order):
         X[:, k] = returns[order - k - 1 : n - k - 1]
@@ -122,7 +102,6 @@ def _ar_coefficient(returns: np.ndarray, order: int) -> float:
     XtX = X.T @ X
     Xty = X.T @ y
 
-    # Check for near-singular
     diag_prod = np.prod(np.diag(XtX))
     if abs(diag_prod) < 1e-40:
         return np.nan
@@ -150,7 +129,6 @@ def _max_lyapunov(returns: np.ndarray, embed_dim: int, tau: int) -> float:
     if n_embed < 20:
         return np.nan
 
-    # Build embedding matrix
     embedded = np.empty((n_embed, embed_dim))
     for d in range(embed_dim):
         embedded[:, d] = returns[d * tau : d * tau + n_embed]
@@ -161,10 +139,9 @@ def _max_lyapunov(returns: np.ndarray, embed_dim: int, tau: int) -> float:
 
     divergence = np.zeros(max_steps)
     counts = np.zeros(max_steps, dtype=np.int64)
-    min_sep = max(tau, 1)  # minimum temporal separation
+    min_sep = max(tau, 1)
 
     for i in range(n_embed - max_steps):
-        # Find nearest neighbor
         min_dist = np.inf
         nn_idx = -1
         for j in range(n_embed - max_steps):
@@ -182,7 +159,6 @@ def _max_lyapunov(returns: np.ndarray, embed_dim: int, tau: int) -> float:
         if nn_idx < 0:
             continue
 
-        # Track divergence
         for k in range(max_steps):
             ii = i + k
             jj = nn_idx + k
@@ -196,7 +172,6 @@ def _max_lyapunov(returns: np.ndarray, embed_dim: int, tau: int) -> float:
                     divergence[k] += np.log(d_k)
                     counts[k] += 1
 
-    # Average log-divergence
     valid_mask = counts > 0
     if np.sum(valid_mask) < 2:
         return np.nan
@@ -207,7 +182,6 @@ def _max_lyapunov(returns: np.ndarray, embed_dim: int, tau: int) -> float:
     if len(steps) < 2:
         return np.nan
 
-    # Linear regression for slope (MLE)
     n_pts = len(steps)
     sx = np.sum(steps)
     sy = np.sum(vals)
@@ -233,11 +207,9 @@ def _pid_error_signal(returns: np.ndarray, kp: float, ki: float, kd: float) -> f
     if n < 10:
         return np.nan
 
-    # Reference: mean return (equilibrium)
     ref = np.mean(returns)
     errors = returns - ref
 
-    # Integral term with exponential decay (anti-windup)
     decay = 0.95
     integral = 0.0
     integral_vals = np.empty(n)
@@ -245,12 +217,10 @@ def _pid_error_signal(returns: np.ndarray, kp: float, ki: float, kd: float) -> f
         integral = decay * integral + errors[t]
         integral_vals[t] = integral
 
-    # Derivative term
     derivative = np.zeros(n)
     for t in range(1, n):
         derivative[t] = errors[t] - errors[t - 1]
 
-    # PID composite
     pid = kp * errors + ki * integral_vals + kd * derivative
 
     valid = pid[~np.isnan(pid)]
@@ -280,7 +250,6 @@ def _prediction_error_decomp(returns: np.ndarray, forecast_horizon: int) -> floa
     train = returns[:train_n]
     evaluate = returns[train_n:]
 
-    # Fit linear model on training data: y = slope * x + intercept
     x_train = np.arange(train_n, dtype=np.float64)
     sx = np.sum(x_train)
     sy = np.sum(train)
@@ -293,14 +262,11 @@ def _prediction_error_decomp(returns: np.ndarray, forecast_horizon: int) -> floa
     slope = (train_n * sxy - sx * sy) / denom
     intercept = (sy - slope * sx) / train_n
 
-    # Predict for evaluation portion
     x_eval = np.arange(train_n, train_n + eval_n, dtype=np.float64)
     predicted = slope * x_eval + intercept
 
-    # Prediction errors
     errors = evaluate - predicted
 
-    # Bias-variance decomposition
     bias = np.mean(errors)
     bias_sq = bias * bias
     variance = np.var(errors, ddof=1) if len(errors) > 1 else 0.0
@@ -310,11 +276,6 @@ def _prediction_error_decomp(returns: np.ndarray, forecast_horizon: int) -> floa
         return np.nan
 
     return float(bias_sq / total)
-
-
-# ---------------------------------------------------------------------------
-# Indicators
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -338,21 +299,12 @@ class KalmanInnovationStat(Feature):
 
     Interpretation:
         - NIS ~ 1.0: random-walk model fits well (stable regime)
-        - NIS >> 1.0: filter is surprised — innovations exceed expectations.
+        - NIS >> 1.0: filter is surprised - innovations exceed expectations.
           Signals model breakdown / regime shift / structural break.
         - NIS << 1.0: filter is over-estimating uncertainty.
           Returns are more predictable than expected (compression).
         - NIS spikes correspond to moments where the optimal filter's
-          assumptions are violated — early regime transition detector.
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        process_noise: Q/R ratio (process noise relative to observation noise)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Harvey, A.C. (1989). Forecasting, Structural Time Series
-    Models and the Kalman Filter. Cambridge University Press.
+          assumptions are violated - early regime transition detector.
     """
 
     source_col: str = "close"
@@ -418,7 +370,7 @@ class KalmanInnovationStat(Feature):
 @dataclass
 @feature("stat/ar_coefficient")
 class ARCoefficientStat(Feature):
-    """Rolling AR Coefficient — System Identification (Ljung, 1999).
+    """Rolling AR Coefficient - System Identification (Ljung, 1999).
 
     Fits an AR(p) autoregressive model to the log-returns in each
     rolling window via ordinary least squares and outputs the first
@@ -426,27 +378,18 @@ class ARCoefficientStat(Feature):
 
     Model: r[t] = a1*r[t-1] + a2*r[t-2] + ... + ap*r[t-p] + epsilon
 
-    Tracking a1 over time implements "system identification" — the core
+    Tracking a1 over time implements "system identification" - the core
     control-theoretic idea of continuously re-estimating the parameters
     of the underlying dynamical system as it evolves.
 
     Interpretation:
-        - a1 > 0: positive autocorrelation — momentum / trending
-        - a1 < 0: negative autocorrelation — mean-reversion
+        - a1 > 0: positive autocorrelation - momentum / trending
+        - a1 < 0: negative autocorrelation - mean-reversion
         - a1 ~ 0: no linear predictability from immediate past
         - |a1| changing over time: autoregressive structure is shifting,
           useful for adaptive strategy selection
         - a1 approaching ±1: extreme serial dependence (rare, signals
           instability in the AR model)
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        ar_order: AR model order (1-5)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Ljung, L. (1999). System Identification: Theory for
-    the User. 2nd ed. Prentice Hall.
     """
 
     source_col: str = "close"
@@ -527,24 +470,13 @@ class LyapunovExponentStat(Feature):
 
     Interpretation:
         - MLE > 0: sensitive dependence on initial conditions (chaos).
-          Nearby market states diverge exponentially — inherently
+          Nearby market states diverge exponentially - inherently
           unpredictable beyond short horizons.
         - MLE ~ 0: edge of chaos / quasi-periodic behavior.
-        - MLE < 0: trajectories converge — system attracted to fixed point
+        - MLE < 0: trajectories converge - system attracted to fixed point
           or limit cycle. Strong mean-reversion / equilibrium-seeking.
         - MLE transition from negative to positive: market shifting from
-          stable to chaotic regime — early warning signal.
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size (larger = more reliable, slower)
-        embed_dim: Embedding dimension (typically 2-5)
-        tau: Time delay for embedding (typically 1)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Rosenstein, M.T., Collins, J.J. & De Luca, C.J. (1993).
-    A practical method for calculating largest Lyapunov exponents from
-    small data sets. Physica D, 65(1-2), 117-134.
+          stable to chaotic regime - early warning signal.
     """
 
     source_col: str = "close"
@@ -632,22 +564,11 @@ class PIDErrorStat(Feature):
 
     Interpretation:
         - High PID error: price deviating strongly, persistently, and/or
-          rapidly from equilibrium — breakout or regime shift.
-        - Low PID error: price well-tracked by equilibrium — stable,
+          rapidly from equilibrium - breakout or regime shift.
+        - Low PID error: price well-tracked by equilibrium - stable,
           mean-reverting behavior.
         - Spikes indicate moments where all three PID components align,
           signaling the strongest form of deviation from equilibrium.
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        kp: Proportional gain (deviation magnitude)
-        ki: Integral gain (accumulated drift)
-        kd: Derivative gain (deviation acceleration)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Astrom, K.J. & Murray, R.M. (2008). Feedback Systems:
-    An Introduction for Scientists and Engineers. Princeton University Press.
     """
 
     source_col: str = "close"
@@ -738,21 +659,12 @@ class PredictionErrorDecompositionStat(Feature):
           model captures the trend correctly but cannot predict randomness.
           Market is "efficient" relative to the simple model.
         - Bias ratio ~ 1: errors dominated by systematic bias. The model
-          is fundamentally wrong — market dynamics have shifted. Strong
+          is fundamentally wrong - market dynamics have shifted. Strong
           regime change signal.
         - Transition low → high: dynamics changing faster than model adapts.
           Early warning of structural break.
         - Transition high → low: market settling into new regime that
           the model is beginning to capture.
-
-    Parameters:
-        source_col: Price column to compute log-returns from
-        period: Rolling window size
-        forecast_horizon: Steps-ahead prediction (1-5)
-        normalized: If True, apply rolling z-score normalization
-
-    Reference: Geman, S., Bienenstock, E. & Doursat, R. (1992). Neural
-    Networks and the Bias/Variance Dilemma. Neural Computation, 4(1), 1-58.
     """
 
     source_col: str = "close"

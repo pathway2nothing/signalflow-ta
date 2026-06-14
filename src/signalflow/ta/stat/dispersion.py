@@ -1,4 +1,3 @@
-# src/signalflow/ta/stat/dispersion.py
 """Dispersion measures - spread around central tendency."""
 
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -340,7 +339,7 @@ class RobustZscoreStat(Feature):
         n = len(values)
 
         robz = np.full(n, np.nan)
-        scale = 1.4826  # consistency constant for normal
+        scale = 1.4826
 
         for i in range(self.period - 1, n):
             window = values[i - self.period + 1 : i + 1]

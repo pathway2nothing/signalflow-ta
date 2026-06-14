@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_compat import njit
 
 
@@ -19,18 +19,7 @@ def _williams_alligator_trend(
     jaws: np.ndarray,
     skip: int,
 ) -> np.ndarray:
-    """Calculate trend using Williams Alligator methodology.
-
-    Args:
-        confirmation_length: Periods required to confirm a trend.
-        lips: Lips moving average values.
-        teeth: Teeth moving average values.
-        jaws: Jaws moving average values.
-        skip: Initial periods to skip.
-
-    Returns:
-        Trend indicators: 1=uptrend, -1=downtrend, 0=sideways.
-    """
+    """Calculate trend using Williams Alligator methodology."""
     prev_trend = -2
     current_trend = -2
     nascent_trend = -2
@@ -68,14 +57,7 @@ def _williams_alligator_trend(
 
 @njit
 def _distance_to_trend_point(trend_indicator: np.ndarray) -> np.ndarray:
-    """Calculate distance from each point to trend start.
-
-    Args:
-        trend_indicator: Array of trend states.
-
-    Returns:
-        Array of distances since trend started.
-    """
+    """Calculate distance from each point to trend start."""
     n = len(trend_indicator)
     distance = np.zeros(n, dtype=np.int32)
     current_trend = trend_indicator[0]
@@ -130,7 +112,6 @@ class WilliamsAlligatorRegime(Feature):
 
         median_price = (high + low) / 2
 
-        # Calculate SMAs
         lips = np.full(n, np.nan)
         teeth = np.full(n, np.nan)
         jaws = np.full(n, np.nan)
@@ -142,7 +123,6 @@ class WilliamsAlligatorRegime(Feature):
         for i in range(self.jaws_length - 1, n):
             jaws[i] = np.mean(median_price[i - self.jaws_length + 1 : i + 1])
 
-        # Apply shifts
         lips_shifted = np.full(n, np.nan)
         teeth_shifted = np.full(n, np.nan)
         jaws_shifted = np.full(n, np.nan)
@@ -363,15 +343,7 @@ class SmaDiffDirection(Feature):
 
 @njit
 def _rolling_linreg_numba(close: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarray]:
-    """Fast rolling linear regression using numba.
-
-    Args:
-        close: Price array.
-        window: Rolling window size.
-
-    Returns:
-        Tuple of (slopes, intercepts).
-    """
+    """Fast rolling linear regression using numba."""
     n = len(close)
     slopes = np.full(n, np.nan)
     intercepts = np.full(n, np.nan)

@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -59,7 +59,6 @@ class MfiVolume(Feature):
             if total > 0:
                 mfi[i] = 100 * pos_sum / total
 
-        # Normalization: [0, 100] → [0, 1]
         if self.normalized:
             mfi = mfi / 100
 
@@ -131,7 +130,6 @@ class CmfVolume(Feature):
             if vol_sum > 0:
                 cmf[i] = mfv_sum / vol_sum
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -204,13 +202,11 @@ class EfiVolume(Feature):
         efi = np.full(n, np.nan)
 
         if n >= self.period:
-            # Initialize with SMA for reproducibility
             efi[self.period - 1] = np.mean(force[: self.period])
 
         for i in range(self.period, n):
             efi[i] = alpha * force[i] + (1 - alpha) * efi[i - 1]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -295,7 +291,6 @@ class EomVolume(Feature):
         for i in range(self.period - 1, n):
             eom[i] = np.mean(emv[i - self.period + 1 : i + 1])
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -376,7 +371,7 @@ class KvoVolume(Feature):
 
         hlc3_diff = np.diff(hlc3, prepend=np.nan)
         trend = np.sign(hlc3_diff)
-        trend[0] = 0  # No trend on first bar
+        trend[0] = 0
 
         sv = volume * trend
 
@@ -387,7 +382,6 @@ class KvoVolume(Feature):
         ema_fast = np.full(n, np.nan)
         ema_slow = np.full(n, np.nan)
 
-        # Initialize with SMA for reproducibility
         if n >= self.fast:
             ema_fast[self.fast - 1] = np.mean(sv[: self.fast])
         if n >= self.slow:
@@ -402,20 +396,15 @@ class KvoVolume(Feature):
 
         kvo_signal = np.full(n, np.nan)
 
-        # Initialize signal line with SMA for reproducibility
-        # Both EMAs are valid starting from slow-1 (since slow >= fast)
         kvo_start = self.slow - 1
 
         if n >= kvo_start + self.signal:
-            # Initialize signal with SMA of first signal_period KVO values
             init_idx = kvo_start + self.signal - 1
             kvo_signal[init_idx] = np.mean(kvo[kvo_start : kvo_start + self.signal])
 
-        # Continue with EMA smoothing
         for i in range(kvo_start + self.signal, n):
             kvo_signal[i] = alpha_sig * kvo[i] + (1 - alpha_sig) * kvo_signal[i - 1]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -497,7 +486,6 @@ class VwapVolume(Feature):
 
         vwap = cum_tp_vol / (cum_vol + 1e-10)
 
-        # Normalization: z-score for unbounded price-like indicator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -520,7 +508,7 @@ class VwapVolume(Feature):
     @property
     def warmup(self) -> int:
         """Minimum bars needed for stable, reproducible output."""
-        base_warmup = 100  # Cumulative indicator
+        base_warmup = 100
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window
 
@@ -577,7 +565,6 @@ class VwapBandsVolume(Feature):
             upper[i] = vwap[i] + self.std_dev * std
             lower[i] = vwap[i] - self.std_dev * std
 
-        # Normalization: z-score for unbounded price-like indicators
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 

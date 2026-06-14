@@ -1,8 +1,7 @@
 """Preset pipes for volume indicators."""
 
-from __future__ import annotations
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.volume import (
     AdVolume,
     CmfVolume,

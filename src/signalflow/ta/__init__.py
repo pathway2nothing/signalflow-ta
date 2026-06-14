@@ -309,9 +309,7 @@ __all__ = [
     "AccBandsVol",
     "AccelerationMom",
     "AdVolume",
-    # New signal features (Tier 2)
     "AdaptiveConfidence",
-    # Trend
     "AdxTrend",
     "AlmaSmooth",
     "AngularMomentumMom",
@@ -333,13 +331,10 @@ __all__ = [
     "CkspTrend",
     "CmfVolume",
     "CmoMom",
-    # Stat - Wave Interference & Spectral
     "ConstructiveInterferenceStat",
     "CorrelationLengthStat",
-    # Stat - Regression
     "CorrelationStat",
     "CrossPairSpillover",
-    # Stat - Cross-Sectional
     "CrossSectionalStat",
     "CvStat",
     "DampingRatioStat",
@@ -370,12 +365,10 @@ __all__ = [
     "Hl2Price",
     "Hlc3Price",
     "HmaSmooth",
-    # Stat - Memory & Diffusion
     "HurstStat",
     "IchimokuTrend",
     "ImpulseVolume",
     "InformationCoefficient",
-    # Stat - Cycle Analysis
     "InstAmplitudeStat",
     "InstFrequencyStat",
     "InstPhaseStat",
@@ -385,9 +378,7 @@ __all__ = [
     "JarqueBeraStat",
     "JerkMom",
     "JmaSmooth",
-    # Stat - Information Theory & Information Geometry
     "KLDivergenceStat",
-    # Stat - Control Theory & Systems Engineering
     "KalmanInnovationStat",
     "KalmanSmooth",
     "KamaSmooth",
@@ -402,7 +393,6 @@ __all__ = [
     "LinRegPriceDiff",
     "LinRegResidualStat",
     "LinRegSlopeStat",
-    # Performance
     "LogReturn",
     "LyapunovExponentStat",
     "MFCCBandEnergyStat",
@@ -416,7 +406,6 @@ __all__ = [
     "MarketPowerVolume",
     "MassIndexVol",
     "McGinleySmooth",
-    # Stat - Distribution
     "MedianStat",
     "MfiVolume",
     "MidpointPrice",
@@ -430,7 +419,6 @@ __all__ = [
     "NatrVol",
     "NaturalFrequencyStat",
     "NviVolume",
-    # Volume
     "ObvVolume",
     "Ohlc4Price",
     "OrderParameterTrend",
@@ -439,10 +427,8 @@ __all__ = [
     "ParkinsonVolStat",
     "PctRankStat",
     "PctReturn",
-    # Stat - Complexity & Information Theory
     "PermutationEntropyStat",
     "PhaseAccelerationStat",
-    # Stat - Elasticity & Escape
     "PlasticStrainStat",
     "PotentialEnergyVol",
     "PowerCepstrumStat",
@@ -457,12 +443,10 @@ __all__ = [
     "RCTimeConstantTrend",
     "RSquaredStat",
     "RangeStat",
-    # Stat - Realized Volatility
     "RealizedVolStat",
     "RegimeSensitivity",
     "RelativeInfoGainStat",
     "RenyiEntropyStat",
-    # Stat - Structure & Spikes
     "ReversePointsStat",
     "ReynoldsTrend",
     "RmaSmooth",
@@ -475,9 +459,7 @@ __all__ = [
     "RollingMinStat",
     "RollingProfitFactor",
     "RotationalInertiaTrend",
-    # Divergence detectors
     "RsiDivergence",
-    # Momentum indicators
     "RsiMom",
     "RviVol",
     "SNRTrend",
@@ -497,19 +479,16 @@ __all__ = [
     "SkewStat",
     "SmaDiffDirection",
     "SmaDirection",
-    # Overlap indicators
     "SmaSmooth",
     "SpectralBandwidthStat",
     "SpectralCentroidStat",
     "SpectralContrastStat",
     "SpectralEntropyStat",
     "SpectralFlatnessStat",
-    # Stat - DSP / Acoustics
     "SpectralFluxStat",
     "SpectralKurtosisStat",
     "SpectralRolloffStat",
     "SpectralSlopeStat",
-    # Stat - Oscillator Dynamics
     "SpringConstantStat",
     "SsfSmooth",
     "StandingWaveRatioStat",
@@ -528,7 +507,6 @@ __all__ = [
     "TotalEnergyVol",
     "TrimaSmooth",
     "TrixMom",
-    # Volatility
     "TrueRangeVol",
     "TsiMom",
     "TtmTrend",
@@ -538,7 +516,6 @@ __all__ = [
     "UlcerIndexVol",
     "UoMom",
     "VarianceRatioStat",
-    # Stat - Dispersion
     "VarianceStat",
     "VhfTrend",
     "VidyaSmooth",
@@ -550,7 +527,6 @@ __all__ = [
     "VolumeSpikeStat",
     "VortexTrend",
     "WcpPrice",
-    # Trend - Regime
     "WilliamsAlligatorRegime",
     "WillrMom",
     "WmaSmooth",
@@ -558,10 +534,33 @@ __all__ = [
     "ZeroCrossingRateStat",
     "ZlmaSmooth",
     "ZscoreStat",
-    # Global features module
     "global_features",
-    # Signal features module
     "signal_features",
-    # Signals module
     "signals",
 ]
+
+
+def _load_all() -> None:
+    """Import every ``signalflow.ta`` submodule so all ``@feature`` / ``@detector``
+    registrations fire when the V5 registry loads this package via the
+    ``signalflow.components`` entry-point.
+
+    Each submodule is imported under a guard: an exotic module that cannot port
+    (e.g. one needing a missing optional extra) is skipped with a warning rather
+    than breaking ``import signalflow.ta`` for everything else.
+    """
+    import importlib
+    import pkgutil
+
+    for _imp, modname, _is_pkg in pkgutil.walk_packages(__path__, prefix=f"{__name__}."):
+        if "._" in modname or modname.endswith("._compat"):
+            continue
+        try:
+            importlib.import_module(modname)
+        except Exception as exc:
+            from loguru import logger
+
+            logger.warning(f"signalflow.ta: skipped {modname}: {exc}")
+
+
+_load_all()

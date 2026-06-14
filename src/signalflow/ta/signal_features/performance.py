@@ -1,13 +1,12 @@
 """Performance-based signal features (return-aware, supervised)."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -40,7 +39,6 @@ class RollingExpectedValue(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Direction sign: rise → +1, fall → -1
         direction = (
             pl.when(pl.col("signal_type") == "rise")
             .then(pl.lit(1.0))
@@ -49,11 +47,9 @@ class RollingExpectedValue(SignalFeature):
             .otherwise(pl.lit(0.0))
         )
 
-        # Signed return: ret * direction (null if label unresolved or ret missing)
         if "ret" in df.columns:
             ret_expr = pl.col("ret").cast(pl.Float64)
         else:
-            # Fallback: use hit/miss as ±1 proxy
             ret_expr = (
                 pl.when(pl.col("label").is_not_null())
                 .then(
@@ -114,7 +110,6 @@ class RollingProfitFactor(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Direction sign
         direction = (
             pl.when(pl.col("signal_type") == "rise")
             .then(pl.lit(1.0))
@@ -143,7 +138,6 @@ class RollingProfitFactor(SignalFeature):
             .alias("_signed_ret"),
         )
 
-        # Separate wins and losses
         df = df.with_columns(
             pl.when(pl.col("_signed_ret") > 0)
             .then(pl.col("_signed_ret"))
@@ -155,7 +149,6 @@ class RollingProfitFactor(SignalFeature):
             .alias("_loss"),
         )
 
-        # Rolling sums
         gross_win = (
             pl.col("_win")
             .rolling_sum(window_size=self.window, min_samples=1)
@@ -167,7 +160,6 @@ class RollingProfitFactor(SignalFeature):
             .over(self.group_col)
         )
 
-        # Profit factor = gross_win / gross_loss (null if no losses)
         df = df.with_columns(
             pl.when(gross_loss > 0)
             .then(gross_win / gross_loss)
@@ -212,7 +204,6 @@ class InformationCoefficient(SignalFeature):
         merged = self.mask_unresolved(merged)
         df = merged.sort([self.group_col, self.ts_col])
 
-        # Need both signal and ret columns
         has_signal = "signal" in df.columns
         has_ret = "ret" in df.columns
 
@@ -221,7 +212,6 @@ class InformationCoefficient(SignalFeature):
                 pl.lit(None, dtype=pl.Float64).alias(col),
             )
 
-        # Null out ret where label is unresolved
         df = df.with_columns(
             pl.when(pl.col("label").is_not_null())
             .then(pl.col("ret").cast(pl.Float64))
@@ -229,8 +219,6 @@ class InformationCoefficient(SignalFeature):
             .alias("_ret_causal"),
         )
 
-        # Rolling rank correlation via Pearson on rolling ranks
-        # Approximate with rolling covariance / (std_signal * std_ret)
         sig = pl.col("signal").cast(pl.Float64)
         ret = pl.col("_ret_causal")
 

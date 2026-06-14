@@ -1,4 +1,3 @@
-# src/signalflow/ta/volume/dynamics.py
 """Volume-weighted dynamics - force, impulse, momentum, power from Newtonian mechanics."""
 
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -43,22 +42,18 @@ class MarketForceVolume(Feature):
         volume = df["volume"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity (log-returns)
         velocity = np.full(n, np.nan)
         for i in range(1, n):
             if close[i - 1] > 0 and close[i] > 0:
                 velocity[i] = np.log(close[i] / close[i - 1])
 
-        # Acceleration
         accel = np.full(n, np.nan)
         for i in range(2, n):
             if not np.isnan(velocity[i]) and not np.isnan(velocity[i - 1]):
                 accel[i] = velocity[i] - velocity[i - 1]
 
-        # Force = volume * acceleration
         force_raw = volume * accel
 
-        # Smooth with SMA
         force = np.full(n, np.nan)
         for i in range(self.period + 1, n):
             window = force_raw[i - self.period + 1 : i + 1]
@@ -125,22 +120,18 @@ class ImpulseVolume(Feature):
         volume = df["volume"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity
         velocity = np.full(n, np.nan)
         for i in range(1, n):
             if close[i - 1] > 0 and close[i] > 0:
                 velocity[i] = np.log(close[i] / close[i - 1])
 
-        # Acceleration
         accel = np.full(n, np.nan)
         for i in range(2, n):
             if not np.isnan(velocity[i]) and not np.isnan(velocity[i - 1]):
                 accel[i] = velocity[i] - velocity[i - 1]
 
-        # Force
         force = volume * accel
 
-        # Impulse = rolling sum of force
         impulse = np.full(n, np.nan)
         for i in range(self.period + 1, n):
             window = force[i - self.period + 1 : i + 1]
@@ -210,16 +201,13 @@ class MarketMomentumVolume(Feature):
         volume = df["volume"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity
         velocity = np.full(n, np.nan)
         for i in range(1, n):
             if close[i - 1] > 0 and close[i] > 0:
                 velocity[i] = np.log(close[i] / close[i - 1])
 
-        # Momentum = volume * velocity
         mom_raw = volume * velocity
 
-        # Smooth with SMA
         mmom = np.full(n, np.nan)
         for i in range(self.period, n):
             window = mom_raw[i - self.period + 1 : i + 1]
@@ -290,22 +278,18 @@ class MarketPowerVolume(Feature):
         volume = df["volume"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Velocity
         velocity = np.full(n, np.nan)
         for i in range(1, n):
             if close[i - 1] > 0 and close[i] > 0:
                 velocity[i] = np.log(close[i] / close[i - 1])
 
-        # Acceleration
         accel = np.full(n, np.nan)
         for i in range(2, n):
             if not np.isnan(velocity[i]) and not np.isnan(velocity[i - 1]):
                 accel[i] = velocity[i] - velocity[i - 1]
 
-        # Power = force * velocity = (volume * accel) * velocity
         power_raw = volume * accel * velocity
 
-        # Smooth with SMA
         mpower = np.full(n, np.nan)
         for i in range(self.period + 1, n):
             window = power_raw[i - self.period + 1 : i + 1]

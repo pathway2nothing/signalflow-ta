@@ -1,4 +1,3 @@
-# src/signalflow/ta/stat/distribution.py
 """Distribution shape measures - position, moments, information."""
 
 from dataclasses import dataclass
@@ -9,8 +8,8 @@ import polars as pl
 from scipy.stats import kurtosis as sp_kurtosis
 from scipy.stats import skew as sp_skew
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -309,7 +308,7 @@ class EntropyStat(Feature):
             "source_col": "close",
             "period": 60,
             "base": 2.718281828,
-        },  # ≈ e для natural log
+        },
     ]
 
     @property
@@ -352,9 +351,7 @@ class JarqueBeraStat(Feature):
                 std = np.std(window, ddof=1)
 
                 if std > 1e-10:
-                    # Skewness
                     skew = np.mean(((window - mean) / std) ** 3)
-                    # Excess kurtosis
                     kurt = np.mean(((window - mean) / std) ** 4) - 3
 
                     jb[i] = (n / 6) * (skew**2 + (kurt**2) / 4)
@@ -400,7 +397,6 @@ class ModeDistanceStat(Feature):
             window = values[i - self.period + 1 : i + 1]
 
             if not np.any(np.isnan(window)):
-                # Histogram to find mode
                 hist, bin_edges = np.histogram(window, bins=self.n_bins)
                 mode_bin = np.argmax(hist)
                 mode_center = (bin_edges[mode_bin] + bin_edges[mode_bin + 1]) / 2
@@ -505,13 +501,11 @@ class EntropyRateStat(Feature):
         values = df[self.source_col].to_numpy()
         n = len(values)
 
-        # Compute rolling entropy
         entropy = np.full(n, np.nan)
         for i in range(self.period - 1, n):
             window = values[i - self.period + 1 : i + 1]
             entropy[i] = self._compute_entropy(window)
 
-        # Entropy rate = d(entropy)/dt
         erate = np.full(n, np.nan)
         for i in range(self.period - 1 + self.lag, n):
             if not np.isnan(entropy[i]) and not np.isnan(entropy[i - self.lag]):

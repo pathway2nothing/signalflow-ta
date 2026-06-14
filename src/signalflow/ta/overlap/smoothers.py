@@ -1,6 +1,5 @@
 """Basic smoothing moving averages."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar, Literal
@@ -8,8 +7,8 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     ssf_kernel as _ssf_kernel,
 )
@@ -93,8 +92,6 @@ class EmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_ema_{period}"]
 
-    # Recursive: uses polars ewm_mean(adjust=False), seeded from the single first
-    # observation (NOT SMA-init). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -197,8 +194,6 @@ class RmaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_rma_{period}"]
 
-    # Recursive: uses polars ewm_mean(adjust=False), seeded from the single first
-    # observation (NOT SMA-init). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -256,8 +251,6 @@ class DemaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_dema_{period}"]
 
-    # Recursive: built on cascaded polars ewm_mean(adjust=False), single-value
-    # seed (NOT SMA-init). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -315,8 +308,6 @@ class TemaSmooth(Feature):
     requires: ClassVar[list[str]] = ["{source_col}"]
     outputs: ClassVar[list[str]] = ["{source_col}_tema_{period}"]
 
-    # Recursive: built on cascaded polars ewm_mean(adjust=False), single-value
-    # seed (NOT SMA-init). Not entry-point invariant in the canonical sense.
     is_recursive: ClassVar[bool] = True
     warmup_invariant: ClassVar[bool] = False
 
@@ -443,7 +434,6 @@ class TrimaSmooth(Feature):
         sma1 = pl.col(self.source_col).rolling_mean(window_size=half)
         trima = df.select(sma1.rolling_mean(window_size=half)).to_series().to_numpy()
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -494,7 +484,6 @@ class SwmaSmooth(Feature):
         source = df[self.source_col].to_numpy()
         n = len(source)
 
-        # Symmetric triangle weights
         half = (self.period + 1) // 2
         if self.period % 2 == 0:
             weights = np.concatenate([np.arange(1, half + 1), np.arange(half, 0, -1)])
@@ -509,7 +498,6 @@ class SwmaSmooth(Feature):
             window = source[i - self.period + 1 : i + 1]
             swma[i] = np.dot(window, weights) / weight_sum
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -566,7 +554,6 @@ class SsfSmooth(Feature):
         ssf = _ssf_kernel(source, self.period, self.poles)
         ssf[: self.period - 1] = np.nan
 
-        # Normalization: percentage difference from source
         if self.normalized:
             from signalflow.ta._normalization import normalize_ma_pct
 
@@ -607,21 +594,9 @@ class FftSmooth(Feature):
     4. Reconstructs the signal via inverse FFT.
     5. Adds the trend back and takes the last sample as output.
 
-    The computation is **fully deterministic** — no random state, no
-    data-dependent initialization — so the output at bar *N* depends only
+    The computation is **fully deterministic** - no random state, no
+    data-dependent initialization - so the output at bar *N* depends only
     on bars [N - period + 1 … N] and is independent of the entry point.
-
-    Parameters:
-        source_col: Price column to smooth.
-        period: Rolling window size (power-of-2 recommended for FFT speed).
-        cutoff_ratio: Fraction of frequency bins to keep, in (0, 1].
-            Lower values → heavier smoothing. Default 0.1 keeps the
-            lowest 10 % of non-DC frequencies.
-        normalized: If True, output percentage difference from source:
-            ``(source - fft_smooth) / source``.
-
-    Reference: Oppenheim, A.V. & Schafer, R.W. "Discrete-Time Signal
-    Processing", 3rd ed., Pearson, 2010.
     """
 
     source_col: str = "close"
@@ -644,31 +619,23 @@ class FftSmooth(Feature):
 
         result = np.full(n, np.nan)
 
-        # Number of rfft bins (including DC)
         n_bins = self.period // 2 + 1
-        # How many non-DC bins to keep (at least 1)
         keep = max(1, round((n_bins - 1) * self.cutoff_ratio))
 
         for i in range(self.period - 1, n):
             window = source[i - self.period + 1 : i + 1]
 
-            # --- detrend (linear) ---
             x = np.arange(self.period, dtype=np.float64)
             coeffs = np.polyfit(x, window, 1)
             trend_line = np.polyval(coeffs, x)
             detrended = window - trend_line
 
-            # --- forward FFT ---
             spectrum = np.fft.rfft(detrended)
 
-            # --- low-pass: zero out high-frequency bins ---
-            # spectrum[0] = DC, spectrum[1:keep+1] = kept, rest = zeroed
             spectrum[keep + 1 :] = 0.0
 
-            # --- inverse FFT ---
             smoothed = np.fft.irfft(spectrum, n=self.period)
 
-            # --- add trend back, take last sample ---
             result[i] = smoothed[-1] + trend_line[-1]
 
         if self.normalized:

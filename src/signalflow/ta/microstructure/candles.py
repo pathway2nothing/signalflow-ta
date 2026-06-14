@@ -2,13 +2,12 @@
 
 Captures information from per-bar geometry (body, wicks, close position) rolled over a window.
 """
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass

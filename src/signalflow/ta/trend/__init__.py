@@ -55,7 +55,6 @@ from signalflow.ta.trend.extensions import (
 )
 
 __all__ = [
-    # Strength
     "AdxTrend",
     "AdxTrendCausal",
     "AroonTrend",
@@ -64,14 +63,12 @@ __all__ = [
     "CkspTrend",
     "DpoTrend",
     "HiloTrend",
-    # Detection
     "IchimokuTrend",
     "LinRegDiffDirection",
     "LinRegDirection",
     "LinRegPriceDiff",
     "MarketImpedanceTrend",
     "OrderParameterTrend",
-    # Stops
     "PsarTrend",
     "QstickTrend",
     "RCTimeConstantTrend",
@@ -87,9 +84,7 @@ __all__ = [
     "VhfTrend",
     "ViscosityTrend",
     "VortexTrend",
-    # Regime
     "WilliamsAlligatorRegime",
-    # Extensions (sf-profit feature_research_lib + iter-15/16/18)
     "DiBalance",
     "EntropyRatio",
     "HilbertAmplitudeSlope",

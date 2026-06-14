@@ -4,12 +4,11 @@ The original uses Wilder's RMA (recursive moving average with α=1/period),
 which is state-recursive and never forgets the cold-start: the same bar T
 gives slightly different values depending on how far back the input series
 starts. This variant replaces Wilder RMA with a truncated exponential
-kernel of width ``5 × period`` — bit-identical regardless of input start,
+kernel of width ``5 × period`` - bit-identical regardless of input start,
 after warmup.
 
 Reference: Welles Wilder, "New Concepts in Technical Trading Systems".
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -17,13 +16,13 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.stat._causal_helpers import truncated_ema
 
 
 @dataclass
 class AdxTrendCausal(Feature):
-    """ADX (trend strength) with truncated-EMA smoother — warmup-invariant.
+    """ADX (trend strength) with truncated-EMA smoother - warmup-invariant.
 
     Algorithm (same as Wilder ADX, but RMA replaced by truncated EMA):
         1. True range TR = max(H-L, |H-C_prev|, |L-C_prev|)
@@ -34,10 +33,6 @@ class AdxTrendCausal(Feature):
         5. -DI = 100 · smoothed_-DM / smoothed_TR
         6. DX  = 100 · |+DI − -DI| / (+DI + -DI)
         7. ADX = truncated_ema(DX, τ=period, window=5·period)
-
-    Attributes:
-        period: smoothing time-constant (Wilder default 14).
-        normalized: divide outputs by 100 to put them in [0, 1].
     """
 
     period: int = 14
@@ -87,4 +82,4 @@ class AdxTrendCausal(Feature):
 
     @property
     def warmup(self) -> int:
-        return self.period * 10  # 2× the kernel width for safety
+        return self.period * 10

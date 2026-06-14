@@ -1,13 +1,12 @@
 """Adaptive and nonlinear signal features."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 
 @dataclass
@@ -53,13 +52,10 @@ class SignalClusterQuality(SignalFeature):
             .alias("_hit"),
         )
 
-        # Row index within pair
         df = df.with_columns(
             pl.col(self.ts_col).cum_count().over(self.group_col).alias("_idx"),
         )
 
-        # Distance to previous signal (always 1 in signal-only dataframe,
-        # but we detect clusters by checking rolling count within gap)
         df = df.with_columns(
             pl.col("_idx")
             .rolling_sum(window_size=self.cluster_gap, min_samples=1)
@@ -67,8 +63,6 @@ class SignalClusterQuality(SignalFeature):
             .alias("_dummy_sum"),
         )
 
-        # Simpler cluster detection: count signals within cluster_gap bars
-        # using a rolling count. If count >= min_cluster, it's a cluster.
         df = df.with_columns(
             pl.lit(1)
             .rolling_sum(window_size=self.cluster_gap, min_samples=1)
@@ -100,7 +94,6 @@ class SignalClusterQuality(SignalFeature):
             .alias(isolated_col),
         )
 
-        # Cluster ratio: fraction of recent signals that are in clusters
         df = df.with_columns(
             is_cluster.cast(pl.Float64)
             .rolling_mean(window_size=self.window, min_samples=1)
@@ -158,7 +151,6 @@ class DrawdownSensitivity(SignalFeature):
             .alias("_hit"),
         )
 
-        # Use equity from context, or approximate from ohlcv close
         equity_df: pl.DataFrame | None = None
         if context and "equity" in context:
             equity_df = context["equity"]
@@ -179,7 +171,6 @@ class DrawdownSensitivity(SignalFeature):
 
         equity_df = equity_df.sort([self.group_col, self.ts_col])
 
-        # Rolling max (running peak)
         equity_df = equity_df.with_columns(
             pl.col("_equity")
             .cum_max()
@@ -187,7 +178,6 @@ class DrawdownSensitivity(SignalFeature):
             .alias("_peak"),
         )
 
-        # Drawdown: (peak - current) / peak
         equity_df = equity_df.with_columns(
             ((pl.col("_peak") - pl.col("_equity")) / pl.col("_peak")).alias("_dd"),
         )
@@ -219,7 +209,6 @@ class DrawdownSensitivity(SignalFeature):
             .alias(normal_col),
         )
 
-        # Sensitivity: normal_acc - dd_acc (positive = degrades in drawdown)
         df = df.with_columns(
             (pl.col(normal_col) - pl.col(dd_col)).alias(sens_col),
         )
@@ -265,7 +254,6 @@ class AdaptiveConfidence(SignalFeature):
             .alias("_hit"),
         )
 
-        # EWM accuracy
         df = df.with_columns(
             pl.col("_hit")
             .ewm_mean(span=self.span, ignore_nulls=True)
@@ -339,7 +327,6 @@ class SignalFragility(SignalFeature):
             acc_double.alias("_acc_d"),
         )
 
-        # Fragility = max - min across the three windows
         max_acc = pl.max_horizontal("_acc_h", "_acc_m", "_acc_d")
         min_acc = pl.min_horizontal("_acc_h", "_acc_m", "_acc_d")
 

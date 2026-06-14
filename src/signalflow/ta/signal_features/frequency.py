@@ -1,13 +1,12 @@
 """Signal frequency and inter-signal distance features."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.signal_feature.base import SignalFeature
+from signalflow.ta._compat import SignalFeature
 
 _ACTIVE_TYPES = {"rise", "fall"}
 
@@ -61,7 +60,7 @@ class InterSignalDistance(SignalFeature):
     """Bars since the previous signal + rolling z-score.
 
     Small ISD (clustered signals) often indicates noisy behaviour.
-    Large ISD means the detector fired after a long silence — potentially
+    Large ISD means the detector fired after a long silence - potentially
     a high-conviction event.
     """
 
@@ -80,17 +79,14 @@ class InterSignalDistance(SignalFeature):
         isd_col, zscore_col = cols[0], cols[1]
         df = signals.sort([self.group_col, self.ts_col])
 
-        # Row number within each pair
         df = df.with_columns(
             pl.col(self.ts_col).cum_count().over(self.group_col).cast(pl.Float64).alias("_idx"),
         )
 
-        # Distance: difference in row positions between consecutive signals
         df = df.with_columns(
             (pl.col("_idx") - pl.col("_idx").shift(1).over(self.group_col)).alias(isd_col),
         )
 
-        # Rolling z-score of ISD
         rolling_mean = (
             pl.col(isd_col)
             .rolling_mean(window_size=self.zscore_window, min_samples=2)

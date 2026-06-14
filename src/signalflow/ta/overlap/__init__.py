@@ -41,12 +41,6 @@ from signalflow.ta.overlap.smoothers import (
     WmaSmooth,
 )
 
-# from signalflow.ta.overlap.trend import (
-#     SupertrendOverlay,
-#     HiloOverlay,
-#     IchimokuOverlay,
-#     ChandelierOverlay,
-# )
 
 __all__ = [
     "AlmaSmooth",
@@ -54,20 +48,17 @@ __all__ = [
     "EmaSmooth",
     "FftSmooth",
     "FramaSmooth",
-    # Price Transforms
     "Hl2Price",
     "Hlc3Price",
     "HmaSmooth",
     "JmaSmooth",
     "KalmanSmooth",
-    # Adaptive Smoothers
     "KamaSmooth",
     "McGinleySmooth",
     "MidpointPrice",
     "MidpricePrice",
     "Ohlc4Price",
     "RmaSmooth",
-    # Basic Smoothers
     "SmaSmooth",
     "SsfSmooth",
     "SwmaSmooth",
@@ -79,9 +70,4 @@ __all__ = [
     "WcpPrice",
     "WmaSmooth",
     "ZlmaSmooth",
-    # Trend Overlays
-    # "SupertrendOverlay",
-    # "HiloOverlay",
-    # "IchimokuOverlay",
-    # "ChandelierOverlay",
 ]

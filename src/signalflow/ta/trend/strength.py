@@ -6,8 +6,8 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta._numba_kernels import (
     adx_kernel as _adx_kernel,
 )
@@ -90,7 +90,6 @@ class AdxTrend(Feature):
 
         adx, dmp, dmn = _adx_kernel(tr, pdm, ndm, self.period)
 
-        # Normalization: [0, 100] → [0, 1]
         if self.normalized:
             adx = adx / 100
             dmp = dmp / 100
@@ -171,7 +170,6 @@ class AroonTrend(Feature):
         aroon_up, aroon_dn = _aroon_kernel(high, low, self.period)
         aroon_osc = aroon_up - aroon_dn
 
-        # Normalization: [0, 100] → [0, 1] for up/dn, [-100, 100] → [-1, 1] for osc
         if self.normalized:
             aroon_up = aroon_up / 100
             aroon_dn = aroon_dn / 100
@@ -263,7 +261,6 @@ class VortexTrend(Feature):
         vi_plus[valid] = vmp_sum[valid] / tr_sum[valid]
         vi_minus[valid] = vmm_sum[valid] / tr_sum[valid]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -342,7 +339,6 @@ class VhfTrend(Feature):
         valid = diff_sum > 0
         vhf[valid] = np.abs(hcp[valid] - lcp[valid]) / diff_sum[valid]
 
-        # Normalization: z-score for unbounded oscillator
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore
 
@@ -429,7 +425,6 @@ class ChopTrend(Feature):
         valid = diff > 0
         chop[valid] = 100 * np.log10(tr_sum[valid] / diff[valid]) / log_period
 
-        # Normalization: [0, 100] → [0, 1]
         if self.normalized:
             chop = chop / 100
 
@@ -488,11 +483,9 @@ class ViscosityTrend(Feature):
 
         velocity = _velocity_kernel(close)
 
-        # Acceleration (change in velocity, vectorized)
         accel = np.full(n, np.nan)
         accel[2:] = velocity[2:] - velocity[1:-1]
 
-        # Rolling means of absolute values (NaN-aware)
         mean_abs_v = _rolling_mean_nan(np.abs(velocity), self.period)
         mean_abs_a = _rolling_mean_nan(np.abs(accel), self.period)
 
@@ -911,15 +904,13 @@ class OrderParameterTrend(Feature):
         close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Returns sign (vectorized)
         ret_sign = np.full(n, np.nan)
         ret_sign[1:] = np.sign(close[1:] - close[:-1])
 
         order = np.abs(_rolling_mean_nan(ret_sign, self.period))
 
-        # Already bounded [0, 1]
         if self.normalized:
-            order = order  # already [0, 1]
+            order = order
 
         suffix = "_norm" if self.normalized else ""
         col_name = f"order_param_{self.period}{suffix}"
@@ -969,14 +960,11 @@ class SusceptibilityTrend(Feature):
         close = df["close"].to_numpy().astype(np.float64)
         n = len(close)
 
-        # Returns sign (vectorized)
         ret_sign = np.full(n, np.nan)
         ret_sign[1:] = np.sign(close[1:] - close[:-1])
 
-        # Order parameter (vectorized)
         order = np.abs(_rolling_mean_nan(ret_sign, self.period))
 
-        # Susceptibility = variance of order parameter x period
         chi = np.full(n, np.nan)
         start = self.period + self.chi_window - 1
         for i in range(start, n):

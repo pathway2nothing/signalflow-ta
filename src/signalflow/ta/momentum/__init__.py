@@ -1,4 +1,3 @@
-# src/signalflow/ta/momentum/__init__.py
 """Momentum indicators - measure speed and magnitude of price changes.
 
 Modules:
@@ -46,21 +45,17 @@ from signalflow.ta.momentum.extensions import (
 )
 
 __all__ = [
-    # Kinematics
     "AccelerationMom",
     "AngularMomentumMom",
     "AoMom",
     "CciMom",
     "CmoMom",
     "JerkMom",
-    # MACD family
     "MacdMom",
     "MomMom",
     "PpoMom",
     "RocMom",
-    # Core
     "RsiMom",
-    # Oscillators
     "StochMom",
     "StochRsiMom",
     "TorqueMom",
@@ -68,7 +63,6 @@ __all__ = [
     "TsiMom",
     "UoMom",
     "WillrMom",
-    # Extensions (sf-profit feature_research_lib + iter-15/16/18/20)
     "MacdNorm",
     "MomPosNeg",
     "MomentumOfMomentum",

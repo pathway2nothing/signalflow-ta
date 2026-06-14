@@ -1,7 +1,7 @@
 """Path-shape descriptors.
 
 Captures geometric properties of the price path: roughness, efficiency,
-streaks, entropy, autocorrelation. Distinct from level/momentum/volatility — measures
+streaks, entropy, autocorrelation. Distinct from level/momentum/volatility - measures
 HOW the price moves through a window, not where it ended up.
 """
 from signalflow.ta.path_shape.shape import (

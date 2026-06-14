@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.feature import GlobalFeature
+from signalflow.ta._compat import GlobalFeature
 
 
 def _rma_sma_init(values: np.ndarray, period: int) -> np.ndarray:
@@ -40,10 +40,8 @@ class MarketVolatilityFeature(GlobalFeature):
     outputs: ClassVar[list[str]] = ["market_volatility", "market_volatility_std"]
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        # Compute per-bar volatility for each pair
         df = df.with_columns(((pl.col("high") - pl.col("low")) / (pl.col("open") + 1e-10)).alias("_volatility"))
 
-        # Aggregate across pairs per timestamp
         result = (
             df.group_by(self.ts_col)
             .agg(
@@ -106,13 +104,11 @@ class MarketRsiFeature(GlobalFeature):
     outputs: ClassVar[list[str]] = ["market_rsi"]
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        # First compute market index
         market = df.group_by(self.ts_col).agg([pl.col("close").mean().alias("market_close")]).sort(self.ts_col)
 
         close = market["market_close"].to_numpy()
         n = len(close)
 
-        # Calculate RSI
         diff = np.diff(close, prepend=close[0])
         diff[0] = 0
 
@@ -125,7 +121,6 @@ class MarketRsiFeature(GlobalFeature):
         rs = avg_gain / (avg_loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))
 
-        # Apply smoothing
         if self.smoothing > 1:
             smoothed_rsi = np.full(n, np.nan)
             for i in range(self.smoothing - 1, n):
@@ -159,13 +154,11 @@ class MarketZscoreFeature(GlobalFeature):
     outputs: ClassVar[list[str]] = ["market_zscore"]
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        # First compute market index
         market = df.group_by(self.ts_col).agg([pl.col("close").mean().alias("market_close")]).sort(self.ts_col)
 
         close = market["market_close"].to_numpy()
         n = len(close)
 
-        # Calculate z-score
         zscore = np.full(n, np.nan)
         for i in range(self.window - 1, n):
             window_vals = close[i - self.window + 1 : i + 1]
@@ -198,8 +191,6 @@ class MarketRollingMinFeature(GlobalFeature):
     outputs: ClassVar[list[str]] = ["at_rolling_min"]
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        # This operates per-pair, not cross-sectional
-        # But we include it here for completeness
         close = df["close"].to_numpy()
         n = len(close)
 
@@ -217,15 +208,7 @@ class MarketRollingMinFeature(GlobalFeature):
 
 
 def compute_global_features(df: pl.DataFrame, features: list[GlobalFeature]) -> pl.DataFrame:
-    """Compute multiple global features and join them.
-
-    Args:
-        df: Multi-asset DataFrame with pair, timestamp, OHLCV columns.
-        features: List of GlobalFeature instances to compute.
-
-    Returns:
-        DataFrame with timestamp and all computed global feature columns.
-    """
+    """Compute multiple global features and join them."""
     if not features:
         ts_col = features[0].ts_col if features else "timestamp"
         return df.select(ts_col).unique().sort(ts_col)

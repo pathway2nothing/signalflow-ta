@@ -3,14 +3,7 @@
 These features split the total realised variance into structural components
 (continuous vs jump, upside vs downside, sparse vs dense sampling). Each
 component carries distinct predictive information about forward dynamics.
-
-References:
-    - Barndorff-Nielsen, O. E. & Shephard, N. (2004). Power and Bipower
-      Variation with Stochastic Volatility and Jumps.
-    - Barndorff-Nielsen, O. E., Kinnebross, S. & Shephard, N. (2010).
-      Multivariate Realised Semivariances.
 """
-from __future__ import annotations
 
 import math
 from dataclasses import dataclass
@@ -19,20 +12,20 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
 @feature("stat/realised_bipower_variance_ratio")
 class RealisedBipowerVarianceRatioStat(Feature):
-    """BV / RV — fraction of variance from continuous (non-jump) component.
+    """BV / RV - fraction of variance from continuous (non-jump) component.
 
     Realised Variance RV = Σ r_t². Bipower Variation BV = (π/2)·Σ|r_t|·|r_{t-1}|.
     BV is jump-robust (jumps appear in only one of the two adjacent bars
     in the product), so BV/RV measures the continuous-volatility share.
 
-    Low ratios indicate jump-dominated regimes — informative about
+    Low ratios indicate jump-dominated regimes - informative about
     forward jump risk and mean-reversion timing.
     """
 
@@ -61,11 +54,11 @@ class RealisedBipowerVarianceRatioStat(Feature):
 @dataclass
 @feature("stat/realised_semivariance_ratio")
 class RealisedSemivarianceRatioStat(Feature):
-    """Downside semivariance / upside semivariance — directional vol asymmetry.
+    """Downside semivariance / upside semivariance - directional vol asymmetry.
 
     Downside RS = Σ r²·(r<0), Upside RS = Σ r²·(r>0). Their ratio quantifies
     structural panic-vs-rally asymmetry. High ratio indicates downside
-    volatility dominating — typical of capitulation.
+    volatility dominating - typical of capitulation.
 
     Iter-29 stability: mean MI_normalised = 0.119 across 11 stable triples.
     """
@@ -95,7 +88,7 @@ class RealisedSemivarianceRatioStat(Feature):
 @dataclass
 @feature("stat/jump_truncated_variance_ratio")
 class JumpTruncatedVarianceRatioStat(Feature):
-    """Variance of |z|<2 returns / total variance — diffusive variance share.
+    """Variance of |z|<2 returns / total variance - diffusive variance share.
 
     Removes jumps (|z|>=2) and computes the variance share of the
     remaining continuous part. Complementary to BV/RV (which uses adjacent-bar
@@ -167,7 +160,7 @@ class RVSemivarianceAsymmetryStat(Feature):
 @dataclass
 @feature("stat/realized_quarticity")
 class RealizedQuarticityStat(Feature):
-    """Σ r^4 over rolling window — fourth-moment volatility-of-volatility.
+    """Σ r^4 over rolling window - fourth-moment volatility-of-volatility.
 
     Realised quarticity is the natural estimator of integrated quarticity
     σ⁴, used to standardise tests of realised variance.
@@ -196,7 +189,7 @@ class RealizedQuarticityStat(Feature):
 @dataclass
 @feature("stat/pre_averaged_bipower_variation")
 class PreAveragedBipowerVariationStat(Feature):
-    """Pre-averaged bipower variation — k-bar averaged returns then BV.
+    """Pre-averaged bipower variation - k-bar averaged returns then BV.
 
     Noise-robust BV: averaging over k sub-bars reduces microstructure noise
     before computing bipower variation. Robust to both noise and jumps.

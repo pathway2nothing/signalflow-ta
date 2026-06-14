@@ -2,16 +2,15 @@
 
 Given a price window with known start P_0 and end P_T, the maximum
 deviation max_t |P_t - (P_0 + (t/T)*(P_T - P_0))| measures how much the
-path "tensions" away from the natural Brownian bridge — direct path from
+path "tensions" away from the natural Brownian bridge - direct path from
 start to end. A perfect Brownian bridge has Hurst-like scaling; large
 deviations indicate one-directional excursions, crowding, or structural
 breaks.
 
 Empirically validated in iter-27 of sf-profit (target encoding research):
-mean MI_normalised across 6 walk-forward folds = 0.11, std 0.007 — most
+mean MI_normalised across 6 walk-forward folds = 0.11, std 0.007 - most
 stable feature in the iteration (lowest std-to-mean ratio).
 """
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import ClassVar
@@ -20,8 +19,8 @@ import numpy as np
 import polars as pl
 from numpy.lib.stride_tricks import sliding_window_view
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
@@ -39,10 +38,6 @@ class BrownianBridgeTensionStat(Feature):
         - tension ≈ 1: typical Brownian-bridge fluctuation
         - tension >> 1: extreme one-directional excursion
         - tension << 1: very straight path
-
-    Attributes:
-        period: window length in bars.
-        source_col: price column.
     """
 
     period: int = 60
@@ -79,7 +74,7 @@ class BrownianBridgeTensionStat(Feature):
 @dataclass
 @feature("stat/bb_path_roughness")
 class BBPathRoughnessStat(Feature):
-    """Sum(|Δprice|) / |end − start| over window — tortuosity of the path.
+    """Sum(|Δprice|) / |end − start| over window - tortuosity of the path.
 
     Ratio of accumulated path length to straight-line displacement. Value 1
     means perfectly straight movement (low roughness); large values mean
@@ -119,7 +114,7 @@ class BBPathRoughnessStat(Feature):
 @dataclass
 @feature("stat/bb_tension_directional")
 class BBTensionDirectionalStat(Feature):
-    """Signed BB tension — positive if max deviation above linear, negative if below.
+    """Signed BB tension - positive if max deviation above linear, negative if below.
 
     Iter-28 stability: mean MI_normalised = 0.106 with std 0.024 across 4
     stable triples.
@@ -160,7 +155,7 @@ class BBTensionDirectionalStat(Feature):
 @dataclass
 @feature("stat/swing_amp_displacement")
 class SwingAmpDisplacementStat(Feature):
-    """sum(high − low) over window / |close_end − close_start| — micro-swing tortuosity.
+    """sum(high − low) over window / |close_end − close_start| - micro-swing tortuosity.
 
     Range-based path-tortuosity variant. Counts cumulative high-low
     excursions per unit of net displacement; high values = much chop,

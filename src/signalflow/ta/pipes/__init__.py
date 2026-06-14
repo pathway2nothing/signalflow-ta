@@ -1,29 +1,10 @@
-"""Preset pipeline factories for composing FeaturePipeline from pre-configured groups.
+"""Preset pipeline factories for composing FeaturePipeline from pre-configured groups."""
 
-Usage::
 
-    from signalflow.feature import FeaturePipeline
-    from signalflow.ta.pipes import smoothers_pipe, momentum_core_pipe, all_ta_pipe
+from signalflow.ta._compat import Feature
 
-    # Compose a custom pipeline from subgroups
-    pipeline = FeaturePipeline(features=[
-        *smoothers_pipe(source_col="close", normalized=True),
-        *momentum_core_pipe(normalized=True),
-        *volatility_range_pipe(),
-    ])
-
-    # Or use everything at once
-    pipeline = FeaturePipeline(features=all_ta_pipe())
-"""
-
-from __future__ import annotations
-
-from signalflow.feature.base import Feature
-
-# Divergence
 from signalflow.ta.pipes.divergence import divergence_pipe
 
-# Momentum
 from signalflow.ta.pipes.momentum import (
     momentum_core_pipe,
     momentum_kinematics_pipe,
@@ -32,17 +13,14 @@ from signalflow.ta.pipes.momentum import (
     momentum_pipe,
 )
 
-# Overlap
 from signalflow.ta.pipes.overlap import (
     overlap_pipe,
     price_transforms_pipe,
     smoothers_pipe,
 )
 
-# Performance
 from signalflow.ta.pipes.performance import performance_pipe
 
-# Stat
 from signalflow.ta.pipes.stat import (
     stat_complexity_pipe,
     stat_cycle_pipe,
@@ -56,7 +34,6 @@ from signalflow.ta.pipes.stat import (
     stat_regression_pipe,
 )
 
-# Trend
 from signalflow.ta.pipes.trend import (
     trend_detection_pipe,
     trend_pipe,
@@ -64,7 +41,6 @@ from signalflow.ta.pipes.trend import (
     trend_strength_pipe,
 )
 
-# Volatility
 from signalflow.ta.pipes.volatility import (
     volatility_bands_pipe,
     volatility_energy_pipe,
@@ -73,7 +49,6 @@ from signalflow.ta.pipes.volatility import (
     volatility_range_pipe,
 )
 
-# Volume
 from signalflow.ta.pipes.volume import (
     volume_cumulative_pipe,
     volume_dynamics_pipe,
@@ -105,7 +80,6 @@ def all_ta_pipe(
 
 
 __all__ = [
-    # Top-level
     "all_ta_pipe",
     "divergence_pipe",
     "momentum_core_pipe",
@@ -113,11 +87,9 @@ __all__ = [
     "momentum_macd_pipe",
     "momentum_oscillators_pipe",
     "momentum_pipe",
-    # Module-level aggregates
     "overlap_pipe",
     "performance_pipe",
     "price_transforms_pipe",
-    # Subgroup pipes
     "smoothers_pipe",
     "stat_complexity_pipe",
     "stat_cycle_pipe",

@@ -1,16 +1,15 @@
 """Path shape descriptors: roughness, efficiency, tortuosity, simplicity."""
-from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
 import polars as pl
 
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import Feature
 
 
 @dataclass
 class PathRoughness(Feature):
-    """std(|returns|) / mean(|returns|) — coefficient of variation of move size."""
+    """std(|returns|) / mean(|returns|) - coefficient of variation of move size."""
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["roughness_{window}"]
     window: int = 240

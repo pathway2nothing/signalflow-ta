@@ -7,20 +7,18 @@ event; EMA with characteristic time tau is the body's adaptation.
 
 Empirically validated in iter-27 of sf-profit (target encoding research):
 mean MI_normalised across 6 walk-forward folds = 0.18 on the
-forward realized-volatility regime label, std 0.02 — one of the most
+forward realized-volatility regime label, std 0.02 - one of the most
 stable cross-fold features in that experiment.
 """
-from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from typing import ClassVar
 
 import numpy as np
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import Feature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import Feature
 from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, truncated_ema
 
 
@@ -36,17 +34,8 @@ class AllostaticLoadStat(Feature):
         4. allostatic load L_t = α * s_t + (1-α) * L_{t-1}
            where α = 1 - exp(-1/tau)
 
-    High L values indicate prolonged elevated stress — markets in extended
+    High L values indicate prolonged elevated stress - markets in extended
     high-volatility regimes. Low values indicate calm.
-
-    Attributes:
-        period: window for the rolling std baseline (denominator of z-score).
-        tau: characteristic decay time of the EMA (bars).
-        source_col: input column.
-
-    Reference:
-        McEwen, B. S., & Stellar, E. (1993). Stress and the individual:
-        Mechanisms leading to disease. Archives of Internal Medicine.
     """
 
     period: int = 240
@@ -74,7 +63,7 @@ class AllostaticLoadStat(Feature):
 @dataclass
 @feature("stat/allostatic_load_directional")
 class AllostaticLoadDirectionalStat(Feature):
-    """Directional allostatic load — signed cumulative stress.
+    """Directional allostatic load - signed cumulative stress.
 
     Like :class:`AllostaticLoadStat` but uses signed z-score (r/σ instead of
     |r|/σ). Captures directional persistence of stress events: positive
@@ -82,14 +71,9 @@ class AllostaticLoadDirectionalStat(Feature):
 
     Empirically the most informative feature of iter-28 (sf-profit
     target-encoding research): mean MI_normalised across 6 walk-forward
-    folds = 0.467 on mean-reversion-event labels with std 0.009 — best
+    folds = 0.467 on mean-reversion-event labels with std 0.009 - best
     cross-fold mean of any feature tested across iter-26/27/28 (502 + 60
     feature classes screened).
-
-    Attributes:
-        period: window for rolling-σ baseline.
-        tau: EMA characteristic time (bars).
-        source_col: input column.
     """
 
     period: int = 240
@@ -117,19 +101,13 @@ class AllostaticLoadDirectionalStat(Feature):
 @dataclass
 @feature("stat/allostatic_fast_slow_ratio")
 class AllostaticFastSlowRatioStat(Feature):
-    """Ratio of fast-tau load to slow-tau load — short vs long stress regime.
+    """Ratio of fast-tau load to slow-tau load - short vs long stress regime.
 
     A growing ratio indicates an accelerating stress regime; values near 1
     indicate a stable regime; sub-1 indicates winding-down.
 
     Iter-28 stability: mean MI_normalised = 0.13 with std 0.02 across 22
     stable triples, all on B1_vol_realized and C1_mkt_vol targets.
-
-    Attributes:
-        period: window for rolling-σ baseline.
-        tau_fast: short EMA characteristic time.
-        tau_slow: long EMA characteristic time.
-        source_col: input column.
     """
 
     period: int = 480
@@ -171,7 +149,7 @@ class CumZScorePowerLawStat(Feature):
     """
 
     period: int = 60
-    gamma: int = 50  # gamma/100 = decay exponent
+    gamma: int = 50
 
     requires: ClassVar[list[str]] = ["close"]
     outputs: ClassVar[list[str]] = ["f08_pl_cum_z_{period}_{gamma}"]
@@ -201,7 +179,7 @@ class CumZScorePowerLawStat(Feature):
 @dataclass
 @feature("stat/vol_weighted_zscore_ema")
 class VolWeightedZScoreEMAStat(Feature):
-    """EMA of (return z-score × normalised volume) — conviction-weighted stress.
+    """EMA of (return z-score × normalised volume) - conviction-weighted stress.
 
     Scales each bar's z-score by its volume relative to recent average,
     then EMA-smooths. Captures momentum from high-conviction bars and
@@ -248,7 +226,7 @@ class VolWeightedZScoreEMAStat(Feature):
 @dataclass
 @feature("stat/downside_zscore_ema")
 class DownsideZScoreEMAStat(Feature):
-    """EMA of downside-only return z-score — panic-driven selling stress.
+    """EMA of downside-only return z-score - panic-driven selling stress.
 
     Iter-29 stability: mean MI_normalised = 0.117 across 10 stable triples.
     """

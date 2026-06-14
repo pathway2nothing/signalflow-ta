@@ -1,10 +1,9 @@
-"""Strategy preset catalog — ready-to-use strategy configurations.
+"""Strategy preset catalog - ready-to-use strategy configurations.
 
 Each preset is a dict describing a complete FlowBuilder configuration
 with sf-ta detectors, entry/exit rules, and recommended parameters.
 """
 
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -17,7 +16,7 @@ class PresetInfo:
     name: str
     display_name: str
     description: str
-    difficulty: str  # "beginner", "intermediate", "advanced"
+    difficulty: str
     tags: tuple[str, ...]
     detector: str
     detector_params: dict[str, Any] = field(default_factory=dict)
@@ -67,7 +66,7 @@ PRESET_CATALOG: dict[str, PresetInfo] = {
         name="mean_reversion",
         display_name="Mean Reversion",
         description=(
-            "Bollinger Band reversion strategy — enters on extreme deviations "
+            "Bollinger Band reversion strategy - enters on extreme deviations "
             "from the moving average and exits when price reverts to the mean. "
             "Higher win rate but smaller gains per trade."
         ),

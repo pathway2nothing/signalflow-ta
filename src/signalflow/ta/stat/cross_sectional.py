@@ -1,13 +1,7 @@
-# src/signalflow/ta/stat/cross_sectional.py
-"""Cross-sectional statistics — universal global features.
+"""Cross-sectional statistics - universal global features.
 
 Computes statistics for any pre-computed column across all pairs at each
-timestamp. No dependency on specific indicators — just pass a column name.
-
-Example:
-    >>> cs = CrossSectionalStat(col="rsi_14", stats=["rank", "zscore", "mean"])
-    >>> df = cs.compute(df)
-    # Adds: rsi_14_cs_rank, rsi_14_cs_zscore, rsi_14_cs_mean
+timestamp. No dependency on specific indicators - just pass a column name.
 """
 
 from dataclasses import dataclass, field
@@ -15,8 +9,8 @@ from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.core import feature
-from signalflow.feature.base import GlobalFeature
+from signalflow.ta._compat import feature
+from signalflow.ta._compat import GlobalFeature
 
 
 @dataclass
@@ -29,25 +23,17 @@ class CrossSectionalStat(GlobalFeature):
     each timestamp and attaches the results back per row.
 
     Supported stats:
-        rank      — percentile rank [0, 1] among all pairs at time t.
-        zscore    — (value - cross_mean) / cross_std.
-        mean      — cross-sectional mean (broadcast to every pair).
-        std       — cross-sectional std (market dispersion).
-        median    — cross-sectional median (broadcast).
-        min       — cross-sectional minimum (broadcast).
-        max       — cross-sectional maximum (broadcast).
-        diff      — value - cross_mean (pair deviation from market).
+        rank      - percentile rank [0, 1] among all pairs at time t.
+        zscore    - (value - cross_mean) / cross_std.
+        mean      - cross-sectional mean (broadcast to every pair).
+        std       - cross-sectional std (market dispersion).
+        median    - cross-sectional median (broadcast).
+        min       - cross-sectional minimum (broadcast).
+        max       - cross-sectional maximum (broadcast).
+        diff      - value - cross_mean (pair deviation from market).
 
     All computations use native Polars ``over()`` window expressions,
     so performance scales well regardless of pair count.
-
-    Args:
-        col: Name of the column to compute stats for. Must exist in the
-             input DataFrame.
-        stats: Which statistics to produce.
-               Default: ``["rank", "zscore", "mean"]``.
-        prefix: Optional prefix for output column names.
-                Default: ``""`` (columns named ``{col}_cs_{stat}``).
     """
 
     col: str = "close"
@@ -74,9 +60,6 @@ class CrossSectionalStat(GlobalFeature):
         if not self.stats:
             raise ValueError("stats must contain at least one entry")
 
-    # ------------------------------------------------------------------
-    # Output helpers
-    # ------------------------------------------------------------------
 
     def _out_name(self, stat: str) -> str:
         return f"{self.prefix}{self.col}_cs_{stat}"
@@ -87,9 +70,6 @@ class CrossSectionalStat(GlobalFeature):
     def required_cols(self) -> list[str]:
         return [self.col]
 
-    # ------------------------------------------------------------------
-    # Core computation
-    # ------------------------------------------------------------------
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         """Compute cross-sectional statistics across all pairs."""
