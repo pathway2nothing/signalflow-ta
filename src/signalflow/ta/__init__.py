@@ -542,7 +542,7 @@ __all__ = [
 
 def _load_all() -> None:
     """Import every ``signalflow.ta`` submodule so all ``@feature`` / ``@detector``
-    registrations fire when the V5 registry loads this package via the
+    registrations fire when the registry loads this package via the
     ``signalflow.components`` entry-point.
 
     Each submodule is imported under a guard: an exotic module that cannot port

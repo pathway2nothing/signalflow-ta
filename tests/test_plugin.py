@@ -1,8 +1,8 @@
-"""V5 compat-shim plugin tests.
+"""Compat-shim plugin tests.
 
-Verifies that the ta plugin imports cleanly on the V5 core, registers its
-transforms/detectors into the V5 registry, and that representative features and
-detectors compute correctly on a real V5 Dataset frame. The namespace bridge
+Verifies that the ta plugin imports cleanly on the core, registers its
+transforms/detectors into the registry, and that representative features and
+detectors compute correctly on a real Dataset frame. The namespace bridge
 that makes ``import signalflow.ta`` resolve lives in ``tests/conftest.py``.
 """
 
