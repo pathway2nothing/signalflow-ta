@@ -8,7 +8,7 @@
 
 # signalflow-ta
 
-**Technical analysis plugin for SignalFlow - 250+ indicator features + 30 signal detectors**
+**Technical analysis plugin for SignalFlow - 248 indicator features + 21 signal detectors**
 
 <p>
 <a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.8.2-7c3aed" alt="Version"></a>
@@ -22,7 +22,7 @@
 
 Part of the [SignalFlow](https://github.com/pathway2nothing/sf-project) ecosystem.
 
-A plugin that registers 250+ technical-analysis indicator features and 30
+A plugin that registers 248 technical-analysis indicator features and 21
 signal detectors with configurable filters, plus `AutoFeatureNormalizer` for
 automatic normalization. Installing it auto-registers every component with the
 core `signalflow` registry via entry points - no imports or wiring needed.
@@ -339,21 +339,19 @@ Each existing module gained new classes from sf-profit feature research. Selecte
 
 ---
 
-## Signal Detectors (30)
+## Signal Detectors (21)
 
 All detectors support configurable `direction` (`"long"`, `"short"`, `"both"`) and optional filters.
 
 | Category | Detectors |
 |----------|-----------|
 | **Momentum** | RSI Anomaly, CCI Anomaly, Stochastic ×2 |
-| **Volume** | MFI Oversold/Overbought, MFI Z-Score |
+| **Volume** | MFI ×2 |
 | **Trend** | Aroon Cross, ADX Regime ×2 |
-| **Volatility** | Bollinger Breakout, Keltner + RSI, Keltner + MACD |
-| **Divergence** | Price/RSI, Price/MACD |
+| **Volatility** | Bollinger Breakout, Keltner ×2 |
+| **Divergence** | Divergence ×3 (Price/RSI, Price/MACD) |
 | **Filter-based** | Hampel ×2, Adaptive Kalman |
-| **Market Condition** | Volatility Regime, Cross-Sectional, Market Breadth |
-| **ML-based** | Isolation Forest (Returns, RSI, Cross-Sectional) |
-| **Cross-pair** | Correlation + Bollinger |
+| **ML-based** | Isolation Forest ×3 (Returns, RSI, Cross-Sectional) |
 
 ### Signal Filters (12)
 

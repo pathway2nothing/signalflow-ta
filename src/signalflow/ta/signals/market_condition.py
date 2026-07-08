@@ -6,7 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import SignalCategory, Signals, SignalType, detector
+from signalflow.ta._compat import SignalCategory, Signals, SignalType
 from signalflow.ta._compat import SignalDetector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import RsiMom
@@ -14,9 +14,12 @@ from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@detector("ta/market_condition_1")
 class MarketConditionDetector1(SignalDetector):
     """Market condition detector using RSI and global volatility.
+
+    Not registered under V5: it needs a ``global_features`` ``context=`` channel that
+    ``Transform.compute(df)`` cannot supply. Kept importable as a candidate for a
+    future cross-pair transform role.
 
     Generates signals when:
     - RSI is below threshold (oversold)
@@ -138,9 +141,12 @@ class MarketConditionDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/market_condition_2")
 class MarketConditionDetector2(SignalDetector):
     """Market condition detector with RSI comparison to market RSI.
+
+    Not registered under V5: it needs a ``global_features`` ``context=`` channel that
+    ``Transform.compute(df)`` cannot supply. Kept importable as a candidate for a
+    future cross-pair transform role.
 
     Generates signals when:
     - Asset RSI is below threshold
@@ -277,9 +283,12 @@ class MarketConditionDetector2(SignalDetector):
 
 
 @dataclass
-@detector("ta/market_condition_3")
 class MarketConditionDetector3(SignalDetector):
     """Advanced market condition detector with z-score and rolling min.
+
+    Not registered under V5: it needs a ``global_features`` ``context=`` channel that
+    ``Transform.compute(df)`` cannot supply. Kept importable as a candidate for a
+    future cross-pair transform role.
 
     Generates signals when:
     - Base conditions (RSI + vol) are met, OR

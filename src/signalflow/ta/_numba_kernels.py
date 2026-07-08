@@ -188,6 +188,9 @@ def adx_kernel(
     n = len(tr)
     alpha = 1.0 / period
 
+    if n < period:
+        return np.full(n, np.nan), np.full(n, np.nan), np.full(n, np.nan)
+
     atr = np.full(n, np.nan)
     smooth_pdm = np.full(n, np.nan)
     smooth_ndm = np.full(n, np.nan)
@@ -301,6 +304,9 @@ def jma_kernel(
     jma = np.full(n, np.nan)
     volty = np.zeros(n)
     v_sum = np.zeros(n)
+
+    if n < period:
+        return jma
 
     warmup = min(period, n)
     if warmup == 0:
@@ -475,6 +481,10 @@ def frama_kernel(
     n = len(source)
     half = period // 2
     frama = np.full(n, np.nan)
+
+    if n < period:
+        return frama
+
     frama[period - 1] = source[period - 1]
 
     for i in range(period, n):
