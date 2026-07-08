@@ -52,8 +52,8 @@ class BTCStressContagionStat(Feature):
     def compute(self, df: pl.DataFrame, context=None) -> pl.DataFrame:
         from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, truncated_ema
         out_col = f"btc_stress_{self.period}_{self.tau}"
-        df = df.sort(["pair", "timestamp"])
-        btc = df.filter(pl.col("pair") == BTC_PAIR).sort("timestamp")
+        df = df.sort(["pair", self.ts_col])
+        btc = df.filter(pl.col("pair") == BTC_PAIR).sort(self.ts_col)
         if btc.height == 0:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
         c_btc = btc["close"].to_numpy().astype(np.float64)
@@ -61,5 +61,5 @@ class BTCStressContagionStat(Feature):
         sd = rolling_std(btc_r, self.period)
         z = np.where(np.isfinite(sd) & (sd > 0), np.abs(btc_r) / np.maximum(sd, 1e-12), 0.0)
         stress = truncated_ema(z, self.tau)
-        stress_df = pl.DataFrame({"timestamp": btc["timestamp"].to_list(), out_col: stress})
-        return df.join(stress_df, on="timestamp", how="left")
+        stress_df = pl.DataFrame({self.ts_col: btc[self.ts_col].to_list(), out_col: stress})
+        return df.join(stress_df, on=self.ts_col, how="left")

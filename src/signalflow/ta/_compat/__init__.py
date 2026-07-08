@@ -125,8 +125,39 @@ class Feature(Transform, metaclass=FeatureMeta):
 
     @property
     def outputs(self) -> list[str]:
-        """Concrete output column names (templates substituted)."""
+        """Concrete output column names, with the normalization suffix applied."""
+        if getattr(self, "normalized", False):
+            resolved = self._normalized_output_cols()
+            if resolved is not None:
+                return resolved
         return self.output_cols()
+
+    def _normalized_output_cols(self) -> "list[str] | None":
+        """Output names under ``normalized=True``, matching each feature's own writer.
+
+        Features that expose a name resolver (``_get_output_name(s)``) route naming
+        through it, appending ``_norm`` per column while leaving already-bounded
+        columns unsuffixed; delegate so declared names equal the columns written.
+        Features without a resolver that still declare their own ``normalized`` field
+        append ``_norm`` inline to every output. Features that merely inherit the base
+        ``normalized`` flag ignore it and keep plain names, signalled by ``None``.
+        """
+        if hasattr(type(self), "_get_output_names"):
+            return list(self._get_output_names())
+        if hasattr(type(self), "_get_output_name"):
+            return [self._get_output_name()]
+        if self._declares_normalized():
+            return [f"{name}_norm" for name in self.output_cols()]
+        return None
+
+    def _declares_normalized(self) -> bool:
+        """True when a subclass (not the base) declares its own ``normalized`` field."""
+        for klass in type(self).__mro__:
+            if klass is Feature:
+                return False
+            if "normalized" in getattr(klass, "__annotations__", {}):
+                return True
+        return False
 
     @property
     def warmup(self) -> int:

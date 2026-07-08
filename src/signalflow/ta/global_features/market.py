@@ -40,20 +40,16 @@ class MarketVolatilityFeature(GlobalFeature):
     outputs: ClassVar[list[str]] = ["market_volatility", "market_volatility_std"]
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        df = df.with_columns(((pl.col("high") - pl.col("low")) / (pl.col("open") + 1e-10)).alias("_volatility"))
+        tmp = df.with_columns(((pl.col("high") - pl.col("low")) / (pl.col("open") + 1e-10)).alias("_volatility"))
 
-        result = (
-            df.group_by(self.ts_col)
-            .agg(
-                [
-                    pl.col("_volatility").mean().alias("market_volatility"),
-                    pl.col("_volatility").std().alias("market_volatility_std"),
-                ]
-            )
-            .sort(self.ts_col)
+        agg = tmp.group_by(self.ts_col).agg(
+            [
+                pl.col("_volatility").mean().alias("market_volatility"),
+                pl.col("_volatility").std().alias("market_volatility_std"),
+            ]
         )
 
-        return result
+        return df.join(agg, on=self.ts_col, how="left")
 
     @property
     def warmup(self) -> int:
@@ -71,17 +67,13 @@ class MarketIndexFeature(GlobalFeature):
     outputs: ClassVar[list[str]] = ["market_close"]
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        result = (
-            df.group_by(self.ts_col)
-            .agg(
-                [
-                    pl.col("close").mean().alias("market_close"),
-                ]
-            )
-            .sort(self.ts_col)
+        agg = df.group_by(self.ts_col).agg(
+            [
+                pl.col("close").mean().alias("market_close"),
+            ]
         )
 
-        return result
+        return df.join(agg, on=self.ts_col, how="left")
 
     @property
     def warmup(self) -> int:
@@ -132,7 +124,7 @@ class MarketRsiFeature(GlobalFeature):
 
         result = market.with_columns(pl.Series(name="market_rsi", values=rsi))
 
-        return result.select([self.ts_col, "market_rsi"])
+        return df.join(result.select([self.ts_col, "market_rsi"]), on=self.ts_col, how="left")
 
     @property
     def warmup(self) -> int:
@@ -169,7 +161,7 @@ class MarketZscoreFeature(GlobalFeature):
 
         result = market.with_columns(pl.Series(name="market_zscore", values=zscore))
 
-        return result.select([self.ts_col, "market_zscore"])
+        return df.join(result.select([self.ts_col, "market_zscore"]), on=self.ts_col, how="left")
 
     @property
     def warmup(self) -> int:
@@ -210,7 +202,7 @@ class MarketRollingMinFeature(GlobalFeature):
 def compute_global_features(df: pl.DataFrame, features: list[GlobalFeature]) -> pl.DataFrame:
     """Compute multiple global features and join them."""
     if not features:
-        ts_col = features[0].ts_col if features else "timestamp"
+        ts_col = features[0].ts_col if features else "ts"
         return df.select(ts_col).unique().sort(ts_col)
 
     result = None

@@ -4,7 +4,7 @@ Operate on the FULL multi-pair DataFrame (not per-pair), computing rank/dispersi
 across pairs at each timestamp. Distinct from existing CrossSectionalStat in stat/cross_sectional.py:
 these are richer compositions tested in sf-profit iter-15/16/18/20.
 
-All features expect a DataFrame with `pair` and `timestamp` columns.
+All features expect a DataFrame with `pair` and `ts` columns.
 """
 from dataclasses import dataclass
 from typing import ClassVar
@@ -23,12 +23,12 @@ class CrossSectionalReturnRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_ret_rank_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         return df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.window).over("pair") - 1).alias("_ret"),
         ).with_columns(
-            (pl.col("_ret").rank(method="average").over("timestamp")
-             / pl.col("_ret").count().over("timestamp")).alias(out)
+            (pl.col("_ret").rank(method="average").over(self.ts_col)
+             / pl.col("_ret").count().over(self.ts_col)).alias(out)
         ).drop("_ret")
 
 
@@ -41,14 +41,14 @@ class CrossSectionalAtrRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_atr_rank_{self.period}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         h, l, c = pl.col("high"), pl.col("low"), pl.col("close")
         cp = c.shift(1).over("pair")
         tr = pl.max_horizontal(h - l, (h - cp).abs(), (l - cp).abs())
         df = df.with_columns(tr.rolling_mean(self.period).over("pair").alias("_atr"))
         return df.with_columns(
-            (pl.col("_atr").rank(method="average").over("timestamp")
-             / pl.col("_atr").count().over("timestamp")).alias(out)
+            (pl.col("_atr").rank(method="average").over(self.ts_col)
+             / pl.col("_atr").count().over(self.ts_col)).alias(out)
         ).drop("_atr")
 
 
@@ -61,12 +61,12 @@ class CrossSectionalAdxRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_adx_rank_{self.period}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(pl.col("close").pct_change().abs().over("pair").alias("_absret"))
         df = df.with_columns(pl.col("_absret").rolling_mean(self.period).over("pair").alias("_dx"))
         return df.with_columns(
-            (pl.col("_dx").rank(method="average").over("timestamp")
-             / pl.col("_dx").count().over("timestamp")).alias(out)
+            (pl.col("_dx").rank(method="average").over(self.ts_col)
+             / pl.col("_dx").count().over(self.ts_col)).alias(out)
         ).drop(["_absret", "_dx"])
 
 
@@ -79,11 +79,11 @@ class CrossSectionalRangeRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_range_rank_{self.period}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns((pl.col("high") - pl.col("low")).rolling_mean(self.period).over("pair").alias("_rng"))
         return df.with_columns(
-            (pl.col("_rng").rank(method="average").over("timestamp")
-             / pl.col("_rng").count().over("timestamp")).alias(out)
+            (pl.col("_rng").rank(method="average").over(self.ts_col)
+             / pl.col("_rng").count().over(self.ts_col)).alias(out)
         ).drop("_rng")
 
 
@@ -96,7 +96,7 @@ class CrossSectionalRsiRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_rsi_rank_{self.period}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         ret = pl.col("close").diff().over("pair")
         gain = pl.when(ret > 0).then(ret).otherwise(0.0)
         loss = pl.when(ret < 0).then(-ret).otherwise(0.0)
@@ -108,8 +108,8 @@ class CrossSectionalRsiRank(Feature):
             (pl.col("_avg_gain") / (pl.col("_avg_gain") + pl.col("_avg_loss") + 1e-9)).alias("_rsi")
         )
         return df.with_columns(
-            (pl.col("_rsi").rank(method="average").over("timestamp")
-             / pl.col("_rsi").count().over("timestamp")).alias(out)
+            (pl.col("_rsi").rank(method="average").over(self.ts_col)
+             / pl.col("_rsi").count().over(self.ts_col)).alias(out)
         ).drop(["_avg_gain", "_avg_loss", "_rsi"])
 
 
@@ -122,12 +122,12 @@ class CrossSectionalVolRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_vol_rank_{self.period}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(pl.col("close").pct_change().over("pair").alias("_ret"))
         df = df.with_columns(pl.col("_ret").rolling_std(self.period).over("pair").alias("_rv"))
         return df.with_columns(
-            (pl.col("_rv").rank(method="average").over("timestamp")
-             / pl.col("_rv").count().over("timestamp")).alias(out)
+            (pl.col("_rv").rank(method="average").over(self.ts_col)
+             / pl.col("_rv").count().over(self.ts_col)).alias(out)
         ).drop(["_ret", "_rv"])
 
 
@@ -141,14 +141,14 @@ class CrossSectionalReturnAccelRank(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_retaccel_rank_{self.short}_{self.long}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         c = pl.col("close")
         roc_s = (c / c.shift(self.short).over("pair") - 1)
         roc_l = (c / c.shift(self.long).over("pair") - 1)
         df = df.with_columns((roc_s - roc_l).alias("_accel"))
         return df.with_columns(
-            (pl.col("_accel").rank(method="average").over("timestamp")
-             / pl.col("_accel").count().over("timestamp")).alias(out)
+            (pl.col("_accel").rank(method="average").over(self.ts_col)
+             / pl.col("_accel").count().over(self.ts_col)).alias(out)
         ).drop("_accel")
 
 
@@ -161,12 +161,12 @@ class CrossSectionalDispersion(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_dispersion_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.window).over("pair") - 1).alias("_ret"),
         )
         return df.with_columns(
-            (pl.col("_ret") - pl.col("_ret").mean().over("timestamp")).abs().mean().over("timestamp").alias(out)
+            (pl.col("_ret") - pl.col("_ret").mean().over(self.ts_col)).abs().mean().over(self.ts_col).alias(out)
         ).drop("_ret")
 
 
@@ -179,13 +179,13 @@ class CrossSectionalRetSkew(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_ret_skew_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.window).over("pair") - 1).alias("_ret"),
         )
-        m = pl.col("_ret").mean().over("timestamp")
-        s = pl.col("_ret").std().over("timestamp")
-        skew = ((pl.col("_ret") - m).pow(3)).mean().over("timestamp") / (s.pow(3) + 1e-12)
+        m = pl.col("_ret").mean().over(self.ts_col)
+        s = pl.col("_ret").std().over(self.ts_col)
+        skew = ((pl.col("_ret") - m).pow(3)).mean().over(self.ts_col) / (s.pow(3) + 1e-12)
         return df.with_columns(skew.alias(out)).drop("_ret")
 
 
@@ -198,11 +198,11 @@ class MarketBreadth(Feature):
 
     def compute(self, df, context=None):
         out = f"market_breadth_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.window).over("pair") - 1).alias("_ret"),
         )
-        breadth = (pl.col("_ret") > 0).cast(pl.Float32).mean().over("timestamp")
+        breadth = (pl.col("_ret") > 0).cast(pl.Float32).mean().over(self.ts_col)
         return df.with_columns(breadth.alias(out)).drop("_ret")
 
 
@@ -215,12 +215,12 @@ class RelativeStrengthVsMarket(Feature):
 
     def compute(self, df, context=None):
         out = f"rs_vs_market_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.window).over("pair") - 1).alias("_ret"),
         )
-        m = pl.col("_ret").mean().over("timestamp")
-        s = pl.col("_ret").std().over("timestamp")
+        m = pl.col("_ret").mean().over(self.ts_col)
+        s = pl.col("_ret").std().over(self.ts_col)
         return df.with_columns(((pl.col("_ret") - m) / (s + 1e-9)).alias(out)).drop("_ret")
 
 
@@ -233,11 +233,11 @@ class DivergenceFromMarketMedian(Feature):
 
     def compute(self, df, context=None):
         out = f"div_from_market_{self.period}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.period).over("pair") - 1).alias("_ret"),
         )
-        med = pl.col("_ret").median().over("timestamp")
+        med = pl.col("_ret").median().over(self.ts_col)
         return df.with_columns((pl.col("_ret") - med).alias(out)).drop("_ret")
 
 
@@ -250,11 +250,11 @@ class PairExcessReturn(Feature):
 
     def compute(self, df, context=None):
         out = f"pair_excess_ret_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(
             (pl.col("close") / pl.col("close").shift(self.window).over("pair") - 1).alias("_ret"),
         )
-        m = pl.col("_ret").mean().over("timestamp")
+        m = pl.col("_ret").mean().over(self.ts_col)
         return df.with_columns((pl.col("_ret") - m).alias(out)).drop("_ret")
 
 
@@ -267,9 +267,9 @@ class CrossSectionalBeta(Feature):
 
     def compute(self, df, context=None):
         out = f"cs_beta_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(pl.col("close").pct_change().over("pair").alias("_ret"))
-        df = df.with_columns(pl.col("_ret").median().over("timestamp").alias("_mret"))
+        df = df.with_columns(pl.col("_ret").median().over(self.ts_col).alias("_mret"))
         df = df.with_columns([
             (pl.col("_ret") * pl.col("_mret")).rolling_mean(self.window).over("pair").alias("_xy"),
             pl.col("_ret").rolling_mean(self.window).over("pair").alias("_xmean"),
@@ -291,9 +291,9 @@ class AvgPairwiseCorrMarket(Feature):
 
     def compute(self, df, context=None):
         out = f"pair_market_corr_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(pl.col("close").pct_change().over("pair").alias("_ret"))
-        df = df.with_columns(pl.col("_ret").median().over("timestamp").alias("_mret"))
+        df = df.with_columns(pl.col("_ret").median().over(self.ts_col).alias("_mret"))
         df = df.with_columns([
             (pl.col("_ret") * pl.col("_mret")).rolling_mean(self.window).over("pair").alias("_xy"),
             pl.col("_ret").rolling_mean(self.window).over("pair").alias("_xm"),
@@ -317,9 +317,9 @@ class PairLeadLagCorr(Feature):
 
     def compute(self, df, context=None):
         out = f"leadlag_corr_{self.lag}_{self.window}"
-        df = df.sort(["pair", "timestamp"])
+        df = df.sort(["pair", self.ts_col])
         df = df.with_columns(pl.col("close").pct_change().over("pair").alias("_ret"))
-        df = df.with_columns(pl.col("_ret").median().over("timestamp").alias("_mret"))
+        df = df.with_columns(pl.col("_ret").median().over(self.ts_col).alias("_mret"))
         df = df.with_columns(pl.col("_mret").shift(self.lag).over("pair").alias("_mret_lag"))
         df = df.with_columns([
             (pl.col("_ret") * pl.col("_mret_lag")).rolling_mean(self.window).over("pair").alias("_xy"),

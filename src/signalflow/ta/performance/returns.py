@@ -5,8 +5,7 @@ from typing import ClassVar
 
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -26,10 +25,10 @@ class LogReturn(Feature):
     source: str = "close"
     period: int = 1
 
-    def __post_init__(self) -> None:
-        self.requires = [self.source]
-        self.outputs = [f"logret_{self.period}_{self.source}"]
+    requires: ClassVar[list[str]] = ["{source}"]
+    outputs: ClassVar[list[str]] = ["logret_{period}_{source}"]
 
+    def __post_init__(self) -> None:
         if self.period < 1:
             raise ValueError("period must be >= 1")
 
@@ -61,10 +60,10 @@ class PctReturn(Feature):
     source: str = "close"
     period: int = 1
 
-    def __post_init__(self) -> None:
-        self.requires = [self.source]
-        self.outputs = [f"pct_ret_{self.period}_{self.source}"]
+    requires: ClassVar[list[str]] = ["{source}"]
+    outputs: ClassVar[list[str]] = ["pct_ret_{period}_{source}"]
 
+    def __post_init__(self) -> None:
         if self.period < 1:
             raise ValueError("period must be >= 1")
 

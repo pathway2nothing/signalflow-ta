@@ -6,16 +6,19 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import SignalCategory, Signals, SignalType, detector
+from signalflow.ta._compat import SignalCategory, Signals, SignalType
 from signalflow.ta._compat import SignalDetector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import BollingerVol
 
 
 @dataclass
-@detector("ta/cross_pair_1")
 class CrossPairDetector1(SignalDetector):
     """Cross-pair correlation detector with Bollinger Bands.
+
+    Not registered under V5: it needs a cross-pair ``context=`` channel that
+    ``Transform.compute(df)`` cannot supply. Kept importable as a candidate for a
+    future cross-pair transform role.
 
     Generates signals based on cross-pair z-score correlation and BB position.
 

@@ -1,4 +1,3 @@
-
 import json
 from dataclasses import dataclass, field
 from typing import Any
@@ -10,16 +9,16 @@ import polars as pl
 class AutoFeatureNormalizer:
     """One-class auto normalizer for time-series features (Polars).
 
-    Input DF columns: [timestamp, pair, feature_...]
+    Input DF columns: [ts, pair, feature_...]
     Assumptions:
-      - timestamp strictly increasing within each pair
+      - ts strictly increasing within each pair
       - no missing timestamps per pair
     Guarantees (after warmup):
       - result at time t depends only on last W samples (start-invariant)
       - full reproducibility via fit() artifact
     """
 
-    ts_col: str = "timestamp"
+    ts_col: str = "ts"
     pair_col: str = "pair"
 
     window: int = 256
