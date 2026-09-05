@@ -1,3 +1,5 @@
+SIGNALFLOW_PLUGIN_API = 1
+
 from signalflow.ta import (
     filters,
     global_features,
