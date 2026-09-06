@@ -6,15 +6,14 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.trend import AroonTrend
 
 
 @dataclass
-@detector("ta/aroon_cross_1")
-class AroonCrossDetector1(SignalDetector):
+@detector("detector/aroon_cross")
+class AroonCrossDetector(SignalDetector):
     """Aroon crossover signal detector.
 
     Detects when Aroon Up crosses above Aroon Down (bullish crossover).
@@ -53,7 +52,7 @@ class AroonCrossDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -85,7 +84,7 @@ class AroonCrossDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.col("_signal_type").alias("signal_type"),
-                pl.col(self.aroon_up_col).alias("signal"),
+                pl.col(self.aroon_up_col).alias("score"),
             ]
         )
 

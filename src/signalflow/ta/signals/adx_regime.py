@@ -6,16 +6,15 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.trend import AdxTrend
 
 
 @dataclass
-@detector("ta/adx_regime_1")
-class AdxRegimeDetector1(SignalDetector):
+@detector("detector/adx_di_cross")
+class AdxDiCrossDetector(SignalDetector):
     """ADX trend regime detector with DI crossover.
 
     Uses ADX to confirm trend strength and DI crossover for direction.
@@ -57,7 +56,7 @@ class AdxRegimeDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -94,7 +93,7 @@ class AdxRegimeDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=adx),
+                pl.Series(name="score", values=adx),
             ]
         )
 
@@ -129,8 +128,8 @@ class AdxRegimeDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/adx_regime_2")
-class AdxRegimeDetector2(SignalDetector):
+@detector("detector/adx_regime_rsi")
+class AdxRegimeRsiDetector(SignalDetector):
     """ADX regime detector combining trend/range with RSI.
 
     Uses ADX to determine market regime:
@@ -185,7 +184,7 @@ class AdxRegimeDetector2(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -222,7 +221,7 @@ class AdxRegimeDetector2(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=adx),
+                pl.Series(name="score", values=adx),
             ]
         )
 

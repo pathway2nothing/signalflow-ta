@@ -103,7 +103,8 @@ class AbsReturnVolumeCorr(Feature):
         a = pl.col("close").diff().abs().alias("_a")
         v = pl.col("volume").alias("_v")
         df = df.with_columns([a, v])
-        x = pl.col("_a"); y = pl.col("_v")
+        x = pl.col("_a")
+        y = pl.col("_v")
         df = df.with_columns([
             (x * y).rolling_mean(self.window).alias("_xy"),
             x.rolling_mean(self.window).alias("_xm"),
@@ -129,7 +130,8 @@ class PriceVolumeCorrelation(Feature):
         d = pl.col("close").diff().alias("_d")
         v = pl.col("volume").alias("_v2")
         df = df.with_columns([d, v])
-        x = pl.col("_d"); y = pl.col("_v2")
+        x = pl.col("_d")
+        y = pl.col("_v2")
         df = df.with_columns([
             (x * y).rolling_mean(self.window).alias("_xy"),
             x.rolling_mean(self.window).alias("_xm"),
@@ -230,7 +232,8 @@ class VolPctRankSignedTrend(Feature):
         tr = pl.max_horizontal(h - l, (h - c.shift(1)).abs(), (l - c.shift(1)).abs())
         natr = tr.rolling_mean(self.natr_period) / (c + 1e-9)
         lookback = self.natr_period * 12
-        natr_rank = (natr - natr.rolling_min(lookback)) / (natr.rolling_max(lookback) - natr.rolling_min(lookback) + 1e-9)
+        natr_lo = natr.rolling_min(lookback)
+        natr_rank = (natr - natr_lo) / (natr.rolling_max(lookback) - natr_lo + 1e-9)
         sma_s = c.rolling_mean(self.trend_period)
         sma_l = c.rolling_mean(self.trend_period * 4)
         trend_sign = (sma_s - sma_l).sign()

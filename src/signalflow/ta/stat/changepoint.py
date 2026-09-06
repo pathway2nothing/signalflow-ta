@@ -12,8 +12,7 @@ import numpy as np
 import polars as pl
 from numpy.lib.stride_tricks import sliding_window_view
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -52,7 +51,8 @@ class FocusMaxStatStat(Feature):
         mn = rolling_mean(r, self.period)
         sd = rolling_std(r, self.period)
         z = np.where(np.isfinite(sd) & (sd > 0), (r - mn) / np.maximum(sd, 1e-12), 0.0)
-        n = len(z); w = self.period
+        n = len(z)
+        w = self.period
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
         wins = sliding_window_view(z, w)

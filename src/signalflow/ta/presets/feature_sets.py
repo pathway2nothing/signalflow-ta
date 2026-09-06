@@ -7,7 +7,7 @@ training under walk-forward where levels leak.
 
 from signalflow.enums import ComponentType
 from signalflow.registry import registry
-from signalflow.transform.pipe import FeaturePipe
+from signalflow.transform.pipeline import FeaturePipeline
 
 STATIONARY_CORE: tuple[str, ...] = (
     "momentum/rsi",
@@ -50,11 +50,11 @@ STATIONARY_CORE: tuple[str, ...] = (
 )
 
 
-def stationary_core_pipe(**overrides: dict) -> FeaturePipe:
-    """Build a ``FeaturePipe`` of the ``STATIONARY_CORE`` features.
+def stationary_core_pipe(**overrides: dict) -> FeaturePipeline:
+    """Build a ``FeaturePipeline`` of the ``STATIONARY_CORE`` features.
 
     Override per-feature parameters by passing dicts keyed on registry name,
     e.g. ``stationary_core_pipe(**{"momentum/rsi": {"period": 21}})``.
     """
     transforms = [registry.create(ComponentType.TRANSFORM, name, **overrides.get(name, {})) for name in STATIONARY_CORE]
-    return FeaturePipe(*transforms)
+    return FeaturePipeline(*transforms)

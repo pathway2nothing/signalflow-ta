@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("signalflow.core", reason="pre-V5 test module: written against the old signalflow.core API")
+
 from datetime import datetime, timedelta
 from typing import Any
 

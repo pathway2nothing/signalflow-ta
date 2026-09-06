@@ -14,7 +14,7 @@ Exported names (the 11 the sweep redirects to here):
 
 * ``Feature``            - per-pair indicator base (OLD ``feature.base.Feature``)
 * ``GlobalFeature``      - cross-pair feature base
-* ``FeaturePipeline``    - ordered feature composition (alias of ``FeaturePipe``)
+* ``FeaturePipeline``    - ordered feature composition (the core class, re-exported)
 * ``SignalDetector``     - OLD detector surface mapped onto the ``signal`` column
 * ``SignalFeature``      - meta-features over signal history
 * ``feature`` / ``detector`` - registration decorators (re-export of core decorators)
@@ -37,6 +37,7 @@ Key adaptations:
 """
 
 
+import contextlib
 from abc import ABCMeta
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
@@ -47,26 +48,33 @@ from signalflow.decorators import detector as _v5_detector
 from signalflow.decorators import feature as _v5_feature
 from signalflow.detector import SignalDetector as _V5SignalDetector
 from signalflow.enums import SIGNAL_COL, Signal, SignalCategory
-from signalflow.transform import FeaturePipe as _V5FeaturePipe
-from signalflow.transform.base import Transform
+from signalflow.transform import FeaturePipeline
+from signalflow.transform.base import Transform, ensure_sorted
 
 __all__ = [
     "Feature",
-    "GlobalFeature",
     "FeaturePipeline",
+    "GlobalFeature",
+    "SignalCategory",
     "SignalDetector",
     "SignalFeature",
-    "feature",
-    "detector",
-    "Signals",
     "SignalType",
-    "SignalCategory",
+    "Signals",
+    "detector",
+    "feature",
 ]
 
 SignalType = Signal
 """OLD name for the discrete-signal enum (RISE / FALL / NONE)."""
 
 _ACTIVE = {Signal.RISE.value, Signal.FALL.value}
+
+
+def _sorted(df: pl.DataFrame, group_col: str, ts_col: str) -> pl.DataFrame:
+    """(group, ts)-ordered frame without a copy when it already is (the core fast path)."""
+    if (group_col, ts_col) == ("pair", "ts"):
+        return ensure_sorted(df)
+    return df.sort([group_col, ts_col])
 
 
 def _tolerant(v5_decorator):
@@ -165,7 +173,7 @@ class Feature(Transform, metaclass=FeatureMeta):
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         """Compute the feature for all pairs (OLD contract)."""
-        sorted_df = df.sort([self.group_col, self.ts_col])
+        sorted_df = _sorted(df, self.group_col, self.ts_col)
         return sorted_df.group_by(self.group_col, maintain_order=True).map_groups(self.compute_pair)
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -205,30 +213,6 @@ class GlobalFeature(Feature):
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         """Subclasses override with cross-pair aggregation logic."""
         raise NotImplementedError(f"{type(self).__name__} must implement compute()")
-
-
-class FeaturePipeline(_V5FeaturePipe):
-    """OLD feature-pipeline surface on top of ``FeaturePipe``.
-
-    The OLD API accepted ``FeaturePipeline(features=[...])`` and exposed
-    ``.compute(df, context=None)``. ``FeaturePipe`` takes ``*transforms`` and
-    ``.compute(df)``. This subclass bridges both call styles.
-    """
-
-    def __init__(self, features: list[Transform] | None = None, *extra: Transform):
-        if features is None:
-            features = []
-        if isinstance(features, (list, tuple)):
-            transforms = (*features, *extra)
-        else:
-            transforms = (features, *extra)
-        super().__init__(*transforms)
-
-    def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        cur = df
-        for t in self.transforms:
-            cur = t.compute(cur)
-        return cur
 
 
 @dataclass(frozen=True)
@@ -297,7 +281,7 @@ class SignalDetector(_V5SignalDetector):
         return 0
 
     def compute(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
-        return self.detect_v5(df.sort([self.pair_col, self.ts_col]), context=context)
+        return self.detect_v5(_sorted(df, self.pair_col, self.ts_col), context=context)
 
     def detect_v5(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         """Bridge: run OLD ``detect`` and project onto the ``signal`` column."""
@@ -323,7 +307,7 @@ class SignalDetector(_V5SignalDetector):
 
     def preprocess(self, df: pl.DataFrame, context: dict[str, Any] | None = None) -> pl.DataFrame:
         """Compute ``self.features`` onto the frame (OLD preprocess)."""
-        out = df.sort([self.pair_col, self.ts_col])
+        out = _sorted(df, self.pair_col, self.ts_col)
         feats = self.features
         if feats is None:
             return out
@@ -363,10 +347,8 @@ class SignalFeature(Transform):
         out = cls.__dict__.get("outputs")
         if isinstance(out, (list, tuple)):
             cls._output_templates = list(out)
-            try:
+            with contextlib.suppress(AttributeError):
                 delattr(cls, "outputs")
-            except AttributeError:
-                pass
 
     @property
     def outputs(self) -> list[str]:

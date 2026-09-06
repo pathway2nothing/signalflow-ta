@@ -9,11 +9,9 @@ from signalflow.ta import (
     signal_features,
     signals,
 )
-from signalflow.ta.probabilistic import (
-    BayesianShrinkageZscore,
-    GMMVolRegime3State,
-    GMMVolRegime5State,
-    PosteriorReversalProb,
+from signalflow.ta.divergence import (
+    MacdDivergence,
+    RsiDivergence,
 )
 from signalflow.ta.filters import (
     AdaptiveEMAError,
@@ -27,8 +25,8 @@ from signalflow.ta.filters import (
 from signalflow.ta.microstructure import (
     BodyToRangeRatio,
     ClosePositionInBar,
-    HiLoMedianGap,
     HighLowImbalance,
+    HiLoMedianGap,
     LowerWickPersistence,
     RangeExpansion,
     RangeFragmentation,
@@ -39,27 +37,6 @@ from signalflow.ta.microstructure import (
     WickToBodyLower,
     WickToBodyRatio,
     WickToBodyUpper,
-)
-from signalflow.ta.path_shape import (
-    DirectionalEntropy,
-    ErrorAutoCorrelation,
-    LongestStreak,
-    MaxConsecutiveGainRun,
-    MaxConsecutiveLossRun,
-    PathEfficiency,
-    PathRoughness,
-    PathSimplicity,
-    PathTortuosity,
-    ReturnAutocorrShort,
-    ReturnSignEntropy,
-    ReversalCount,
-    VolatilityClusterScore,
-    VolumeEntropy,
-    ZeroCrossingRate,
-)
-from signalflow.ta.divergence import (
-    MacdDivergence,
-    RsiDivergence,
 )
 from signalflow.ta.momentum import (
     AccelerationMom,
@@ -110,7 +87,30 @@ from signalflow.ta.overlap import (
     WmaSmooth,
     ZlmaSmooth,
 )
+from signalflow.ta.path_shape import (
+    DirectionalEntropy,
+    ErrorAutoCorrelation,
+    LongestStreak,
+    MaxConsecutiveGainRun,
+    MaxConsecutiveLossRun,
+    PathEfficiency,
+    PathRoughness,
+    PathSimplicity,
+    PathTortuosity,
+    ReturnAutocorrShort,
+    ReturnSignEntropy,
+    ReversalCount,
+    VolatilityClusterScore,
+    VolumeEntropy,
+    ZeroCrossingRate,
+)
 from signalflow.ta.performance import LogReturn, PctReturn
+from signalflow.ta.probabilistic import (
+    BayesianShrinkageZscore,
+    GMMVolRegime3State,
+    GMMVolRegime5State,
+    PosteriorReversalProb,
+)
 from signalflow.ta.signal_features import (
     AdaptiveConfidence,
     BayesianPosterior,

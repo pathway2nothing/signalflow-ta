@@ -6,8 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta._numba_kernels import (
     historical_vol_kernel as _historical_vol_kernel,
 )

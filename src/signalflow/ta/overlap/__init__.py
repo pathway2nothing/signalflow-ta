@@ -41,7 +41,6 @@ from signalflow.ta.overlap.smoothers import (
     WmaSmooth,
 )
 
-
 __all__ = [
     "AlmaSmooth",
     "DemaSmooth",

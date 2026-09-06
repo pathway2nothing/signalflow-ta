@@ -7,8 +7,7 @@ import numpy as np
 import polars as pl
 from scipy.signal import hilbert
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 def _detrend_and_hilbert(values: np.ndarray, period: int, idx: int) -> tuple[float, float]:

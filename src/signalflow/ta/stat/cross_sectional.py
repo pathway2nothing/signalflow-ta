@@ -9,8 +9,7 @@ from typing import Any, ClassVar
 
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import GlobalFeature
+from signalflow.ta._compat import GlobalFeature, feature
 
 
 @dataclass

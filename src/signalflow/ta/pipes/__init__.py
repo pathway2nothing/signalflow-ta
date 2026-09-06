@@ -2,9 +2,7 @@
 
 
 from signalflow.ta._compat import Feature
-
 from signalflow.ta.pipes.divergence import divergence_pipe
-
 from signalflow.ta.pipes.momentum import (
     momentum_core_pipe,
     momentum_kinematics_pipe,
@@ -12,15 +10,12 @@ from signalflow.ta.pipes.momentum import (
     momentum_oscillators_pipe,
     momentum_pipe,
 )
-
 from signalflow.ta.pipes.overlap import (
     overlap_pipe,
     price_transforms_pipe,
     smoothers_pipe,
 )
-
 from signalflow.ta.pipes.performance import performance_pipe
-
 from signalflow.ta.pipes.stat import (
     stat_complexity_pipe,
     stat_cycle_pipe,
@@ -33,14 +28,12 @@ from signalflow.ta.pipes.stat import (
     stat_realized_vol_pipe,
     stat_regression_pipe,
 )
-
 from signalflow.ta.pipes.trend import (
     trend_detection_pipe,
     trend_pipe,
     trend_stops_pipe,
     trend_strength_pipe,
 )
-
 from signalflow.ta.pipes.volatility import (
     volatility_bands_pipe,
     volatility_energy_pipe,
@@ -48,7 +41,6 @@ from signalflow.ta.pipes.volatility import (
     volatility_pipe,
     volatility_range_pipe,
 )
-
 from signalflow.ta.pipes.volume import (
     volume_cumulative_pipe,
     volume_dynamics_pipe,

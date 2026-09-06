@@ -251,7 +251,8 @@ class LinRegSlopeRatio(Feature):
             return df.with_columns(pl.Series(out, np.full(n, np.nan, dtype=np.float32)))
         ss, _, _, _, _ = _linreg_slope_intercept(c, self.short)
         sl, _, _, _, _ = _linreg_slope_intercept(c, self.long)
-        full_s = np.full(n, np.nan); full_l = np.full(n, np.nan)
+        full_s = np.full(n, np.nan)
+        full_l = np.full(n, np.nan)
         full_s[self.short - 1:] = ss
         full_l[self.long - 1:] = sl
         sign_prod = np.sign(full_s) * np.sign(full_l)

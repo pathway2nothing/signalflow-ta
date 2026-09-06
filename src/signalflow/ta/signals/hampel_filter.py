@@ -6,8 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.signals.filters import SignalFilter
 
 
@@ -64,8 +63,8 @@ def _adaptive_hampel_filter(
 
 
 @dataclass
-@detector("ta/hampel_filter_1")
-class HampelFilterDetector1(SignalDetector):
+@detector("detector/hampel_anomaly")
+class HampelAnomalyDetector(SignalDetector):
     """Hampel filter-based anomaly detector.
 
     Detects price deviations from the Hampel-filtered baseline.
@@ -107,7 +106,7 @@ class HampelFilterDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -137,7 +136,7 @@ class HampelFilterDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=score),
+                pl.Series(name="score", values=score),
             ]
         )
 
@@ -172,8 +171,8 @@ class HampelFilterDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/hampel_filter_2")
-class HampelFilterDetector2(SignalDetector):
+@detector("detector/adaptive_hampel_anomaly")
+class AdaptiveHampelAnomalyDetector(SignalDetector):
     """Adaptive Hampel filter-based anomaly detector.
 
     Uses separate volatility window for MAD calculation, making it
@@ -217,7 +216,7 @@ class HampelFilterDetector2(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -247,7 +246,7 @@ class HampelFilterDetector2(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=score),
+                pl.Series(name="score", values=score),
             ]
         )
 

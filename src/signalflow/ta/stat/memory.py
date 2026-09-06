@@ -6,8 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -109,19 +108,11 @@ class AutocorrStat(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_acf{lag}_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
-        n = len(values)
-
-        acf = np.full(n, np.nan)
-        for i in range(self.period + self.lag - 1, n):
-            x = values[i - self.period + 1 : i + 1]
-            x_lag = values[i - self.period + 1 - self.lag : i + 1 - self.lag]
-
-            if len(x) == len(x_lag) and len(x) > 0:
-                corr = np.corrcoef(x, x_lag)[0, 1]
-                acf[i] = corr if not np.isnan(corr) else 0
-
-        return df.with_columns(pl.Series(name=f"{self.source_col}_acf{self.lag}_{self.period}", values=acf))
+        x = pl.col(self.source_col).cast(pl.Float64)
+        corr = pl.rolling_corr(x, x.shift(self.lag), window_size=self.period)
+        ready = pl.int_range(pl.len()) >= self.period + self.lag - 1
+        expr = pl.when(ready).then(pl.when(corr.is_nan()).then(0.0).otherwise(corr)).otherwise(None)
+        return df.with_columns(expr.alias(f"{self.source_col}_acf{self.lag}_{self.period}"))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30, "lag": 1},
@@ -160,24 +151,12 @@ class VarianceRatioStat(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_vr{k}_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
-        n = len(values)
-
-        log_ret = np.diff(np.log(values), prepend=np.nan)
-
-        vr = np.full(n, np.nan)
-        for i in range(self.period + self.k - 1, n):
-            window_1 = log_ret[i - self.period + 1 : i + 1]
-
-            log_ret_k = np.log(values[i - self.period + 1 + self.k : i + 1]) - np.log(
-                values[i - self.period + 1 : i + 1 - self.k]
-            )
-
-            var_1 = np.nanvar(window_1, ddof=1)
-            var_k = np.nanvar(log_ret_k, ddof=1)
-
-            if var_1 > 1e-10:
-                vr[i] = var_k / (self.k * var_1)
+        logc = pl.col(self.source_col).cast(pl.Float64).log()
+        var_1 = logc.diff(1).rolling_var(self.period, ddof=1)
+        var_k = logc.diff(self.k).rolling_var(self.period - self.k, ddof=1)
+        ready = pl.int_range(pl.len()) >= self.period + self.k - 1
+        vr_expr = pl.when(ready & (var_1 > 1e-10)).then(var_k / (self.k * var_1)).otherwise(None)
+        vr = df.select(vr_expr.alias("_vr")).get_column("_vr").to_numpy()
 
         return df.with_columns(pl.Series(name=f"{self.source_col}_vr{self.k}_{self.period}", values=vr))
 

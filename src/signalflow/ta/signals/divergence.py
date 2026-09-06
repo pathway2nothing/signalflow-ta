@@ -6,8 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.momentum import MacdMom, RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 
@@ -107,7 +106,7 @@ def _build_signals_df(
             pair_col,
             ts_col,
             pl.Series(name="signal_type", values=signal_type),
-            pl.Series(name="signal", values=signal_values),
+            pl.Series(name="score", values=signal_values),
         ]
     )
 
@@ -150,7 +149,7 @@ def _detect_multi_pair(
                     detector.pair_col,
                     detector.ts_col,
                     pl.lit(0).alias("signal_type"),
-                    pl.lit(0.0).alias("signal"),
+                    pl.lit(0.0).alias("score"),
                 ]
             )
         )
@@ -159,8 +158,8 @@ def _detect_multi_pair(
 
 
 @dataclass
-@detector("ta/divergence_1")
-class DivergenceDetector1(SignalDetector):
+@detector("detector/rsi_divergence")
+class RsiDivergenceDetector(SignalDetector):
     """RSI divergence detector.
 
     Detects bullish and bearish divergences between price and RSI.
@@ -221,8 +220,8 @@ class DivergenceDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/divergence_2")
-class DivergenceDetector2(SignalDetector):
+@detector("detector/rsi_divergence_offset")
+class RsiDivergenceOffsetDetector(SignalDetector):
     """RSI divergence detector with offset subsampling.
 
     Subsamples every ``offset``-th bar before running extrema / divergence
@@ -297,8 +296,8 @@ class DivergenceDetector2(SignalDetector):
 
 
 @dataclass
-@detector("ta/divergence_3")
-class DivergenceDetector3(SignalDetector):
+@detector("detector/macd_divergence")
+class MacdDivergenceDetector(SignalDetector):
     """MACD divergence detector.
 
     Detects bullish and bearish divergences between price and MACD histogram.

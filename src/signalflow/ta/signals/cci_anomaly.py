@@ -6,16 +6,15 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import CciMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@detector("ta/cci_anomaly_1")
-class CciAnomalyDetector1(SignalDetector):
+@detector("detector/cci_anomaly")
+class CciAnomalyDetector(SignalDetector):
     """CCI statistical anomaly detector.
 
     Detects extreme CCI deviations using rolling z-score normalization.
@@ -59,7 +58,7 @@ class CciAnomalyDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -91,7 +90,7 @@ class CciAnomalyDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 signal_expr.otherwise(pl.lit(SignalType.NONE.value)).alias("signal_type"),
-                pl.col(self.zscore_col).alias("signal"),
+                pl.col(self.zscore_col).alias("score"),
             ]
         )
 

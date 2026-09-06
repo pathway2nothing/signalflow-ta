@@ -6,15 +6,14 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.momentum import StochMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@detector("ta/stochastic_1")
-class StochasticDetector1(SignalDetector):
+@detector("detector/stochastic_cross")
+class StochasticCrossDetector(SignalDetector):
     """Stochastic oscillator crossover detector.
 
     Generates signals on %K/%D crossovers in extreme zones.
@@ -64,7 +63,7 @@ class StochasticDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -101,7 +100,7 @@ class StochasticDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=stoch_k),
+                pl.Series(name="score", values=stoch_k),
             ]
         )
 
@@ -136,8 +135,8 @@ class StochasticDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/stochastic_2")
-class StochasticDetector2(SignalDetector):
+@detector("detector/stochastic_extreme_zscore")
+class StochasticExtremeZscoreDetector(SignalDetector):
     """Stochastic oscillator extreme zone detector with z-score.
 
     Generates signals when Stochastic reaches extreme z-score values.
@@ -189,7 +188,7 @@ class StochasticDetector2(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -225,7 +224,7 @@ class StochasticDetector2(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=zscore),
+                pl.Series(name="score", values=zscore),
             ]
         )
 

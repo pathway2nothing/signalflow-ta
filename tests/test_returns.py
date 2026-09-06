@@ -72,7 +72,7 @@ def test_pct_return_values_match_definition() -> None:
         assert np.isclose(got[t], close[t] / close[t - 3] - 1.0)
 
 
-@pytest.mark.parametrize("name", ["ta/isolation_forest_1", "ta/isolation_forest_3"])
+@pytest.mark.parametrize("name", ["detector/isoforest_returns", "detector/isoforest_cross_sectional"])
 def test_isolation_forest_features_compute(name: str) -> None:
     df = _ohlcv(500)
     detector = registry.create(ComponentType.TRANSFORM, name)

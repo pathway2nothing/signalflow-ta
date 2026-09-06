@@ -7,16 +7,15 @@ import numpy as np
 import polars as pl
 from sklearn.ensemble import IsolationForest
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.performance import LogReturn
 from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@detector("ta/isolation_forest_1")
-class IsolationForestDetector1(SignalDetector):
+@detector("detector/isoforest_returns")
+class IsoForestReturnsDetector(SignalDetector):
     """Isolation Forest anomaly detector using log returns.
 
     Detects anomalies in log return distribution using Isolation Forest.
@@ -35,6 +34,7 @@ class IsolationForestDetector1(SignalDetector):
     n_estimators: int = 100
     anomaly_threshold: float = -0.5
     direction: str = "long"
+    learned: ClassVar[bool] = True
     filters: list[SignalFilter] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -61,7 +61,7 @@ class IsolationForestDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -110,7 +110,7 @@ class IsolationForestDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=anomaly_scores),
+                pl.Series(name="score", values=anomaly_scores),
             ]
         )
 
@@ -144,8 +144,8 @@ class IsolationForestDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/isolation_forest_2")
-class IsolationForestDetector2(SignalDetector):
+@detector("detector/isoforest_rsi")
+class IsoForestRsiDetector(SignalDetector):
     """Isolation Forest anomaly detector using RSI.
 
     Detects anomalies in RSI distribution using Isolation Forest.
@@ -166,6 +166,7 @@ class IsolationForestDetector2(SignalDetector):
     rsi_long_threshold: float = 30.0
     rsi_short_threshold: float = 70.0
     direction: str = "long"
+    learned: ClassVar[bool] = True
     filters: list[SignalFilter] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -192,7 +193,7 @@ class IsolationForestDetector2(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -241,7 +242,7 @@ class IsolationForestDetector2(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=anomaly_scores),
+                pl.Series(name="score", values=anomaly_scores),
             ]
         )
 
@@ -275,8 +276,8 @@ class IsolationForestDetector2(SignalDetector):
 
 
 @dataclass
-@detector("ta/isolation_forest_3")
-class IsolationForestDetector3(SignalDetector):
+@detector("detector/isoforest_cross_sectional")
+class IsoForestCrossSectionalDetector(SignalDetector):
     """Cross-sectional Isolation Forest detector.
 
     Detects anomalies using both time-series and cross-sectional features.
@@ -304,6 +305,7 @@ class IsolationForestDetector3(SignalDetector):
     rsi_long_threshold: float = 30.0
     rsi_short_threshold: float = 70.0
     direction: str = "long"
+    learned: ClassVar[bool] = True
     filters: list[SignalFilter] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -334,7 +336,7 @@ class IsolationForestDetector3(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -407,7 +409,7 @@ class IsolationForestDetector3(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=anomaly_scores),
+                pl.Series(name="score", values=anomaly_scores),
             ]
         )
 

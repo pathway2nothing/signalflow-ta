@@ -15,8 +15,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 BTC_PAIR = "BTCUSDT"
 

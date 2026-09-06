@@ -13,19 +13,11 @@ _ta = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "sign
 if _ta not in signalflow.__path__:
     signalflow.__path__.append(_ta)
 
-collect_ignore = [
-    "test_signal_features.py",
-    "test_signal_features_v2.py",
-    "test_signals.py",
-    "test_indicators.py",
-]
-
 from datetime import datetime, timedelta
 
 import numpy as np
 import polars as pl
 import pytest
-
 
 SEED = 42
 DEFAULT_PAIR = "BTCUSDT"

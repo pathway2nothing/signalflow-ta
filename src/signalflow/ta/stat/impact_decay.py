@@ -16,8 +16,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, rolling_sum, truncated_ema
 
 

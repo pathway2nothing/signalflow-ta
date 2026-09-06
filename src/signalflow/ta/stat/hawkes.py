@@ -20,8 +20,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta.stat._causal_helpers import log_returns, rolling_std, truncated_ema
 
 
@@ -158,7 +157,8 @@ class HawkesSignedJumpsStat(Feature):
         r = log_returns(c)
         sd = rolling_std(r, self.period)
         z = np.where(np.isfinite(sd) & (sd > 0), r / np.maximum(sd, 1e-12), 0.0)
-        jp = (z > 2.0).astype(np.float64); jn = (z < -2.0).astype(np.float64)
+        jp = (z > 2.0).astype(np.float64)
+        jn = (z < -2.0).astype(np.float64)
         out = truncated_ema(jp, self.tau) - truncated_ema(jn, self.tau)
         return df.with_columns(pl.Series(out_col, out, dtype=pl.Float64))
 

@@ -75,9 +75,9 @@ def test_feature_compute(family, factory, frame):
 
 
 DETECTORS = [
-    "AdxRegimeDetector1",
-    "BollingerBandDetector1",
-    "CciAnomalyDetector1",
+    "AdxDiCrossDetector",
+    "BollingerBreakoutDetector",
+    "CciAnomalyDetector",
 ]
 
 
@@ -91,20 +91,20 @@ def test_detector_compute(name, frame):
 
 
 def test_detector_signal_values(frame):
-    det = ta.signals.AdxRegimeDetector1()
+    det = ta.signals.AdxDiCrossDetector()
     out = det.compute(frame)
     vals = set(out["signal"].unique().to_list())
     assert vals <= {"rise", "fall", "none"}, f"unexpected signal values {vals}"
 
 
 def test_feature_pipe_and_forecast_model(dataset):
-    pipe = sf.FeaturePipe(
+    pipe = sf.FeaturePipeline(
         ta.RsiMom(period=14),
         ta.EmaSmooth(period=20),
         ta.AtrVol(period=14),
     )
     assert pipe.outputs
-    model = sf.ForecastModel(target=sf.FixedHorizon(12), features=pipe, n_folds=3)
+    model = sf.ForecastModel(target=sf.FixedHorizon(12), features=pipe, cv=sf.KFold(3))
     model.fit(dataset)
     pred = model.predict(dataset)
     assert "p_rise" in pred.columns

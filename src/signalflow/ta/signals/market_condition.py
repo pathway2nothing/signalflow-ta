@@ -6,15 +6,14 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import SignalCategory, Signals, SignalType
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalCategory, SignalDetector, Signals, SignalType
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-class MarketConditionDetector1(SignalDetector):
+class RsiGlobalVolDetector(SignalDetector):
     """Market condition detector using RSI and global volatility.
 
     Not registered under V5: it needs a ``global_features`` ``context=`` channel that
@@ -64,7 +63,7 @@ class MarketConditionDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -72,7 +71,7 @@ class MarketConditionDetector1(SignalDetector):
 
     def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         if context is None or "global_features" not in context:
-            raise ValueError("MarketConditionDetector1 requires 'global_features' in context")
+            raise ValueError("RsiGlobalVolDetector requires 'global_features' in context")
 
         global_feats = context["global_features"]
 
@@ -106,7 +105,7 @@ class MarketConditionDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.col(self.rsi_col).alias("signal"),
+                pl.col(self.rsi_col).alias("score"),
             ]
         )
 
@@ -141,7 +140,7 @@ class MarketConditionDetector1(SignalDetector):
 
 
 @dataclass
-class MarketConditionDetector2(SignalDetector):
+class RsiVsMarketDetector(SignalDetector):
     """Market condition detector with RSI comparison to market RSI.
 
     Not registered under V5: it needs a ``global_features`` ``context=`` channel that
@@ -196,7 +195,7 @@ class MarketConditionDetector2(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -204,7 +203,7 @@ class MarketConditionDetector2(SignalDetector):
 
     def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         if context is None or "global_features" not in context:
-            raise ValueError("MarketConditionDetector2 requires 'global_features' in context")
+            raise ValueError("RsiVsMarketDetector requires 'global_features' in context")
 
         global_feats = context["global_features"]
         df = features.join(global_feats, on=self.ts_col, how="left")
@@ -250,7 +249,7 @@ class MarketConditionDetector2(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=rsi),
+                pl.Series(name="score", values=rsi),
             ]
         )
 
@@ -283,7 +282,7 @@ class MarketConditionDetector2(SignalDetector):
 
 
 @dataclass
-class MarketConditionDetector3(SignalDetector):
+class ZscoreRollingMinDetector(SignalDetector):
     """Advanced market condition detector with z-score and rolling min.
 
     Not registered under V5: it needs a ``global_features`` ``context=`` channel that
@@ -343,7 +342,7 @@ class MarketConditionDetector3(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -351,7 +350,7 @@ class MarketConditionDetector3(SignalDetector):
 
     def _detect_single(self, features: pl.DataFrame, context: dict[str, Any] | None = None) -> Signals:
         if context is None or "global_features" not in context:
-            raise ValueError("MarketConditionDetector3 requires 'global_features' in context")
+            raise ValueError("ZscoreRollingMinDetector requires 'global_features' in context")
 
         global_feats = context["global_features"]
         df = features.join(global_feats, on=self.ts_col, how="left")
@@ -415,7 +414,7 @@ class MarketConditionDetector3(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=zscore),
+                pl.Series(name="score", values=zscore),
             ]
         )
 

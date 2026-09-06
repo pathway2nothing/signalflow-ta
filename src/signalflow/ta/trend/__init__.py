@@ -13,6 +13,14 @@ from signalflow.ta.trend.detection import (
     QstickTrend,
     TtmTrend,
 )
+from signalflow.ta.trend.extensions import (
+    DiBalance,
+    EntropyRatio,
+    HilbertAmplitudeSlope,
+    NatrXDiBalance,
+    RsiDivPolarity,
+    UpDownEntropyAsymmetry,
+)
 from signalflow.ta.trend.regime import (
     LinRegDiffDirection,
     LinRegDirection,
@@ -29,7 +37,6 @@ from signalflow.ta.trend.stops import (
     PsarTrend,
     SupertrendTrend,
 )
-from signalflow.ta.trend.strength_causal import AdxTrendCausal
 from signalflow.ta.trend.strength import (
     AdxTrend,
     AroonTrend,
@@ -45,14 +52,7 @@ from signalflow.ta.trend.strength import (
     ViscosityTrend,
     VortexTrend,
 )
-from signalflow.ta.trend.extensions import (
-    DiBalance,
-    EntropyRatio,
-    HilbertAmplitudeSlope,
-    NatrXDiBalance,
-    RsiDivPolarity,
-    UpDownEntropyAsymmetry,
-)
+from signalflow.ta.trend.strength_causal import AdxTrendCausal
 
 __all__ = [
     "AdxTrend",
@@ -61,19 +61,24 @@ __all__ = [
     "ChandelierTrend",
     "ChopTrend",
     "CkspTrend",
+    "DiBalance",
     "DpoTrend",
+    "EntropyRatio",
+    "HilbertAmplitudeSlope",
     "HiloTrend",
     "IchimokuTrend",
     "LinRegDiffDirection",
     "LinRegDirection",
     "LinRegPriceDiff",
     "MarketImpedanceTrend",
+    "NatrXDiBalance",
     "OrderParameterTrend",
     "PsarTrend",
     "QstickTrend",
     "RCTimeConstantTrend",
     "ReynoldsTrend",
     "RotationalInertiaTrend",
+    "RsiDivPolarity",
     "SNRTrend",
     "SmaDiffDirection",
     "SmaDirection",
@@ -81,14 +86,9 @@ __all__ = [
     "SusceptibilityTrend",
     "TtmTrend",
     "TwoMaRegime",
+    "UpDownEntropyAsymmetry",
     "VhfTrend",
     "ViscosityTrend",
     "VortexTrend",
     "WilliamsAlligatorRegime",
-    "DiBalance",
-    "EntropyRatio",
-    "HilbertAmplitudeSlope",
-    "NatrXDiBalance",
-    "RsiDivPolarity",
-    "UpDownEntropyAsymmetry",
 ]

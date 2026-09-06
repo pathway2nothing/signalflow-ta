@@ -11,7 +11,7 @@
 **Technical analysis plugin for SignalFlow - 248 indicator features + 21 signal detectors**
 
 <p>
-<a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.8.2-7c3aed" alt="Version"></a>
+<a href="https://pypi.org/project/signalflow-ta/"><img src="https://img.shields.io/badge/version-0.8.5-7c3aed" alt="Version"></a>
 <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12+-3b82f6?logo=python&logoColor=white" alt="Python 3.12+"></a>
 <a href="https://signalflow-trading.com"><img src="https://img.shields.io/badge/docs-signalflow--trading.com-7c3aed" alt="Docs"></a>
 </p>
@@ -48,7 +48,7 @@ import signalflow.ta as ta
 
 from signalflow.ta.momentum import RsiMom, MacdMom
 from signalflow.ta.volatility import BollingerVol
-from signalflow.ta.signals import BollingerBandDetector1, RsiZscoreFilter
+from signalflow.ta.signals import BollingerBreakoutDetector, RsiZscoreFilter
 
 # Use as features
 rsi = RsiMom(period=14)
@@ -56,7 +56,7 @@ macd = MacdMom(fast=12, slow=26, signal=9)
 bb = BollingerVol(period=20, std_dev=2.0)
 
 # Use as detector with filters
-detector = BollingerBandDetector1(
+detector = BollingerBreakoutDetector(
     period=20, std=2.0, rsi_period=14,
     direction="long",
     filters=[RsiZscoreFilter(threshold=-1.5)]
@@ -342,16 +342,31 @@ Each existing module gained new classes from sf-profit feature research. Selecte
 ## Signal Detectors (21)
 
 All detectors support configurable `direction` (`"long"`, `"short"`, `"both"`) and optional filters.
+Detectors marked *learned* fit a model on the frame they detect on, so their signals are in-sample and a `Flow` warns about it.
 
-| Category | Detectors |
-|----------|-----------|
-| **Momentum** | RSI Anomaly, CCI Anomaly, Stochastic ×2 |
-| **Volume** | MFI ×2 |
-| **Trend** | Aroon Cross, ADX Regime ×2 |
-| **Volatility** | Bollinger Breakout, Keltner ×2 |
-| **Divergence** | Divergence ×3 (Price/RSI, Price/MACD) |
-| **Filter-based** | Hampel ×2, Adaptive Kalman |
-| **ML-based** | Isolation Forest ×3 (Returns, RSI, Cross-Sectional) |
+| Registry name | Class | What it does |
+|---|---|---|
+| `detector/adaptive_hampel_anomaly` | `AdaptiveHampelAnomalyDetector` | Adaptive Hampel filter-based anomaly detector |
+| `detector/adx_di_cross` | `AdxDiCrossDetector` | ADX trend regime detector with DI crossover |
+| `detector/adx_regime_rsi` | `AdxRegimeRsiDetector` | ADX regime detector combining trend/range with RSI |
+| `detector/aroon_cross` | `AroonCrossDetector` | Aroon crossover signal detector |
+| `detector/bollinger_breakout` | `BollingerBreakoutDetector` | Bollinger Band breakout detector |
+| `detector/cci_anomaly` | `CciAnomalyDetector` | CCI statistical anomaly detector |
+| `detector/hampel_anomaly` | `HampelAnomalyDetector` | Hampel filter-based anomaly detector |
+| `detector/isoforest_cross_sectional` | `IsoForestCrossSectionalDetector` (learned) | Cross-sectional Isolation Forest detector |
+| `detector/isoforest_returns` | `IsoForestReturnsDetector` (learned) | Isolation Forest anomaly detector using log returns |
+| `detector/isoforest_rsi` | `IsoForestRsiDetector` (learned) | Isolation Forest anomaly detector using RSI |
+| `detector/kalman_filter` | `KalmanFilterDetector` | Adaptive Kalman Filter-based signal detector |
+| `detector/keltner_macd_rsi` | `KeltnerMacdRsiDetector` | Keltner Channel detector with MACD and RSI conditions |
+| `detector/keltner_rsi_zscore` | `KeltnerRsiZscoreDetector` | Keltner Channel detector with RSI z-score condition |
+| `detector/macd_divergence` | `MacdDivergenceDetector` | MACD divergence detector |
+| `detector/mfi_extreme` | `MfiExtremeDetector` | Money Flow Index extreme zone detector |
+| `detector/mfi_zscore_reversal` | `MfiZscoreReversalDetector` | Money Flow Index with z-score and reversal detection |
+| `detector/rsi_anomaly` | `RsiAnomalyDetector` | RSI statistical anomaly detector |
+| `detector/rsi_divergence` | `RsiDivergenceDetector` | RSI divergence detector |
+| `detector/rsi_divergence_offset` | `RsiDivergenceOffsetDetector` | RSI divergence detector with offset subsampling |
+| `detector/stochastic_cross` | `StochasticCrossDetector` | Stochastic oscillator crossover detector |
+| `detector/stochastic_extreme_zscore` | `StochasticExtremeZscoreDetector` | Stochastic oscillator extreme zone detector with z-score |
 
 ### Signal Filters (12)
 

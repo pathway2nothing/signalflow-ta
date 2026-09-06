@@ -6,16 +6,15 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.momentum import MacdMom, RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import KeltnerVol
 
 
 @dataclass
-@detector("ta/keltner_channel_1")
-class KeltnerChannelDetector1(SignalDetector):
+@detector("detector/keltner_rsi_zscore")
+class KeltnerRsiZscoreDetector(SignalDetector):
     """Keltner Channel detector with RSI z-score condition.
 
     Generates signals when:
@@ -67,7 +66,7 @@ class KeltnerChannelDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -113,7 +112,7 @@ class KeltnerChannelDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=kc_diff),
+                pl.Series(name="score", values=kc_diff),
             ]
         )
 
@@ -152,8 +151,8 @@ class KeltnerChannelDetector1(SignalDetector):
 
 
 @dataclass
-@detector("ta/keltner_channel_2")
-class KeltnerChannelDetector2(SignalDetector):
+@detector("detector/keltner_macd_rsi")
+class KeltnerMacdRsiDetector(SignalDetector):
     """Keltner Channel detector with MACD and RSI conditions.
 
     Generates signals when:
@@ -211,7 +210,7 @@ class KeltnerChannelDetector2(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -268,7 +267,7 @@ class KeltnerChannelDetector2(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=kc_diff),
+                pl.Series(name="score", values=kc_diff),
             ]
         )
 

@@ -2,7 +2,7 @@
 
 Under ``normalized=True`` features append ``_norm``-suffixed columns via their own
 ``_get_output_name`` writers. The compat shim's ``outputs`` property must declare
-those exact names, otherwise ``FeaturePipe.outputs`` and schema-driven consumers lie.
+those exact names, otherwise ``FeaturePipeline.outputs`` and schema-driven consumers lie.
 """
 
 from datetime import datetime, timedelta

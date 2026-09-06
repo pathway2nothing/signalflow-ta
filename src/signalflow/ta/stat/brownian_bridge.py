@@ -19,8 +19,7 @@ import numpy as np
 import polars as pl
 from numpy.lib.stride_tricks import sliding_window_view
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -180,7 +179,8 @@ class SwingAmpDisplacementStat(Feature):
         c = df["close"].to_numpy().astype(np.float64)
         h = df["high"].to_numpy().astype(np.float64)
         l = df["low"].to_numpy().astype(np.float64)
-        n = len(c); w = int(self.period)
+        n = len(c)
+        w = int(self.period)
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
         wins = sliding_window_view(h - l, w)

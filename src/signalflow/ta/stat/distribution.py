@@ -5,11 +5,8 @@ from typing import ClassVar
 
 import numpy as np
 import polars as pl
-from scipy.stats import kurtosis as sp_kurtosis
-from scipy.stats import skew as sp_skew
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -193,16 +190,9 @@ class SkewStat(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_skew_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
-        n = len(values)
-
-        skew = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            window = values[i - self.period + 1 : i + 1]
-            if not np.any(np.isnan(window)):
-                skew[i] = sp_skew(window, bias=False)
-
-        return df.with_columns(pl.Series(name=f"{self.source_col}_skew_{self.period}", values=skew))
+        # scipy.stats.skew(window, bias=False) == Polars rolling_skew(bias=False): the G1 sample skewness
+        expr = pl.col(self.source_col).cast(pl.Float64).rolling_skew(self.period, bias=False)
+        return df.with_columns(expr.alias(f"{self.source_col}_skew_{self.period}"))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},
@@ -238,16 +228,9 @@ class KurtosisStat(Feature):
     outputs: ClassVar[list[str]] = ["{source_col}_kurt_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        values = df[self.source_col].to_numpy()
-        n = len(values)
-
-        kurt = np.full(n, np.nan)
-        for i in range(self.period - 1, n):
-            window = values[i - self.period + 1 : i + 1]
-            if not np.any(np.isnan(window)):
-                kurt[i] = sp_kurtosis(window, fisher=True)
-
-        return df.with_columns(pl.Series(name=f"{self.source_col}_kurt_{self.period}", values=kurt))
+        # scipy.stats.kurtosis(window, fisher=True) == Polars rolling_kurtosis(fisher=True, bias=True)
+        expr = pl.col(self.source_col).cast(pl.Float64).rolling_kurtosis(self.period, fisher=True, bias=True)
+        return df.with_columns(expr.alias(f"{self.source_col}_kurt_{self.period}"))
 
     test_params: ClassVar[list[dict]] = [
         {"source_col": "close", "period": 30},

@@ -13,6 +13,12 @@ import polars as pl
 import pytest
 from conftest import generate_test_ohlcv
 
+from signalflow.ta._numba_compat import NUMBA_AVAILABLE
+
+pytestmark = pytest.mark.skipif(
+    not NUMBA_AVAILABLE, reason="numba kernels not installed (pip install 'signalflow-ta[numba]')"
+)
+
 
 @pytest.fixture(scope="module")
 def large_ohlcv() -> pl.DataFrame:

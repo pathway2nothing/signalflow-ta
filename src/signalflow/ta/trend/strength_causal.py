@@ -52,9 +52,12 @@ class AdxTrendCausal(Feature):
         h = df["high"].to_numpy().astype(np.float64)
         l = df["low"].to_numpy().astype(np.float64)
         c = df["close"].to_numpy().astype(np.float64)
-        c_prev = np.roll(c, 1); c_prev[0] = c[0]
-        h_prev = np.roll(h, 1); h_prev[0] = h[0]
-        l_prev = np.roll(l, 1); l_prev[0] = l[0]
+        c_prev = np.roll(c, 1)
+        c_prev[0] = c[0]
+        h_prev = np.roll(h, 1)
+        h_prev[0] = h[0]
+        l_prev = np.roll(l, 1)
+        l_prev[0] = l[0]
         tr = np.maximum.reduce([h - l, np.abs(h - c_prev), np.abs(l - c_prev)])
         tr[0] = h[0] - l[0]
         up = h - h_prev
@@ -72,7 +75,9 @@ class AdxTrendCausal(Feature):
         dx = np.nan_to_num(dx, nan=0.0, posinf=0.0, neginf=0.0)
         adx = truncated_ema(dx, self.period)
         if self.normalized:
-            adx = adx / 100.0; dmp = dmp / 100.0; dmn = dmn / 100.0
+            adx = adx / 100.0
+            dmp = dmp / 100.0
+            dmn = dmn / 100.0
         suffix = ""
         return df.with_columns([
             pl.Series(f"adx_causal_{self.period}{suffix}", adx, dtype=pl.Float64),

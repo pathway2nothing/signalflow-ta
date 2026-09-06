@@ -19,8 +19,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -154,6 +153,7 @@ class ForeshockBuildupStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         from numpy.lib.stride_tricks import sliding_window_view
+
         from signalflow.ta.stat._causal_helpers import log_returns, rolling_std
 
         out_col = f"foreshock_{self.period}"
@@ -202,16 +202,19 @@ class GutenbergRichterBValueStat(Feature):
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         import math
+
         from numpy.lib.stride_tricks import sliding_window_view
         out_col = f"f28_gr_b_{self.period}"
         c = df["close"].to_numpy().astype(np.float64)
-        n = len(c); w = int(self.period)
+        n = len(c)
+        w = int(self.period)
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
         r = np.diff(np.log(np.maximum(c, 1e-12)), prepend=np.log(max(float(c[0]), 1e-12)))
         mag = np.log(np.abs(r) + 1e-12)
         wins = sliding_window_view(mag, w)
-        m_min = wins.min(axis=1); m_mean = wins.mean(axis=1)
+        m_min = wins.min(axis=1)
+        m_mean = wins.mean(axis=1)
         b = np.log10(math.e) / np.maximum(m_mean - m_min, 1e-12)
         pad = np.full(w - 1, np.nan, dtype=np.float64)
         return df.with_columns(pl.Series(out_col, np.concatenate([pad, b]), dtype=pl.Float64))

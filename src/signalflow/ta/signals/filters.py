@@ -6,6 +6,8 @@ from dataclasses import dataclass
 import numpy as np
 import polars as pl
 
+from signalflow.ta.signals._utils import _rma_sma_init
+
 
 class SignalFilter(ABC):
     """Base class for signal filters."""
@@ -215,8 +217,6 @@ class MeanExtensionFilter(SignalFilter):
     def warmup(self) -> int:
         return self.window
 
-
-from signalflow.ta.signals._utils import _rma_sma_init
 
 
 @dataclass

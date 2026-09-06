@@ -6,16 +6,15 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta._normalization import normalize_zscore
 from signalflow.ta.momentum import RsiMom
 from signalflow.ta.signals.filters import SignalFilter
 
 
 @dataclass
-@detector("ta/rsi_anomaly_1")
-class RsiAnomalyDetector1(SignalDetector):
+@detector("detector/rsi_anomaly")
+class RsiAnomalyDetector(SignalDetector):
     """RSI statistical anomaly detector.
 
     Detects extreme RSI deviations using rolling z-score normalization.
@@ -58,7 +57,7 @@ class RsiAnomalyDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -90,7 +89,7 @@ class RsiAnomalyDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 signal_expr.otherwise(pl.lit(SignalType.NONE.value)).alias("signal_type"),
-                pl.col(self.zscore_col).alias("signal"),
+                pl.col(self.zscore_col).alias("score"),
             ]
         )
 

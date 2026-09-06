@@ -1,17 +1,17 @@
 """Signal detectors based on technical analysis indicators."""
 
 from signalflow.ta.signals.adx_regime import (
-    AdxRegimeDetector1,
-    AdxRegimeDetector2,
+    AdxDiCrossDetector,
+    AdxRegimeRsiDetector,
 )
-from signalflow.ta.signals.aroon_cross import AroonCrossDetector1
-from signalflow.ta.signals.bollinger_band import BollingerBandDetector1
-from signalflow.ta.signals.cci_anomaly import CciAnomalyDetector1
-from signalflow.ta.signals.cross_pair import CrossPairDetector1
+from signalflow.ta.signals.aroon_cross import AroonCrossDetector
+from signalflow.ta.signals.bollinger_band import BollingerBreakoutDetector
+from signalflow.ta.signals.cci_anomaly import CciAnomalyDetector
+from signalflow.ta.signals.cross_pair import CrossPairCorrBollingerDetector
 from signalflow.ta.signals.divergence import (
-    DivergenceDetector1,
-    DivergenceDetector2,
-    DivergenceDetector3,
+    MacdDivergenceDetector,
+    RsiDivergenceDetector,
+    RsiDivergenceOffsetDetector,
 )
 from signalflow.ta.signals.filters import (
     AboveBBUpperFilter,
@@ -29,71 +29,71 @@ from signalflow.ta.signals.filters import (
     SignalFilter,
 )
 from signalflow.ta.signals.hampel_filter import (
-    HampelFilterDetector1,
-    HampelFilterDetector2,
+    AdaptiveHampelAnomalyDetector,
+    HampelAnomalyDetector,
 )
 from signalflow.ta.signals.isolation_forest import (
-    IsolationForestDetector1,
-    IsolationForestDetector2,
-    IsolationForestDetector3,
+    IsoForestCrossSectionalDetector,
+    IsoForestReturnsDetector,
+    IsoForestRsiDetector,
 )
-from signalflow.ta.signals.kalman_filter import KalmanFilterDetector1
+from signalflow.ta.signals.kalman_filter import KalmanFilterDetector
 from signalflow.ta.signals.keltner_channel import (
-    KeltnerChannelDetector1,
-    KeltnerChannelDetector2,
+    KeltnerMacdRsiDetector,
+    KeltnerRsiZscoreDetector,
 )
 from signalflow.ta.signals.market_condition import (
-    MarketConditionDetector1,
-    MarketConditionDetector2,
-    MarketConditionDetector3,
+    RsiGlobalVolDetector,
+    RsiVsMarketDetector,
+    ZscoreRollingMinDetector,
 )
 from signalflow.ta.signals.mfi import (
-    MfiDetector1,
-    MfiDetector2,
+    MfiExtremeDetector,
+    MfiZscoreReversalDetector,
 )
-from signalflow.ta.signals.rsi_anomaly import RsiAnomalyDetector1
+from signalflow.ta.signals.rsi_anomaly import RsiAnomalyDetector
 from signalflow.ta.signals.stochastic import (
-    StochasticDetector1,
-    StochasticDetector2,
+    StochasticCrossDetector,
+    StochasticExtremeZscoreDetector,
 )
 
 __all__ = [
     "AboveBBUpperFilter",
-    "AdxRegimeDetector1",
-    "AdxRegimeDetector2",
-    "AroonCrossDetector1",
+    "AdaptiveHampelAnomalyDetector",
+    "AdxDiCrossDetector",
+    "AdxRegimeRsiDetector",
+    "AroonCrossDetector",
     "BelowBBLowerFilter",
-    "BollingerBandDetector1",
-    "CciAnomalyDetector1",
+    "BollingerBreakoutDetector",
+    "CciAnomalyDetector",
     "CciZscoreFilter",
-    "CrossPairDetector1",
-    "DivergenceDetector1",
-    "DivergenceDetector2",
-    "DivergenceDetector3",
-    "HampelFilterDetector1",
-    "HampelFilterDetector2",
+    "CrossPairCorrBollingerDetector",
+    "HampelAnomalyDetector",
     "HighVolatilityFilter",
-    "IsolationForestDetector1",
-    "IsolationForestDetector2",
-    "IsolationForestDetector3",
-    "KalmanFilterDetector1",
-    "KeltnerChannelDetector1",
-    "KeltnerChannelDetector2",
+    "IsoForestCrossSectionalDetector",
+    "IsoForestReturnsDetector",
+    "IsoForestRsiDetector",
+    "KalmanFilterDetector",
+    "KeltnerMacdRsiDetector",
+    "KeltnerRsiZscoreDetector",
     "LowVolatilityFilter",
     "MacdAboveSignalFilter",
     "MacdBelowSignalFilter",
-    "MarketConditionDetector1",
-    "MarketConditionDetector2",
-    "MarketConditionDetector3",
+    "MacdDivergenceDetector",
     "MeanExtensionFilter",
     "MeanReversionFilter",
-    "MfiDetector1",
-    "MfiDetector2",
+    "MfiExtremeDetector",
+    "MfiZscoreReversalDetector",
     "PriceDowntrendFilter",
     "PriceUptrendFilter",
-    "RsiAnomalyDetector1",
+    "RsiAnomalyDetector",
+    "RsiDivergenceDetector",
+    "RsiDivergenceOffsetDetector",
+    "RsiGlobalVolDetector",
+    "RsiVsMarketDetector",
     "RsiZscoreFilter",
     "SignalFilter",
-    "StochasticDetector1",
-    "StochasticDetector2",
+    "StochasticCrossDetector",
+    "StochasticExtremeZscoreDetector",
+    "ZscoreRollingMinDetector",
 ]

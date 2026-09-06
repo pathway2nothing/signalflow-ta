@@ -16,7 +16,6 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 import pytest
-
 from conftest import (
     generate_empty_column_df,
     generate_ohlcv_with_nulls,
@@ -24,7 +23,6 @@ from conftest import (
     generate_sinusoidal_ohlcv,
     generate_static_ohlcv,
 )
-
 
 MOMENTUM_INDICATORS: list[tuple[type, dict]] = [
 ]

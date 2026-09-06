@@ -6,8 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta._numba_kernels import cmo_kernel as _cmo_kernel
 from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 
@@ -106,14 +105,10 @@ class RocMom(Feature):
     outputs: ClassVar[list[str]] = ["roc_{period}"]
 
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
-        close = df["close"].to_numpy()
-        n = len(close)
-
-        roc = np.full(n, np.nan)
-
-        for i in range(self.period, n):
-            if close[i - self.period] != 0:
-                roc[i] = 100 * (close[i] - close[i - self.period]) / close[i - self.period]
+        c = pl.col("close").cast(pl.Float64)
+        prev = c.shift(self.period)
+        roc_expr = pl.when(prev != 0).then(100.0 * (c - prev) / prev).otherwise(None)
+        roc = df.select(roc_expr.alias("_roc")).get_column("_roc").to_numpy().astype(np.float64)
 
         if self.normalized:
             from signalflow.ta._normalization import get_norm_window, normalize_zscore

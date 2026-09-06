@@ -6,15 +6,14 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import BollingerVol
 
 
 @dataclass
-@detector("ta/bollinger_band_1")
-class BollingerBandDetector1(SignalDetector):
+@detector("detector/bollinger_breakout")
+class BollingerBreakoutDetector(SignalDetector):
     """Bollinger Band breakout detector.
 
     Detects when price crosses outside Bollinger Bands.
@@ -56,7 +55,7 @@ class BollingerBandDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -91,7 +90,7 @@ class BollingerBandDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.col("_signal_type").alias("signal_type"),
-                pl.col("_signal").alias("signal"),
+                pl.col("_signal").alias("score"),
             ]
         )
 

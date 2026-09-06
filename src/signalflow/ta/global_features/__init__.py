@@ -1,14 +1,6 @@
 """Global (cross-sectional) features for market-wide indicators."""
 
 from signalflow.ta.global_features.btc_contagion import BTCStressContagionStat
-from signalflow.ta.global_features.market import (
-    MarketIndexFeature,
-    MarketRollingMinFeature,
-    MarketRsiFeature,
-    MarketVolatilityFeature,
-    MarketZscoreFeature,
-    compute_global_features,
-)
 from signalflow.ta.global_features.cross_sectional import (
     AvgPairwiseCorrMarket,
     CrossSectionalAdxRank,
@@ -27,16 +19,18 @@ from signalflow.ta.global_features.cross_sectional import (
     PairLeadLagCorr,
     RelativeStrengthVsMarket,
 )
+from signalflow.ta.global_features.market import (
+    MarketIndexFeature,
+    MarketRollingMinFeature,
+    MarketRsiFeature,
+    MarketVolatilityFeature,
+    MarketZscoreFeature,
+    compute_global_features,
+)
 
 __all__ = [
-    "BTCStressContagionStat",
-    "MarketIndexFeature",
-    "MarketRollingMinFeature",
-    "MarketRsiFeature",
-    "MarketVolatilityFeature",
-    "MarketZscoreFeature",
-    "compute_global_features",
     "AvgPairwiseCorrMarket",
+    "BTCStressContagionStat",
     "CrossSectionalAdxRank",
     "CrossSectionalAtrRank",
     "CrossSectionalBeta",
@@ -49,7 +43,13 @@ __all__ = [
     "CrossSectionalVolRank",
     "DivergenceFromMarketMedian",
     "MarketBreadth",
+    "MarketIndexFeature",
+    "MarketRollingMinFeature",
+    "MarketRsiFeature",
+    "MarketVolatilityFeature",
+    "MarketZscoreFeature",
     "PairExcessReturn",
     "PairLeadLagCorr",
     "RelativeStrengthVsMarket",
+    "compute_global_features",
 ]

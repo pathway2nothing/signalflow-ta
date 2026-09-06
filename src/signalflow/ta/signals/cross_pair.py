@@ -6,14 +6,13 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import SignalCategory, Signals, SignalType
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalCategory, SignalDetector, Signals, SignalType
 from signalflow.ta.signals.filters import SignalFilter
 from signalflow.ta.volatility import BollingerVol
 
 
 @dataclass
-class CrossPairDetector1(SignalDetector):
+class CrossPairCorrBollingerDetector(SignalDetector):
     """Cross-pair correlation detector with Bollinger Bands.
 
     Not registered under V5: it needs a cross-pair ``context=`` channel that
@@ -84,7 +83,7 @@ class CrossPairDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -99,7 +98,7 @@ class CrossPairDetector1(SignalDetector):
         bb_diff = bb_lower - close
 
         if context is None:
-            raise ValueError("CrossPairDetector1 requires context with cross-pair data")
+            raise ValueError("CrossPairCorrBollingerDetector requires context with cross-pair data")
 
         correlation_signal = np.ones(n, dtype=bool)
 
@@ -146,7 +145,7 @@ class CrossPairDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=bb_diff),
+                pl.Series(name="score", values=bb_diff),
             ]
         )
 

@@ -15,8 +15,7 @@ import numpy as np
 import polars as pl
 from numpy.lib.stride_tricks import sliding_window_view
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 
 
 @dataclass
@@ -41,7 +40,8 @@ class KatzFractalDimensionStat(Feature):
     def compute_pair(self, df: pl.DataFrame) -> pl.DataFrame:
         out_col = f"f021_katz_{self.period}"
         c = df[self.source_col].to_numpy().astype(np.float64)
-        n = len(c); w = int(self.period)
+        n = len(c)
+        w = int(self.period)
         if n < w:
             return df.with_columns(pl.lit(np.nan).alias(out_col))
         diffs = np.abs(np.diff(c))

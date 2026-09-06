@@ -58,7 +58,8 @@ class VolatilityClusterScore(Feature):
         out = f"vol_cluster_{self.window}"
         a = pl.col("close").diff().abs().alias("_aret")
         df = df.with_columns(a)
-        x = pl.col("_aret"); xl = x.shift(1)
+        x = pl.col("_aret")
+        xl = x.shift(1)
         df = df.with_columns([
             (x * xl).rolling_mean(self.window).alias("_xy"),
             x.rolling_mean(self.window).alias("_xm"),
@@ -86,7 +87,8 @@ class ErrorAutoCorrelation(Feature):
         c = pl.col("close")
         err = (c - c.rolling_mean(self.period)).alias("_e")
         df = df.with_columns(err)
-        e = pl.col("_e"); el = e.shift(self.lag)
+        e = pl.col("_e")
+        el = e.shift(self.lag)
         df = df.with_columns([
             (e * el).rolling_mean(self.window).alias("_xy"),
             e.rolling_mean(self.window).alias("_xm"),

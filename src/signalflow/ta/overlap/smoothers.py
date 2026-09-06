@@ -7,8 +7,7 @@ from typing import ClassVar, Literal
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta._numba_kernels import (
     ssf_kernel as _ssf_kernel,
 )

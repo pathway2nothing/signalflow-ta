@@ -6,8 +6,7 @@ from typing import Any, ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import Signals, SignalType, detector
-from signalflow.ta._compat import SignalDetector
+from signalflow.ta._compat import SignalDetector, Signals, SignalType, detector
 from signalflow.ta.signals.filters import SignalFilter
 
 
@@ -59,8 +58,8 @@ def _adaptive_kalman_filter(
 
 
 @dataclass
-@detector("ta/kalman_filter_1")
-class KalmanFilterDetector1(SignalDetector):
+@detector("detector/kalman_filter")
+class KalmanFilterDetector(SignalDetector):
     """Adaptive Kalman Filter-based signal detector.
 
     Generates signals based on deviation from Kalman-filtered price.
@@ -107,7 +106,7 @@ class KalmanFilterDetector1(SignalDetector):
                         self.pair_col,
                         self.ts_col,
                         pl.lit(0).alias("signal_type"),
-                        pl.lit(0.0).alias("signal"),
+                        pl.lit(0.0).alias("score"),
                     ]
                 )
             )
@@ -160,7 +159,7 @@ class KalmanFilterDetector1(SignalDetector):
                 self.pair_col,
                 self.ts_col,
                 pl.Series(name="signal_type", values=signal_type),
-                pl.Series(name="signal", values=zscore),
+                pl.Series(name="score", values=zscore),
             ]
         )
 

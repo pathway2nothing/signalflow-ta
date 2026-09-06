@@ -56,10 +56,14 @@ class MaxConsecutiveGainRun(Feature):
         windows = swv(up, window_shape=self.window)
         runs = np.zeros(len(windows), dtype=np.int32)
         for i, w in enumerate(windows):
-            cur = 0; mx = 0
+            cur = 0
+            mx = 0
             for x in w:
-                if x: cur += 1; mx = max(mx, cur)
-                else: cur = 0
+                if x:
+                    cur += 1
+                    mx = max(mx, cur)
+                else:
+                    cur = 0
             runs[i] = mx
         full = np.full(n, np.nan)
         full[self.window - 1:] = runs
@@ -85,10 +89,14 @@ class MaxConsecutiveLossRun(Feature):
         windows = swv(down, window_shape=self.window)
         runs = np.zeros(len(windows), dtype=np.int32)
         for i, w in enumerate(windows):
-            cur = 0; mx = 0
+            cur = 0
+            mx = 0
             for x in w:
-                if x: cur += 1; mx = max(mx, cur)
-                else: cur = 0
+                if x:
+                    cur += 1
+                    mx = max(mx, cur)
+                else:
+                    cur = 0
             runs[i] = mx
         full = np.full(n, np.nan)
         full[self.window - 1:] = runs
@@ -117,11 +125,15 @@ class LongestStreak(Feature):
             longest_pos = longest_neg = cur_pos = cur_neg = 0
             for s in w:
                 if s > 0:
-                    cur_pos += 1; cur_neg = 0
-                    if cur_pos > longest_pos: longest_pos = cur_pos
+                    cur_pos += 1
+                    cur_neg = 0
+                    if cur_pos > longest_pos:
+                        longest_pos = cur_pos
                 elif s < 0:
-                    cur_neg += 1; cur_pos = 0
-                    if cur_neg > longest_neg: longest_neg = cur_neg
+                    cur_neg += 1
+                    cur_pos = 0
+                    if cur_neg > longest_neg:
+                        longest_neg = cur_neg
                 else:
                     cur_pos = cur_neg = 0
             out_arr[self.window - 1 + i] = max(longest_pos, longest_neg)

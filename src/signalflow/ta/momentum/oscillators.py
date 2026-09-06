@@ -6,8 +6,7 @@ from typing import ClassVar
 import numpy as np
 import polars as pl
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta._numba_kernels import cci_kernel as _cci_kernel
 from signalflow.ta._numba_kernels import rma_sma_init as _rma_sma_init
 from signalflow.ta._numba_kernels import rolling_max as _rolling_max

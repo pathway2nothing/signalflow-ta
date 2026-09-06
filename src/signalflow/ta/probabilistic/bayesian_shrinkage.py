@@ -7,8 +7,7 @@ import numpy as np
 import polars as pl
 from scipy.stats import norm
 
-from signalflow.ta._compat import feature
-from signalflow.ta._compat import Feature
+from signalflow.ta._compat import Feature, feature
 from signalflow.ta.probabilistic._helpers import log_returns
 
 
