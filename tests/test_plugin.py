@@ -21,7 +21,7 @@ from signalflow import ComponentType, registry
 
 @pytest.fixture(scope="module")
 def frame() -> pl.DataFrame:
-    ds = sf.data(
+    ds = sf.dataset(
         "synthetic",
         pairs=["BTCUSDT", "ETHUSDT"],
         start="2023-01-01",
@@ -33,7 +33,7 @@ def frame() -> pl.DataFrame:
 
 @pytest.fixture(scope="module")
 def dataset():
-    return sf.data(
+    return sf.dataset(
         "synthetic",
         pairs=["BTCUSDT", "ETHUSDT"],
         start="2023-01-01",
