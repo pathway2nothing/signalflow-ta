@@ -12,7 +12,8 @@ import signalflow.ta as ta
 
 @pytest.fixture(scope="module")
 def frame() -> pl.DataFrame:
-    return sf.dataset("synthetic", pairs=["BTCUSDT", "ETHUSDT"], start="2024-01-01", end="2024-02-15", interval="1h").frame
+    ds = sf.dataset("synthetic", pairs=["BTCUSDT", "ETHUSDT"], start="2024-01-01", end="2024-02-15", interval="1h")
+    return ds.frame
 
 
 def _per_pair(frame: pl.DataFrame, col: str, fn) -> np.ndarray:
